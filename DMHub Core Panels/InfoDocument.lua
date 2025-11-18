@@ -438,6 +438,7 @@ function GameHud:CreateDocumentDialog()
                                 height = 'auto',
                                 pad = 0,
                                 tmargin = 4,
+                                lmargin = 20,
                                 halign = "left",
                                 valign = 'top',
                             },

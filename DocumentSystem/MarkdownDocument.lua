@@ -839,11 +839,12 @@ function MarkdownDocument.DisplayPanel(self, args)
                 minWidth = 0,
             },
         },
-        width = "100%",
+        width = "100%-24",
         height = "100%",
         flow = "vertical",
         halign = "center",
         valign = "center",
+        hpad = 6,
         vscroll = true,
         savedoc = function(element)
             element:FireEvent("refreshDocument")
