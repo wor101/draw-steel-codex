@@ -359,7 +359,7 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
                                     },
 
                                     gui.Label {
-                                        text = document.summary["npages"],
+                                        text = "",
                                         fontFace = "newzald",
                                         halign = "right",
                                         fontSize = 10,
@@ -367,6 +367,15 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
                                         width = "auto",
                                         height = "100%",
                                         bold = true,
+
+
+                                        create = function(element)
+                                            if document.summary ~= nil then
+                                                element.text = document.summary["npages"]
+                                            else
+                                                element:ScheduleEvent("create", 0.01)
+                                            end
+                                        end
                                     },
                                 },
 
