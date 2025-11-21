@@ -45,6 +45,64 @@ end
 Commands.SplitArgs = function(str)
     local result = {}
 
+    if string.find(str, "(", 1, true) then
+        local currentStr = {}
+        local stack = {}
+        --handle nested parentheses
+        local len = #str
+        local i = 1
+        while i <= len do
+            local char = string.sub(str, i, i)
+            if char == "(" or char == '"' then
+                if #currentStr > 0 then
+                    result[#result + 1] = trim(table.concat(currentStr, ""))
+                    currentStr = {}
+                end
+
+                stack[#stack + 1] = cond(char == "(", ")", char)
+                --find matching )
+                local j = i + 1
+                while j <= #str do
+                    local c = string.sub(str, j, j)
+                    if (c == "(" or c == '"') and c ~= stack[#stack] then
+                        stack[#stack + 1] = cond(c == "(", ")", c)
+                    elseif c == stack[#stack] then
+                        stack[#stack] = nil
+                        if #stack == 0 then
+                            break
+                        end
+                    end
+                    j = j + 1
+                end
+
+                if #stack == 0 then
+                    --found matching )
+                    local arg = string.sub(str, i + 1, j - 1)
+                    result[#result + 1] = arg
+                    i = j+1
+                else
+                    local arg = string.sub(str, i + 1, j)
+                    result[#result + 1] = arg
+                    break
+                end
+            elseif char == " " then
+                if #currentStr > 0 then
+                    result[#result + 1] = trim(table.concat(currentStr, ""))
+                    currentStr = {}
+                end
+                i = i+1
+            else
+                currentStr[#currentStr + 1] = char
+                i = i+1
+            end
+        end
+
+        if #currentStr > 0 then
+            result[#result + 1] = trim(table.concat(currentStr, ""))
+        end
+        return result
+    end
+
     while str ~= nil and str ~= "" do
         local match = regex.MatchGroups(str, "^\\s*((?<arg>[^\" ]+)|\"(?<arg>[^\"]+)\")(?<suffix>.*)$")
         if match == nil then
@@ -57,6 +115,8 @@ Commands.SplitArgs = function(str)
 
     return result
 end
+
+print("SPLIT::", Commands.SplitArgs("(numheroes + 4) * 3"))
 
 Commands.applyongoingeffect = function(str)
     if str == "help" then
@@ -739,7 +799,38 @@ Commands.giveitem = function(str)
     end
 end
 
-Commands.createcharacter = function()
+Commands.havehero = function(str)
+    if str == "help" then
+        dmhub.Log(
+            "Usage: /havehero <token name>\n Checks if a hero with the given name exists in the game.")
+        return
+    end
+
+    local args = Commands.SplitArgs(str)
+
+    if args[1] == nil then
+        return false
+    end
+
+    local characters = game.GetGameGlobalCharacters()
+    local tokens = tokenSearch(args[1], table.values(characters))
+    for tokenid,token in pairs(tokens) do
+        return true
+    end
+
+    return false
+end
+
+Commands.createcharacter = function(str)
+
+    if str == "help" then
+        dmhub.Log(
+            "Usage: /createcharacter [CopyOf]\nCreates a new character, assigned to the current user. If 'CopyOf' is provided, creates a copy of the given character, finding that character by name.")
+        return
+    end
+
+    local args = Commands.SplitArgs(str)
+
     local heroType = nil
     local characterTypes = dmhub.GetTable(CharacterType.tableName)
     for k, v in pairs(characterTypes) do
@@ -776,7 +867,21 @@ Commands.createcharacter = function()
 
 
     if heroType ~= nil then
-        local charid = game.CreateCharacter("character", heroType)
+        local charid = nil
+
+        if args[1] ~= nil and args[1] ~= "" then
+            local characters = game.GetGameGlobalCharacters()
+            local tokens = tokenSearch(args[1], table.values(characters))
+            for tokenid,token in pairs(tokens) do
+                dmhub.CopyTokenToClipboard(token)
+                charid = dmhub.PasteTokenFromClipboard(targetLoc)
+                break
+            end
+        end
+
+        if charid == nil then
+            charid = game.CreateCharacter("character", heroType)
+        end
 
         dmhub.Coroutine(function()
             for i = 1, 100 do
@@ -845,10 +950,28 @@ Commands.granttitle = function(str)
     end
 end
 
+local g_varDocId = "variables"
+
+Commands.setvar = function(str)
+    local args = Commands.SplitArgs(str)
+    if #args ~= 2 then
+        return
+    end
+
+	local doc = mod:GetDocumentSnapshot(g_varDocId)
+    doc:BeginChange()
+    doc.data[args[1]] = Commands.query(args[2])
+    doc:CompleteChange("Change variable")
+end
+
+Commands.var = function(str)
+	local doc = mod:GetDocumentSnapshot(g_varDocId)
+    return doc.data[str]
+end
+
 -- (plus, minus, divide, times) (and, or) (less than, greater than, less equal, greater equal, equal, not equal)
 Commands.query = function(str)
     local args = Commands.SplitArgs(str)
-
 
     if #args == 1 then
         local arg = args[1]
@@ -857,13 +980,42 @@ Commands.query = function(str)
             return arg
         elseif dmhub.HasSetting(arg) then
             return dmhub.GetSettingValue(arg)
+        elseif string.starts_with(arg, "?") then
+            arg = string.sub(arg, 2)
+            local commandResult = dmhub.Execute(arg)
+            print("EXECUTE::", arg, "RESULT:", commandResult)
+            return commandResult
         else
+            local varvalue = Commands.var(arg)
+            if varvalue ~= nil then
+                return varvalue
+            end
             return arg
         end
     elseif #args == 3 then
         local operation = args[2]
         local a = Commands.query(args[1])
         local b = Commands.query(args[3])
+
+        if tonumber(a) ~= nil then
+            a = tonumber(a)
+        else
+            if a == false or a == "" or a == nil then
+                a = 0
+            else
+                a = 1
+            end
+        end
+
+        if tonumber(b) ~= nil then
+            b = tonumber(b)
+        else
+            if b == false or b == "" or b == nil then
+                b = 0
+            else
+                b = 1
+            end
+        end
 
         --plus
         if operation == "+" then
@@ -975,8 +1127,10 @@ Commands.query = function(str)
     end
 end
 
+
 --for testing
 Commands.print = function(str)
     local result = Commands.query(str)
-    print("venla:", result)
+    print("RESULT::", result)
+    return result
 end
