@@ -14,7 +14,7 @@ CharacterModifier.TypeInfo.bestowcondition = {
             if creature ~= nil then
                 local immunities = creature:GetConditionImmunities()
                 if not immunities[modifier.conditionid] then
-                     conditionsRecorded[modifier.conditionid] = (conditionsRecorded[modifier.conditionid] or 0) + 1
+                     conditionsRecorded[modifier.conditionid] = (tonumber(conditionsRecorded[modifier.conditionid] or 0) or 1) + 1
                 end
             end
         end

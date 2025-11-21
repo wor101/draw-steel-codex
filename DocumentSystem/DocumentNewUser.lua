@@ -1,11 +1,6 @@
 local mod = dmhub.GetModLoading()
 
-dmhub.RegisterEventHandler("EnterGame", function()
-    if dmhub.isDM or dmhub.currentToken ~= nil then
-        print("EnterGame: HAS TOKEN")
-        return
-    end
-
+local function ShowDocumentOnStart(docname)
     dmhub.Coroutine(function()
 
         while (not GameHud.instance) or (not GameHud.instance.documentsPanel) or (not GameHud.instance.documentsPanel.valid) do
@@ -18,16 +13,40 @@ dmhub.RegisterEventHandler("EnterGame", function()
 
         print("EnterGame: Display")
 
-        local description = string.lower("New Player Welcome")
+        local description = string.lower(docname)
         local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
         for k,doc in unhidden_pairs(customDocs) do
-            if string.lower(doc.description) == description then
+            if string.lower(k) == description or string.lower(doc.description) == description then
                 print("EnterGame: ShowDocument")
                 doc:ShowDocument()
                 return
             end
         end
     end)
+
+end
+
+dmhub.RegisterEventHandler("EnterGame", function()
+    if dmhub.isDM then
+        local adventuresDocument = GetCurrentAdventuresDocument()
+
+        local docid = adventuresDocument and adventuresDocument.data.slots and adventuresDocument.data.slots["slot1"]
+        if docid == nil then
+            dmhub.Execute('setadventuredocument 1 "Director Welcome"')
+            docid = adventuresDocument and adventuresDocument.data.slots and adventuresDocument.data.slots["slot1"]
+        end
+
+        if docid ~= nil then
+            ShowDocumentOnStart(docid)
+        end
+    end
+
+    if dmhub.isDM or dmhub.currentToken ~= nil then
+        print("EnterGame: HAS TOKEN")
+        return
+    end
+
+    ShowDocumentOnStart("New Player Welcome")
 end)
 
 print("Loaded:: xxx")

@@ -173,7 +173,8 @@ local function CreateStatusBar()
 
         gui.Label{
             fontSize = 14,
-            width = 200,
+            minFontSize = 10,
+            width = 100,
             height = "100%",
             color = "#aaaaaa",
             text = "Ready",
@@ -194,7 +195,8 @@ local function CreateStatusBar()
 
         gui.Label{
             fontSize = 14,
-            width = 400,
+            minFontSize = 10,
+            width = 320,
             height = "100%",
             color = "#aaaaaa",
             text = "",
@@ -573,6 +575,8 @@ local function CreateSearchBar()
     return resultPanel
 end
 
+local g_adventureDocumentsBar
+
 local g_presentationBar
 
 local g_searchBar
@@ -585,6 +589,76 @@ local g_searchHandlers = {}
 
 TopBar = {}
 
+
+--- @param documentids {string}
+TopBar.SetAdventureDocuments = function(documentids)
+    if g_adventureDocumentsBar ~= nil and g_adventureDocumentsBar.valid then
+        g_adventureDocumentsBar:FireEventTree("documents", documentids)
+    end
+end
+
+local function CreateAdventureDocumentsBar()
+    local resultPanel
+
+    resultPanel = gui.Panel{
+        flow = "horizontal",
+        height = "100%",
+        lmargin = 40,
+        width = 300,
+        halign = "left",
+        styles = {
+            {
+                selectors = {"label"},
+                fontSize = 16,
+                minFontSize = 12,
+                color = Styles.textColor,
+                bgcolor = Styles.RichBlack02,
+                bgimage = true,
+                width = 140,
+                height = "100%",
+                bold = true,
+            },
+            {
+                selectors = {"label", "hover"},
+                bgcolor = Styles.textColor,
+                color = Styles.RichBlack02,
+            },
+        },
+        destroy = function(element)
+            if g_adventureDocumentsBar == element then
+                g_adventureDocumentsBar = nil
+            end
+        end,
+
+        documents = function(element, documentids)
+            documentids = documentids or {}
+            local children = {}
+
+            local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
+            for i,docid in ipairs(documentids) do
+                local doc = customDocs[docid]
+                if doc ~= nil and not rawget(doc, "hidden") then
+                    local panel = gui.Label{
+                        text = doc.description,
+                        textWrap = false,
+                        textOverflow = "ellipsis",
+
+                        press = function(element)
+                            local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
+                            CustomDocument.OpenContent(customDocs[docid])
+                        end,
+                    }
+
+                    children[#children+1] = panel
+                end
+            end 
+
+            element.children = children
+        end,
+    }
+
+    return resultPanel
+end
 
 
 --- @param info {id: string}
@@ -674,9 +748,11 @@ local function CreateTopBar()
     local m_inGame = nil
     local m_searchBar = CreateSearchBar()
     local m_presentationBar = CreatePresentationBar()
+    local m_adventureDocumentsBar = CreateAdventureDocumentsBar()
 
     g_searchBar = m_searchBar
     g_presentationBar = m_presentationBar
+    g_adventureDocumentsBar = m_adventureDocumentsBar
 
     local menuBar = gui.Panel{
         id = "menuBarPanel",
@@ -832,6 +908,7 @@ local function CreateTopBar()
             end,
         },
 
+        m_adventureDocumentsBar,
         m_presentationBar,
         CreateStatusBar(),
         m_searchBar,

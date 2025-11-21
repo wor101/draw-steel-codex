@@ -184,12 +184,69 @@ local DockablePanelTheme = {
 		--bgcolor = "#ffffff33",
 	},
 
-    --invisible for right now, just monitors.
-	{
+    	{
 		selectors = {"dockHandle"},
-		width = 1,
-		height = 1,
+		width = 32,
+		height = 64,
+		bgimage = "panels/dock-handle.png",
+		bgcolor = "white",
+		valign = "bottom",
+		halign = "right",
+		saturation = 0,
+		brightness = 2,
+        opacity = 0.5,
 	},
+
+	{
+		selectors = {"dockHandle", "left"},
+		scale = {x = -1},
+		x = 16,
+		y = 8,
+	},
+
+	{
+		selectors = {"dockHandle", "left", "hover", "~parent:offscreen"},
+		x = 16,
+		transitionTime = 0.1,
+	},
+
+	{
+		selectors = {"dockHandle", "left", "parent:offscreen"},
+		x = 16,
+		transitionTime = 0.1,
+	},
+
+	{
+		selectors = {"dockHandle", "right"},
+		halign = "left",
+		x = -16,
+		y = 8,
+	},
+
+	{
+		selectors = {"dockHandle", "right", "hover", "~parent:offscreen"},
+		x = -16,
+		transitionTime = 0.1,
+	},
+
+	{
+		selectors = {"dockHandle", "right", "parent:offscreen"},
+		x = -16,
+		transitionTime = 0.1,
+	},
+
+	{
+		selectors = {"dockHandle", "hover"},
+		brightness = 2,
+	},
+
+	
+
+	{
+		selectors = {"dockHandle", "parent:empty"},
+		collapsed = 1,
+	},
+
 
     {
         selectors = {"tab"},
@@ -252,12 +309,16 @@ function GameHud:CreateSingleDock(params)
     local closeHandle
 	closeHandle = gui.Panel{
 		idprefix = "dockHandle",
-		classes = {"dockHandle"},
+		classes = {"dockHandle", params.halign},
 		floating = true,
 
 		monitor = offscreenSetting,
 
 		events = {
+            press = function(element)
+				dmhub.SetSettingValue(offscreenSetting, not dmhub.GetSettingValue(offscreenSetting))
+			end,
+
 			monitor = function(element)
 				resultPanel:SetClass("offscreen", dmhub.GetSettingValue(offscreenSetting))
 				dmhub.UpdateScreenHudArea(cond(resultPanel:HasClass("offscreen"), 0, 1))

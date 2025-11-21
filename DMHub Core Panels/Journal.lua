@@ -26,6 +26,53 @@ Commands.doc = function(str)
 end
 
 
+local g_adventureDocumentId = "adventureDocs"
+
+function GetCurrentAdventuresDocument()
+    local doc = mod:GetDocumentSnapshot(g_adventureDocumentId)
+    return doc
+end
+
+Commands.setadventuredocument = function(str)
+    if str == "help" then
+        dmhub.Log(
+            "Usage: /setadventuredocument <slotnumber> <document name>\n Sets the given slot number to the given document name as the current adventure document.")
+        return
+    end
+
+    local args = Commands.SplitArgs(str)
+    if #args ~= 2 or tonumber(args[1]) == nil then
+        print("LINK:: INVALID")
+        return
+    end
+
+    local slot = tonumber(args[1])
+    if slot ~= 1 and slot ~= 2 then
+        dmhub.Log("Only slots 1 and 2 are valid for adventure documents.")
+        return
+    end
+
+    local name = string.lower(args[2])
+
+    local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
+    for k, doc in unhidden_pairs(customDocs) do
+        if string.lower(doc.name) == name then
+            local doc = mod:GetDocumentSnapshot(g_adventureDocumentId)
+            doc:BeginChange()
+            local slots = doc.data.slots or {}
+            doc.data.slots = slots
+            slots[string.format("slot%d", slot)] = k
+            doc:CompleteChange("Change variable")
+            print("LINK:: Changed mod document")
+            return
+        end
+    end
+
+    print("LINK:: COULD NOT FIND DOC", name)
+end
+
+
+
 DockablePanel.Register {
     name = "Journal",
     icon = "icons/standard/Icon_App_Journal.png",
@@ -166,9 +213,13 @@ end
 local CreateFolderContentsPanel
 
 local function CreateFolderPanel(journalPanel, folderid)
-    local builtinFolder = folderid == "private" or folderid == "public" or folderid == "templates" or
+    local builtinFolder = folderid == "private" or folderid == "public" or folderid == "templates" or folderid == "adventure" or
         folderid == game.currentMapId or folderid == dmhub.loginUserid
     local m_contentPanel = CreateFolderContentsPanel(journalPanel, folderid)
+
+    if folderid == "adventure" then
+        return m_contentPanel
+    end
 
     local resultPanel
     resultPanel = gui.TreeNode {
@@ -276,17 +327,34 @@ local function CreateFolderPanel(journalPanel, folderid)
     return resultPanel
 end
 
+local g_adventurePanelStyles = {
+    gui.Style{
+        selectors = {"label"},
+        bold = true,
+        fontSize = 22,
+    }
+}
+
 CreateFolderContentsPanel = function(journalPanel, folderid)
     local m_documentPanels = {}
     local contentPanel
     local m_invalidated = true
 
+    local dragTarget = folderid ~= "adventure"
+
+    local styles
+    if folderid == "adventure" then
+        styles = g_adventurePanelStyles
+    end
+
+
     contentPanel = gui.Panel {
         width = "100%+12", --make it take the whole space of the parent + scrollbar area
         height = "auto",
         flow = "vertical",
-        dragTarget = true,
+        dragTarget = dragTarget,
         dragTargetPriority = 1,
+        styles = styles,
         classes = { "contentPanel" },
         x = cond(folderid == "", 0, 8),
 
@@ -318,7 +386,7 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
 
                 if member.nodeType == "pdf" or member.nodeType == "image" or member.nodeType == "pdffragment" or member.nodeType == "custom" then
                     p = m_documentPanels[k] or gui.Panel {
-                        draggable = true,
+                        draggable = dragTarget,
                         hover = function(element)
                             if member.nodeType ~= "pdf" then
                                 return
@@ -529,6 +597,25 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
                             element.data.ord = string.lower("b" .. doc.description)
                             element.data.doc = doc
 
+                            --try to order according to info bubbles.
+                            if member.nodeType == "custom" then
+                                local ord = nil
+                                local bubbles = dmhub.infoBubbles
+                                for k, bubble in pairs(bubbles) do
+                                    if bubble.document ~= nil then
+                                        local doc = bubble.document:GetMarkdownDocument()
+                                        if doc ~= nil and doc.id == member.id then
+                                            ord = bubble.document.ord
+                                        end
+                                    end
+                                end
+
+                                if ord ~= nil then
+                                    element.data.ord = string.format("b%09d-%s", ord, doc.description)
+                                end
+                            end
+
+
                             if member.nodeType == "pdf" then
                                 local bookmarks = doc.bookmarks
                                 local bookmarksSorted = {}
@@ -724,9 +811,52 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
                                 click = function(element)
                                 end,
                             },
+                            gui.Label{
+                                width = 16,
+                                height = 16,
+                                cornerRadius = 8,
+                                borderWidth = 1,
+                                borderColor = Styles.textColor,
+                                bgimage = true,
+                                bgcolor = "black",
+                                textAlignment = "center",
+                                color = Styles.textColor,
+                                bold = true,
+                                text = "1",
+                                fontSize = 11,
+                                create = function(element)
+                                    if member.parentFolder == game.currentMapId then
+                                        local found = false
+                                        if member.nodeType == "custom" then
+                                            local bubbles = dmhub.infoBubbles
+                                            for k, bubble in pairs(bubbles) do
+                                                if bubble.document ~= nil then
+                                                    local doc = bubble.document:GetMarkdownDocument()
+                                                    if doc ~= nil and doc.id == member.id then
+                                                        element.text = bubble.icon
+                                                        found = true
+                                                        break
+                                                    end 
+                                                end
+                                            end
+                                        end
+
+                                        element:SetClass("collapsed", not found)
+                                    else
+                                        element:SetClass("collapsed", true)
+                                    end
+                                end,
+                            },
                             gui.Panel {
                                 classes = { "icon" },
-                                bgimage = cond(member.nodeType == "pdf", "icons/icon_app/icon_app_137.png", "icons/icon_app/icon_app_34.png"), --choose pdf or image icon.
+                                create = function(element)
+                                    if member.parentFolder == game.currentMapId then
+                                        element:SetClass("collapsed", true)
+                                    else
+                                        element:SetClass("collapsed", false)
+                                        element.bgimage = cond(member.nodeType == "pdf", "icons/icon_app/icon_app_137.png", "icons/icon_app/icon_app_34.png") --choose pdf or image icon.
+                                    end
+                                end,
                             },
                             gui.Label {
                                 data = {},
@@ -908,6 +1038,9 @@ CreateJournalPanel = function()
                 element:FireEvent("refreshAssets")
             end,
 
+            monitorGame = cond(dmhub.isDM, mod:GetDocumentSnapshot(g_adventureDocumentId).path),
+            monitorGameEvent = "refreshAssets",
+
             monitorAssets = { "documents", "images", "objecttables" },
             refreshAssets = function(element)
                 journalPanel.data.documentFoldersTable = {
@@ -919,6 +1052,12 @@ CreateJournalPanel = function()
                 }
 
                 if dmhub.isDM then
+                    journalPanel.data.documentFoldersTable.adventure = {
+                        description = "Current Adventure",
+                        parentFolder = "",
+                        nodeType = "builtinFolder",
+                    }
+
                     journalPanel.data.documentFoldersTable.templates = {
                         description = "Templates",
                         parentFolder = "",
@@ -953,6 +1092,27 @@ CreateJournalPanel = function()
                 end
 
                 local foldersToMembers = {}
+
+                local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
+                if dmhub.isDM then
+                    local adventureDocuments = mod:GetDocumentSnapshot(g_adventureDocumentId)
+                    if adventureDocuments ~= nil and adventureDocuments.data ~= nil and adventureDocuments.data.slots ~= nil then
+                        for i=1,2 do
+                            local key = string.format("slot%d", i)
+                            local docid = adventureDocuments.data.slots[key]
+                            if docid ~= nil and docid ~= "" then
+                                local doc = customDocs[docid]
+                                if doc ~= nil and not doc.hidden then
+                                    local parentFolder = "adventure"
+                                    local members = foldersToMembers[parentFolder] or {}
+                                    members[docid] = doc
+                                    foldersToMembers[parentFolder] = members
+                                end
+                            end
+                        end
+                    end
+                end
+
                 local docs = assets.pdfDocumentsTable
                 for k, doc in pairs(docs or {}) do
                     if not doc.hidden then
@@ -982,7 +1142,6 @@ CreateJournalPanel = function()
                     print("FRAGMENT::", k, fragment.description)
                 end
 
-                local customDocs = dmhub.GetTable(CustomDocument.tableName) or {}
                 for k, doc in unhidden_pairs(customDocs) do
                     local parentFolder = doc.parentFolder
                     local members = foldersToMembers[parentFolder] or {}

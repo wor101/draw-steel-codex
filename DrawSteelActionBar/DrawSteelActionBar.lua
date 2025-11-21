@@ -3388,7 +3388,6 @@ CreateAbilityController = function()
                     g_pointTargeting.showingMovementArrow = true
                     clearMovementArrow = false
                 elseif (shape == 'emptyspace' or shape == 'anyspace') and (targetingType == "straightline" or targetingType == "straightpath" or targetingType == "straightpathignorecreatures") then
-                    local isSlide = g_currentAbility:ForcedMovementType() == "slide"
                     local waypoints = {}
                     for _, pos in ipairs(m_positionTargetsChosen) do
                         waypoints[#waypoints + 1] = pos.loc
@@ -3397,9 +3396,8 @@ CreateAbilityController = function()
                     g_currentSymbols.waypoints = waypoints
 
                     local movementInfo = g_token:MarkMovementArrow(loc, {
-                        straightline = not isSlide,
+                        straightline = true,
                         ignorecreatures = (targetingType == "straightpathignorecreatures"),
-                        waypoints = isSlide and waypoints or nil
                     })
                     
                     if movementInfo ~= nil then
@@ -3420,7 +3418,7 @@ CreateAbilityController = function()
                         local requestDist = math.min(loc:DistanceInTiles(path.origin), abilityDist)
                         local pathDist = path.destination:DistanceInTiles(path.origin)
 
-                        if pathDist < requestDist and (g_currentAbility:try_get("targeting", "direct") == "straightline" or g_currentAbility:ForcedMovementType() == "slide") and g_token.properties:CalculateNamedCustomAttribute("No Damage From Forced Movement") == 0 then
+                        if pathDist < requestDist and (g_currentAbility:try_get("targeting", "direct") == "straightline") and g_token.properties:CalculateNamedCustomAttribute("No Damage From Forced Movement") == 0 then
                             local prevOvershoot = g_pointTargeting.pathEndOvershoot
                             g_pointTargeting.pathEndOvershoot = abilityDist - pathDist
 
@@ -3778,8 +3776,7 @@ CreateAbilityController = function()
             assert(g_token ~= nil)
             assert(g_currentAbility ~= nil, "Current ability is not set.")
 
-            local slide = g_currentAbility:ForcedMovementType() == "slide"
-            if loc ~= nil and (g_pointTargeting.shapeRequiresConfirm and not slide) and g_pointTargeting.shape ~= nil then
+            if loc ~= nil and (g_pointTargeting.shapeRequiresConfirm) and g_pointTargeting.shape ~= nil then
                 g_pointTargeting.shapeRequiresConfirm = false
                 g_pointTargeting.shapeConfirmedLoc = loc
                 return
@@ -3838,8 +3835,7 @@ CreateAbilityController = function()
                     return
                 end
 
-                print("WAYPOINT:: SLIDE =", slide)
-                if targetingType == "pathfind" or targetingType == "vacated" or slide then
+                if targetingType == "pathfind" or targetingType == "vacated" then
                     --allow waypoint selection.
 
                     ClearRadiusMarkers()

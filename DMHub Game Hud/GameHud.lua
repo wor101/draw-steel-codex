@@ -624,6 +624,48 @@ local function CreateLobbyHud(dialog, tokenInfo)
     return gamehud
 end
 
+function GameHud:CreateAdventureDocumentsManager()
+    local resultPanel
+
+    local m_docs = nil
+
+    --a dummy panel to monitor changes to the adventure documents.
+    resultPanel = gui.Panel{
+        floating = true,
+        width = 1,
+        height = 1,
+
+        monitorGame = GetCurrentAdventuresDocument().path,
+        refreshGame = function(element)
+            local doc = GetCurrentAdventuresDocument()
+            local docs = doc.data.slots or {}
+            if dmhub.DeepEqual(m_docs, docs) then
+                return
+            end
+
+            m_docs = DeepCopy(docs)
+
+            local documentids = {}
+            for i=1,2 do
+                local key = string.format("slot%d", i)
+                local docid = doc.data.slots and doc.data.slots[key]
+                if docid ~= nil then
+                    documentids[#documentids+1] = docid
+                end
+            end
+
+            TopBar.SetAdventureDocuments(documentids)
+        end,
+
+        destroy = function(element)
+            TopBar.SetAdventureDocuments({})
+            print("ADVENTURE:: DESTROY DOC")
+        end,
+    }
+
+    return resultPanel
+end
+
 GameHud.InvalidateGameHud = function()
 
 dmhub.CreateGameHud = function(dialog, tokenInfo)
@@ -901,6 +943,7 @@ dmhub.CreateGameHud = function(dialog, tokenInfo)
 		},
 
 		children = {
+            gamehud:CreateAdventureDocumentsManager(),
 		    gamehud:CreateInitiativeBar(tokenInfo),
 			gamehud:CreateShapesLayer(),
 

@@ -792,7 +792,7 @@ function GameHud.CreateInitiativeBar(self, info)
     if dmhub.isDM then
         --reset turn button -- resets to checkpoint.
         resetTurnButton = gui.Panel {
-            bgimage = "icons/icon_tool/icon_power.png",
+            bgimage = "panels/hud/anticlockwise-rotation.png",
             bgcolor = "#ffffffaa",
             halign = "right",
             valign = "center",

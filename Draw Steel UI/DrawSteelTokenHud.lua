@@ -337,6 +337,7 @@ TokenHud.RegisterPanel{
                 hover = function(element)
                     if token.canControl then
                         audio.FireSoundEvent("Mouse.Hover")
+                        gui.Tooltip("Click to take your turn now.")(element)
                     end
                 end,
 

@@ -160,14 +160,21 @@ local function StripSpoilers(text)
     return result
 end
 
-local g_hardwiredPowerTables = {
-    ["|easy"] = {"You succeed on the task and incur a consequence.", "You succeed on the task.", "You succeed on the task with a reward."},
-    ["|medium"] = {"You fail the task.", "You succeed on the task and incur a consequence.", "You succeed on the task."},
-    ["|hard"] = {"You fail the task and incur a consequence.", "You fail the task.", "You succeed on the task."},
+local g_hardwiredPowerTableList = {
+    { preset = "|easy", tiers = {"You succeed on the task and incur a consequence.", "You succeed on the task.", "You succeed on the task with a reward."}, },
+    { preset = "|medium", tiers = {"You fail the task.", "You succeed on the task and incur a consequence.", "You succeed on the task."}, },
+    { preset = "|hard", tiers = {"You fail the task and incur a consequence.", "You fail the task.", "You succeed on the task."}, },
 }
 
+local g_hardwiredPowerTables = {}
+
+for _,info in ipairs(g_hardwiredPowerTableList) do
+    g_hardwiredPowerTables[info.preset] = info.tiers
+end
+
 local BreakdownRichTags
-BreakdownRichTags = function(content, result, options)
+BreakdownRichTags = function(content, result, options, extraOutput)
+    extraOutput = extraOutput or {}
     options = options or {}
     local isPlayer = options.player
 
@@ -226,6 +233,51 @@ BreakdownRichTags = function(content, result, options)
         local currentIndent = ""
         local skipping = false
         local str = line
+
+        if skipLines <= 0 then
+            local conditional = regex.MatchGroups(str, "^ *\\?\\?\\?(?<condition>.*)$")
+            if conditional ~= nil and trim(conditional.condition) == "" then
+                skipLines = 1
+            elseif conditional ~= nil then
+                local query = trim(conditional.condition)
+                local result = dmhub.Execute(query)
+                if result == nil then
+                    result = false
+                end
+                local queries = extraOutput.queries or {}
+                extraOutput.queries = queries
+                queries[query] = result
+                if tonumber(result) == 0 or result == "" or result == false then
+                    local ndeep = 1
+
+                    local nskip = 1
+
+                    for j=i+1,#lines do
+                        local line = lines[j]
+                        local s = line
+                        local m = regex.MatchGroups(s, "^ *\\?\\?\\?(?<condition>.*)$")
+                        if m ~= nil then
+                            if trim(m.condition) == "" then
+                                ndeep = ndeep - 1
+                            else
+                                ndeep = ndeep + 1
+                            end
+                        end
+                        nskip = nskip + 1
+                        if ndeep == 0 then
+                            break
+                        end
+                    end
+
+                    skipLines = nskip
+                else
+                    skipLines = 1
+                end
+            end
+        end
+
+
+
         if skipLines > 0 then
             skipLines = skipLines - 1
             str = ""
@@ -333,6 +385,8 @@ BreakdownRichTags = function(content, result, options)
                     attr = powerRollMatch.attr,
                     tiers = g_hardwiredPowerTables[nextLine],
                     preset = nextLine,
+                    lines = options.linesContext or lines,
+                    lineIndex = options.lineIndexContext or i,
                 }
                 str = ""
             end
@@ -645,6 +699,7 @@ local g_linkStyles = {
 local function PowerRollDisplay(doc)
     local resultPanel
 
+    local m_token = nil
     local m_info = nil
 
     resultPanel = gui.Panel {
@@ -707,19 +762,45 @@ local function PowerRollDisplay(doc)
             gui.Label{
                 styles = g_linkStyles,
                 lmargin = 8,
-                fontSize = 14,
+                fontSize = 16,
+                width = 120,
+                height = 18,
+                valign = "center",
                 text = "",
-                refreshPowerRoll = function(element, info)
-                    if info.preset == nil then
+                refreshPowerRoll = function(element, token)
+                    if token.preset == nil then
                         element:SetClass("collapsed", true)
                         return
                     end
 
+                    print("INFO::", token)
+                    element.data.token = token
                     element:SetClass("collapsed", false)
-                    element.text = info.preset
+                    element.text = string.sub(token.preset, 2)
                 end,
 
                 press = function(element)
+                    local token = element.data.token
+                    if token == nil then
+                        return
+                    end
+
+                    local nextIndex = 1
+                    for i=1,#g_hardwiredPowerTableList do
+                        local info = g_hardwiredPowerTableList[i]
+                        if info.preset == token.preset then
+                            nextIndex = i+1
+                            if nextIndex > #g_hardwiredPowerTableList then
+                                nextIndex = 1
+                            end
+                            break
+                        end
+                    end
+
+                    local lines = table.shallow_copy(token.lines)
+                    lines[token.lineIndex+1] = g_hardwiredPowerTableList[nextIndex].preset
+                    doc:SetTextContent(table.concat(lines, "\n"))
+                    doc:Upload()
                 end,
             },
         },
@@ -846,6 +927,23 @@ function MarkdownDocument.DisplayPanel(self, args)
         valign = "center",
         hpad = 6,
         vscroll = true,
+        think = function(element)
+            if element.data.queries == nil then
+                return
+            end
+
+            for k,v in pairs(element.data.queries) do
+                local result = dmhub.Execute(k)
+                if result == nil then
+                    result = false
+                end
+
+                if result ~= v then
+                    element:FireEvent("refreshDocument")
+                    break
+                end
+            end
+        end,
         savedoc = function(element)
             element:FireEvent("refreshDocument")
         end,
@@ -880,7 +978,17 @@ function MarkdownDocument.DisplayPanel(self, args)
 
             local tagsSeen = {}
 
-            local tokens = BreakdownRichTags(self:GetTextContent(), nil, { player = self:IsPlayerView(element) })
+            local richTagInfo = {}
+            local tokens = BreakdownRichTags(self:GetTextContent(), nil, { player = self:IsPlayerView(element) }, richTagInfo)
+
+            if richTagInfo.queries ~= nil then
+                element.thinkTime = 0.2
+                element.data.queries = richTagInfo.queries
+            else
+                element.thinkTime = nil
+                element.data.queries = nil
+            end
+
             --print("BREAKDOWN::", tokens)
             for i, token in ipairs(tokens) do
                 if token.type == "justification" then
@@ -1250,6 +1358,9 @@ function MarkdownDocument.DisplayPanel(self, args)
                         hoverLink = function(element, link)
                             print("LINK:: HOVER", link, element.linkHovered)
                             CustomDocument.PreviewLink(element, link)
+                        end,
+                        dehoverLink = function(element, link)
+                            element.tooltip = nil
                         end,
                         press = function(element)
                             if element.linkHovered ~= nil then

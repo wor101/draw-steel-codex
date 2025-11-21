@@ -2133,7 +2133,7 @@ creature.RegisterSymbol {
 				local ongoingEffectInfo = ongoingEffectsTable[cond.ongoingEffectid]
 				--if this ongoing effect has an underlying condition then record us having that condition since conditions can also have modifiers.
 				if ongoingEffectInfo.condition ~= 'none' then
-					conditions[ongoingEffectInfo.condition] = true
+					conditions[ongoingEffectInfo.condition] = 1
 				end
 			end
 		end
@@ -3811,3 +3811,8 @@ function creature:AddTitle(titleid)
     titles[titleid] = true
     
 end
+
+dmhub.RegisterEventHandler("ClearTemporaryState", function()
+    print("CLEARSTATE:: CLEARING STATE", #dmhub.allTokens)
+
+end)

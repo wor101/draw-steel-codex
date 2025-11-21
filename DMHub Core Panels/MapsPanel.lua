@@ -263,7 +263,7 @@ local CreateMapNode = function(map)
             }
 		},
 
-		gui.FancyButton{
+		gui.Button{
 			width = 100,
 			height = 36,
 			text = "Enter Map",

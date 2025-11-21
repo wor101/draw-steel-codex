@@ -150,6 +150,9 @@ function GameHud:CreateDocumentDialog()
                             press = function(element)
                                 resultPanel:FireEvent('refreshBubbleDocument', dmhub.infoBubbles[id])
                             end,
+                            refreshBubbleDocument = function(element, info)
+                                element:SetClassTree('selected', id == info.id)
+                            end,
                             rightClick = function(element)
                                 local currentInfo = dmhub.infoBubbles[id]
                                 local maxOrd = nil
@@ -559,6 +562,10 @@ function GameHud:CreateDocumentDialog()
                 textAlignment = 'left',
             },
             {
+                selectors = { 'left-panel-child-label', 'selected' },
+                color = "black",
+            },
+            {
                 selectors = { 'left-panel-child-bubble' },
                 halign = "left",
                 valign = "center",
@@ -593,6 +600,10 @@ function GameHud:CreateDocumentDialog()
                 borderWidth = 2,
                 borderColor = Styles.textColor,
                 bgcolor = '#00000000',
+            },
+            {
+                selectors = { 'left-panel-child', 'selected' },
+                bgcolor = Styles.textColor,
             },
             {
                 selectors = { 'left-panel-child', 'hover' },
