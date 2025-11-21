@@ -20,6 +20,26 @@ function creature:GetMentor()
     return
 end
 
+function creature:Retainers()
+    return {}
+end
+
+function character:Retainers()
+    local retainers = {}
+    local followers = self:GetFollowers()
+
+    for _, follower in ipairs(followers) do
+        if follower and follower.type == "retainer" then
+            local retainerToken = dmhub.GetTokenById(follower.retainerToken)
+            if retainerToken ~= nil then
+                retainers[#retainers + 1] = retainerToken
+            end
+        end
+    end
+
+    return retainers
+end
+
 function monster:GetMentor()
     local token = dmhub.LookupToken(self)
     local partyMembers = dmhub.GetCharacterIdsInParty(token.partyid) or {}
