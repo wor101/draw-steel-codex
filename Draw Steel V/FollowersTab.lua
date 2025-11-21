@@ -1,13 +1,5 @@
 local mod = dmhub.GetModLoading()
 
-function character:GetFollowers()
-    return self:try_get("followers") or {}
-end
-
-function monster:GetFollowers()
-    return {}
-end
-
 --Called by CharSheet.FeaturesAndNotesPanel to create the Followers tab
 function CharSheet.CreateFollowersPanel()
     return gui.Panel {
@@ -130,16 +122,18 @@ function CharSheet.FollowersInnerPanel()
                 library = "Avatar",
                 restrictImageType = "Avatar",
                 allowPaste = true,
+                value = follower.portrait or false,
 
-                thinkTime = 0.2,
-                think = function(element)
-                    element:FireEvent("imageLoaded")
-                end,
-
-                refreshToken = function(element, info)
-                    if follower and follower.portrait then
-                        element:SetValue(follower.portrait, false)
-                        element:FireEvent("imageLoaded")
+                refreshAll = function(element, info)
+                    if follower and follower.retainerToken then
+                        local followerToken = dmhub.GetTokenById(follower.retainerToken)
+                        if followerToken then
+                            local portrait = followerToken.portrait
+                            follower.portrait = portrait
+                            element.value = portrait
+                        end
+                    else
+                        element.value = follower.portrait or false
                     end
                 end,
 
@@ -374,11 +368,38 @@ function CharSheet.FollowersInnerPanel()
         return resultsPanel
     end
 
+    local RetainerDropdownOptions = function(partyid)
+        local results = {
+            {
+                id = "none",
+                text = "Select Retainer Token",
+            },
+        }
+
+        local partyMembers = dmhub.GetCharacterIdsInParty(partyid) or {}
+        for _, charid in pairs(partyMembers) do
+            local token = dmhub.GetTokenById(charid)
+            if token ~= nil then
+                if token.properties:IsRetainer() then
+                    results[#results + 1] = {
+                        id = charid,
+                        text = token.name,
+                    }
+                end
+            end
+        end
+
+        return results
+    end
+
     local CreateFollowersSection = function(i, params)
         local resultPanel
 
-        local followers = CharacterSheet.instance.data.info.token.properties:GetFollowers()
+        local tok = CharacterSheet.instance.data.info.token
+        local followers = tok.properties:GetFollowers()
         local follower = followers[i]
+
+        local retainerOptions = RetainerDropdownOptions(tok.partyid)
 
         local args = {
             classes = {"framedPanel"},
@@ -397,7 +418,7 @@ function CharSheet.FollowersInnerPanel()
             styles = Styles,
 
             refreshToken = function(element, info)
-                local followers = info.token.properties:GetFollowers()
+                followers = info.token.properties:GetFollowers()
                 follower = followers[i]
             end,
 
@@ -415,9 +436,16 @@ function CharSheet.FollowersInnerPanel()
                         element:FireEvent("change")
                     end,
 
-                    refreshToken = function(element, info)
-                        if follower then
-                            element.text = follower.name
+                    refreshAll = function(element, info)
+                        if follower and follower.retainerToken then
+                            local followerToken = dmhub.GetTokenById(follower.retainerToken)
+                            if followerToken then
+                                element.text = creature.GetTokenDescription(followerToken)
+                            end
+                            element.editable = false
+                        else
+                            element.text = follower.name or "Unnamed"
+                            element.editable = true
                         end
                     end,
 
@@ -491,9 +519,19 @@ function CharSheet.FollowersInnerPanel()
                         },
 
                         gui.Panel{
+                            classes = {cond(follower.type == "retainer", "collapsed-anim")},
                             flow = "horizontal",
                             width = "auto",
                             height = 30,
+
+                            refreshAll = function(element)
+                                if follower.type ~= "retainer" then
+                                    element:SetClass("collapsed-anim", false)
+                                else
+                                    element:SetClass("collapsed-anim", true)
+                                end
+                            end,
+
                             gui.Label{
                                 classes = { "followerLabel"},
                                 width = "auto",
@@ -563,6 +601,8 @@ function CharSheet.FollowersInnerPanel()
                                 else
                                     element:SetClass("collapsed-anim", true)
                                 end
+
+                                retainerOptions = RetainerDropdownOptions(tok.partyid)
                             end,
 
                             gui.Label{
@@ -573,7 +613,7 @@ function CharSheet.FollowersInnerPanel()
                             },
 
                             gui.Dropdown{
-                                options = {},
+                                options = retainerOptions,
 
                                 idChosen = follower.retainerToken or "none",
                                 
