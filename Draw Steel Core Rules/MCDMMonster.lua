@@ -61,6 +61,10 @@ function monster:FillMonsterActivatedAbilities(options, result)
 
     self:FillFreeStrikes(options, result)
 
+    if self:try_get("retainer", false) then
+        return
+    end
+
     local group = self:MonsterGroup()
     local foundDefaultMalice = false
     if group ~= nil then
@@ -823,6 +827,23 @@ monster.RegisterSymbol{
         name = "Free Strike Range",
         type = "number",
         desc = "The free strike range of the monster.",
+        seealso = {},
+    }
+}
+
+monster.RegisterSymbol{
+    symbol = "ev",
+    lookup = function(c)
+        if c:IsMonster() then
+            return c.ev or 1
+        end
+
+        return 0
+    end,
+    help = {
+        name = "EV",
+        type = "number",
+        desc = "The EV of the monster.",
         seealso = {},
     }
 }
