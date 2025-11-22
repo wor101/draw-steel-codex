@@ -420,7 +420,7 @@ local function ActionBarDrawer(args)
             },
 
             refresh = function(element)
-                local movementSpeed = g_creature:CurrentMovementSpeed()
+                local movementSpeed = math.max(0, g_creature:CurrentMovementSpeed())
                 local moved = g_creature:DistanceMovedThisTurn()
 
                 --find the movement speed base, without temporary modifiers.
