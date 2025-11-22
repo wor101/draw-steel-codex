@@ -96,6 +96,7 @@ function ActivatedAbilityTransformBehavior:Cast(ability, casterToken, targets, a
 							transformid = chosenOption.id,
 							untilEndOfTurn = self.durationUntilEndOfTurn,
 							temporary_hitpoints = tempHitpoints,
+							tempHitpointsEndEffect = tempHitpoints == nil,
 						})
 					end
 				}
