@@ -502,7 +502,7 @@ BreakdownRichTags = function(content, result, options, extraOutput)
                 }
             else
                 local linepos = (#line - #str) + #match.prefix
-                local len = #match.tag + 4
+                local len = #line - (#match.prefix + #match.suffix)
 
                 if options.linePrefix then
                     linepos = linepos + #options.linePrefix

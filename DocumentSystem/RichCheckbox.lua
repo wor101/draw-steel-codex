@@ -25,7 +25,7 @@ function RichCheckbox.CreateDisplay(self)
             m_space = match.space or ""
             m_name = match.name or ""
             element.data.SetText(match.name)
-            element.value = (match.value == "x" or match.value == "X")
+            element:SetValue(match.value == "x" or match.value == "X", false)
             element:SetClass("uploading", false)
             element:SetClassTree("disabled", token.player)
         end,

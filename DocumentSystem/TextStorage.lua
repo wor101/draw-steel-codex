@@ -179,6 +179,8 @@ function TextStorage:SetContent(str)
     local keys = table.keys(self.sections)
     table.sort(keys)
 
+    --print("MERGE:: SET TEXT", str)
+
     local startSections = {}
     local endSections = {}
 
