@@ -81,7 +81,7 @@ function FSCIImporter:_importCharacterInfo()
     self:_importCareer()
     self:_importClass()
     self:_importComplication()
-    self:_setImport()
+    -- self:_setImport() -- Tab no longer included in the character sheet so don't burn the space
 
     writeLog("Import Character complete.", STATUS.INFO, -1)
     writeDebug("IMPORTCHARACTER:: COMPLETE::")
