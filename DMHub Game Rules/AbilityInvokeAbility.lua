@@ -254,10 +254,6 @@ function ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(invokerToken, abili
 
 	local casting = false
 
-    if abilityClone:RequiresPromptWhenCast() then
-        targeting = "prompt"
-    end
-
 	symbols.invoker = symbols.invoker or GenerateSymbols(invokerToken.properties)
     local invoker = symbols.invoker
     if type(invoker) == "function" then
@@ -330,9 +326,23 @@ function ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(invokerToken, abili
                     end
                 end
             end
-            abilityClone:Cast(casterToken, targets, {
-                symbols = symbols,
-            })
+
+            if abilityClone:RequiresPromptWhenCast() then
+                local synth = abilityClone:SynthesizeAbilities(casterToken.properties)
+                if synth ~= nil and #synth == 1 then
+                    --if exactly one synthesized ability then just auto-cast it?
+                    abilityClone = synth[1]
+                end
+            end
+
+            if abilityClone:RequiresPromptWhenCast() then
+                abilityClone.skippable = true
+                gamehud.actionBarPanel:FireEventTree("invokeAbility", casterToken, abilityClone, symbols, invokerCallback, {instantCast = true, targets = targets})
+            else
+                abilityClone:Cast(casterToken, targets, {
+                    symbols = symbols,
+                })
+            end
         end
 
         print("INVOKE:: Waiting for cast to finish", abilityClone.name, coroutine.running())

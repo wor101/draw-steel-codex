@@ -1117,8 +1117,12 @@ local function AbilityHeading(args)
                 return
             end
 
-            print("ActionBar:: fire with g_token =", g_token)
-            g_abilityController:FireEventTree("beginCasting", m_ability, { cast = args.cast, fromui = true })
+            if args.instantCast then
+                m_ability = m_ability:MakeTemporaryClone()
+                m_ability.castImmediately = true
+            end
+
+            g_abilityController:FireEventTree("beginCasting", m_ability, { targets = args.targets, cast = args.cast, fromui = true })
         end,
 
         gui.Label {
@@ -2923,6 +2927,19 @@ CreateAbilityController = function()
             g_currentAbility = ability
             g_targetsChosen = {}
             g_firstTarget = nil
+
+            --transfer any packaged targets over. TODO: Work out how to pass in non-token targets.
+            if args.targets ~= nil then
+                for _,target in ipairs(args.targets) do
+                    if target.token ~= nil then
+                        g_targetsChosen[#g_targetsChosen + 1] = target.token.charid
+                    end
+                end
+            end
+            
+            if g_targetsChosen ~= nil then
+                g_firstTarget = g_targetsChosen[1]
+            end
             m_positionTargetsChosen = {}
             g_pointTargeting = {}
 
@@ -3232,7 +3249,8 @@ CreateAbilityController = function()
         end,
 
         --- @param invokerInfo nil|{oncast=nil|function, oncancel=nil|function}
-        invokeAbility = function(element, casterToken, ability, symbols, invokerInfo)
+        invokeAbility = function(element, casterToken, ability, symbols, invokerInfo, options)
+            options = options or {}
             gui.SetFocus(nil)
 
             g_invokerInfo = invokerInfo
@@ -3256,7 +3274,7 @@ CreateAbilityController = function()
             spellPanel.data.blockFocus = true
             --]]
 
-            g_synthesizedSpellsPanel:FireEvent("refreshSpell", { forceCasterToken = casterToken })
+            g_synthesizedSpellsPanel:FireEvent("refreshSpell", { forceCasterToken = casterToken, instantCast = options.instantCast, targets = options.targets })
         end,
 
         highlightTargetToken = function(element, targetToken)
