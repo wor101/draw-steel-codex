@@ -46,6 +46,16 @@ dmhub.RegisterEventHandler("EnterGame", function()
         return
     end
 
+    --see if we already have a character assigned.
+    local characters = game.GetGameGlobalCharacters()
+    for _,token in ipairs(characters) do
+        if token.ownerId == dmhub.userid then
+            print("EnterGame: HAS CHARACTER")
+            return
+        end
+    end
+
+
     ShowDocumentOnStart("New Player Welcome")
 end)
 
