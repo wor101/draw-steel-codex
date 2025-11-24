@@ -3596,8 +3596,101 @@ function CreateTitlescreen(dialog, options)
     titlescreen:AddChild(progressDice)
 
     dialog.sheet = titlescreen
+    titlescreen.data.dialog = dialog
     g_titlescreen = titlescreen
 end
+
+local ShowTermsOfService = function(titlescreen, args)
+    local dialog = titlescreen.data.dialog
+	args = args or {}
+	local forceAccept = args.forceAccept
+
+	local termsDialog
+	termsDialog = gui.Panel{
+        id = "termsOfService",
+        floating = true,
+		halign = "center",
+		valign = "center",
+		width = dialog.width,
+		height = dialog.height,
+
+		styles = {
+            Styles.Default,
+			Styles.Panel,
+		},
+		classes = {"framedPanel"},
+
+		flow = "vertical",
+
+		gui.Label{
+			color = Styles.textColor,
+			fontSize = 28,
+			width = "auto",
+			height = "auto",
+			halign = "center",
+			valign = "center",
+            text = "Terms of Service",
+			--text = cond(forceAccept, "We've updated our Terms of Use...", "Draw Steel Codex Terms of Service"),
+		},
+
+		gui.Panel{
+			width = "80%",
+			height = "60%",
+			vscroll = true,
+			halign = "center",
+			valign = "center",
+			gui.Label{
+				textAlignment = "topleft",
+				markdown = true,
+				fontSize = 16,
+				width = "100%-16",
+				height = "auto",
+				halign = "left",
+				valign = "top",
+				text = termsAndOngoingEffectsText,
+			},
+		},
+
+		gui.Panel{
+			halign = "center",
+			valign = "center",
+			flow = "horizontal",
+			width = 600,
+
+			gui.Button{
+				classes = {"loginButton", cond(not forceAccept, "collapsed")},
+				text = "Decline & Exit",
+                halign = "center",
+                fontSize = 24,
+                width = 240,
+                height = 30,
+				click = function(element)
+					termsDialog:DestroySelf()
+					dmhub.QuitApplication()
+				end,
+			},
+
+			gui.Button{
+				classes = {"loginButton"},
+				text = cond(forceAccept, "I Agree", "Close"),
+                halign = "center",
+                fontSize = 24,
+                width = 240,
+                height = 30,
+				click = function(element)
+					termsDialog:DestroySelf()
+					if args.onaccept then
+						args.onaccept()
+					end
+				end,
+			},
+
+		}
+	}
+
+	titlescreen:AddChild(termsDialog)
+end
+
 
 if rawget(_G, "TitlescreenVersion") ~= 2 then
     TitlescreenVersion = 2
@@ -3607,7 +3700,22 @@ if rawget(_G, "TitlescreenVersion") ~= 2 then
 
     print("LOBBYGAME:: ENTERING...")
     dmhub.RecreateTitlescreen()
-    lobby:EnterLobbyGame(function()
-        g_titlescreen:FireEventTree("lobbyGameLoaded")
-    end)
+
+    if dmhub.termsOfServiceUpToDate then
+        lobby:EnterLobbyGame(function()
+            dmhub.TermsOfServiceAccepted()
+            g_titlescreen:FireEventTree("lobbyGameLoaded")
+        end)
+    else
+        ShowTermsOfService(g_titlescreen, {
+            forceAccept = true,
+            onaccept = function()
+                lobby:EnterLobbyGame(function()
+                    dmhub.TermsOfServiceAccepted()
+                    g_titlescreen:FireEventTree("lobbyGameLoaded")
+                end)
+            end,
+        })
+    end
+
 end
