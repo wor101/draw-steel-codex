@@ -1243,11 +1243,12 @@ end
 --- @param notes {string}|nil
 --- @return string
 function ActivatedAbilityDrawSteelCommandBehavior.NormalizeDamageRuleTextForCreature(caster, rule, notes)
+    local original = rule
     --search for something like 7 + M, A, or I damage
     local matchDamageWithCharacteristic = regex.MatchGroups(rule, "^(?<prefix>.*?)(?<number>[0-9]+)\\s*\\+\\s*(?<attr>[MARIPmarip, ]+,? or [MARIPmarip]+)(\\s*(?<suffix>.*)|(?<suffix>[;,].*))?$")
     if matchDamageWithCharacteristic == nil then
         --try to find with just a single attribute.
-        matchDamageWithCharacteristic = regex.MatchGroups(rule, "^(?<prefix>.*?)(?<number>[0-9]+)\\s*\\+\\s*(?<attr>[A-Za-z])(\\s*(?<suffix>.*)|(?<suffix>[;,].*))?$")
+        matchDamageWithCharacteristic = regex.MatchGroups(rule, "^(?<prefix>.*?)(?<number>[0-9]+)\\s*\\+\\s*(?<attr>[MARIPmarip](?![A-Za-z]))(\\s*(?<suffix>.*)|(?<suffix>[;,].*))?$")
     end
     if matchDamageWithCharacteristic ~= nil then
         local baseDamage = tonumber(matchDamageWithCharacteristic.number)
