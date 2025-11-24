@@ -9618,6 +9618,12 @@ function creature:IsValid()
         end
     end
 
+	local triggeredEvents = self:try_get("triggeredEvents")
+    if triggeredEvents ~= nil and #triggeredEvents > 0 and triggeredEvents[1] == nil then
+        --this has happened sometimes, so we repair it in this case.
+        return false
+    end
+
 	return true
 end
 
@@ -9766,6 +9772,11 @@ function creature:Repair(localOnly)
 
     for _,key in ipairs(deleteList) do
         self.availableTriggers[key] = nil
+    end
+
+	local triggeredEvents = self:try_get("triggeredEvents")
+    if triggeredEvents ~= nil and #triggeredEvents > 0 and triggeredEvents[1] == nil then
+        self.triggeredEvents = nil
     end
 
 	if tok ~= nil then
