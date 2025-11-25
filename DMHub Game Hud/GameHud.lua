@@ -33,9 +33,10 @@ function GameHud.Refresh(self)
 
 	if self:try_get("hasRefreshed", false) == false then
 		self.hasRefreshed = true
-		if dmhub.isDM and dmhub.GetSettingValue("showtutorial") then
-			LaunchablePanel.GetOrLaunchPanel("Tutorial")
-		end
+        --turn off launching tutorial on startup.
+		--if dmhub.isDM and dmhub.GetSettingValue("showtutorial") then
+		--	LaunchablePanel.GetOrLaunchPanel("Tutorial")
+		--end
 	end
 end
 

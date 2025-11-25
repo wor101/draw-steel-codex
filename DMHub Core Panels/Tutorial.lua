@@ -2,6 +2,7 @@ local mod = dmhub.GetModLoading()
 
 local CreateTutorialDialog
 
+--[[
 LaunchablePanel.Register{
     name = "Tutorial",
     icon = mod.images.help,
@@ -16,6 +17,7 @@ LaunchablePanel.Register{
 		return CreateTutorialDialog()
 	end,
 }
+]]
 
 local goblinGuid = "76de605d-434b-4210-905f-5c47caf159cf"
 
