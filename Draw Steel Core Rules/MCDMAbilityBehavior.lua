@@ -993,12 +993,8 @@ function ActivatedAbilityDrawSteelCommandBehavior:ExecuteCommandInternal(ability
     if gateMatch ~= nil then
         --see if the condition gate is exceeded.
         local gate
-        if gateMatch.gate == "weak" then
-            gate = casterToken.properties:HighestCharacteristic()-2
-        elseif gateMatch.gate == "average" then
-            gate = casterToken.properties:HighestCharacteristic()-1
-        elseif gateMatch.gate == "strong" then
-            gate = casterToken.properties:HighestCharacteristic()
+        if type(gateMatch.gate) == "string" then
+            gate = casterToken.properties:CalcuatePotencyValue(gateMatch.gate)
         else
             gate = tonumber(gateMatch.gate)
         end
@@ -1305,7 +1301,7 @@ end
 function ActivatedAbilityDrawSteelCommandBehavior.DisplayRuleTextForCreature(caster, rule, notes, fullyImplemented)
     local starting = rule
     if caster ~= nil then
-        local potency = caster:Potency()
+        local potency = caster:CalcuatePotencyValue("Strong")
         local startingRule = rule
 
         --old way. Deprecate later?
