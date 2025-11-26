@@ -693,6 +693,32 @@ Commands.spawn = function(str)
     end
 end
 
+Commands.relocate = function(str)
+    if str == "help" then
+        dmhub.Log("Usage: /relocate x1 y1 x2 y2 \n Relocates all tokens from (x1, y1) to (x2, y2).")
+    end
+
+    local args = Commands.SplitArgs(str)
+    local x1 = tonum(args[1])
+    local y1 = tonum(args[2])
+    local x2 = tonum(args[3])
+    local y2 = tonum(args[4])
+
+    if x1 == nil or y1 == nil or x2 == nil or y2 == nil then
+        dmhub.Log("You must provide four numbers: x1 y1 x2 y2")
+        return
+    end
+
+    for _, token in ipairs(dmhub.allTokens) do
+        local locs = token.locsOccupying
+        for i,loc in ipairs(locs) do
+            if loc.x == x1 and loc.y == y1 then
+                token:ChangeLocation(core.Loc { x = x2, y = y2, floorIndex = loc.floorIndex }:WithGroundLevelAltitude())
+            end
+        end
+    end
+end
+
 --[[local GetDayTypeKey = function(floorid)
 	if game.FloorIsAboveGround(floorid) then
 		return 'daynight'
