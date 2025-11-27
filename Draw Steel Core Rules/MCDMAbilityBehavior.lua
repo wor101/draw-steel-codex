@@ -994,9 +994,9 @@ function ActivatedAbilityDrawSteelCommandBehavior:ExecuteCommandInternal(ability
         --see if the condition gate is exceeded.
         local gate
         if type(gateMatch.gate) == "string" then
-            gate = casterToken.properties:CalcuatePotencyValue(gateMatch.gate)
+            gate = casterToken.properties:CalculatePotencyValue(gateMatch.gate)
         else
-            gate = tonumber(gateMatch.gate)
+            gate = tonumber(gateMatch.gate) + casterToken.properties:CalculateNamedCustomAttribute("Potency Bonus")
         end
 
 
@@ -1301,7 +1301,7 @@ end
 function ActivatedAbilityDrawSteelCommandBehavior.DisplayRuleTextForCreature(caster, rule, notes, fullyImplemented)
     local starting = rule
     if caster ~= nil then
-        local potency = caster:CalcuatePotencyValue("Strong")
+        local potency = caster:CalculatePotencyValue("Strong")
         local startingRule = rule
 
         --old way. Deprecate later?
@@ -1313,6 +1313,15 @@ function ActivatedAbilityDrawSteelCommandBehavior.DisplayRuleTextForCreature(cas
         rule = regex.ReplaceAll(rule, "(if the target has )?(?<attr>[MARIP]) < \\[?weak\\]?", string.format("<color=#ff4444><uppercase>${attr}</uppercase> < %d</color>", potency-2))
         rule = regex.ReplaceAll(rule, "(if the target has )?(?<attr>[MARIP]) < \\[?average\\]?", string.format("<color=#ff4444><uppercase>${attr}</uppercase> < %d</color>", potency-1))
         rule = regex.ReplaceAll(rule, "(if the target has )?(?<attr>[MARIP]) < \\[?strong\\]?", string.format("<color=#ff4444><uppercase>${attr}</uppercase> < %d</color>", potency))
+
+        --Add potency bonus when numeric gate is used
+        local potencyBonus = caster:CalculateNamedCustomAttribute("Potency Bonus")
+        if starting == rule and potencyBonus > 0 then
+            rule = string.gsub(rule, "([MARIPmarip])%s*<%s*(%-?%d+)", function(attr, gate)
+                local adjustedGate = tonumber(gate) + potencyBonus
+                return string.format("<color=#ff4444><uppercase>%s</uppercase> < %d</color>", string.upper(attr), adjustedGate)
+            end)
+        end
 
         if rule ~= startingRule and notes ~= nil then
             notes[#notes+1] = string.format("<color=#ff4444>Caster has a Potency of %d</color>", potency)
