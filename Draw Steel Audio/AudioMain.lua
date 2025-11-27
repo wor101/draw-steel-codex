@@ -897,6 +897,8 @@ dmhub.TokenMovingOnPath = function(args)
     local burrowing = args.path.movementType == "burrow"
     local sound = (AudioSurfaceTypes.surfaces[surface] or {}).sound or "Foot.Generic_Generic"
 
+    local puddle = (AudioSurfaceTypes.surfaces[surface] or {}).puddleSound
+
     if flying then
        sound = "Foot.Fly_Wing"
     elseif burrowing then
@@ -947,6 +949,13 @@ dmhub.TokenMovingOnPath = function(args)
                 volume = volumeScale,
                 pitch = pitch,
             })
+
+            if puddle then
+                audio.FireSoundEvent("Foot.Swim_Generic", {
+                    volume = volumeScale*0.4,
+                    pitch = pitch,
+                })
+            end
 
             args.lastPlayed = (args.lastPlayed or 0) + playFrequency
         end
