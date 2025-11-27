@@ -1116,7 +1116,7 @@ function ActivatedAbilityPowerRollBehavior:Cast(ability, casterToken, targets, o
 
     --Allow modifiers to modify the casting of the power roll.
     --Limited to cost changes
-    for _, mod in ipairs(modifiersApplied) do
+    for _, mod in ipairs(modifiersApplied or {}) do
         mod.modifier:ModifyPowerRollCasting(mod.context, caster, ability, options)
     end
 
