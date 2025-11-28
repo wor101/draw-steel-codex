@@ -2234,6 +2234,7 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
 		CharacterPanel.SkillsPanel(m_token),
 		CharacterPanel.LanguagesPanel(m_token),
         CharacterPanel.AbilitiesPanel(m_token),
+        CharacterPanel.NotesPanel(m_token),
     }
 
     return resultPanel
@@ -3558,6 +3559,50 @@ CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, mem
 	element.data.folderPanels = newFolderPanels
 
 	return newMemberPanes
+end
+
+function CharacterPanel.NotesPanel(token)
+    local m_cache = nil
+    local resultPanel
+    resultPanel = gui.Label{
+        width = "100%",
+        height = "auto",
+        fontSize = 12,
+        tmargin = 8,
+        markdown = true,
+        links = true,
+        press = function(element)
+            if element.linkHovered ~= nil then
+                dmhub.OpenTutorialVideo(element.linkHovered)
+            end
+        end,
+        refreshToken = function(element, token)
+            local creature = token.properties
+            local notes = creature:try_get("notes")
+            if dmhub.DeepEqual(m_cache, notes) then
+                return
+            end
+
+            local text = ""
+            m_cache = DeepCopy(notes)
+            if notes ~= nil then
+                for _,note in ipairs(notes) do
+                    if note.text ~= nil and note.text ~= "" then
+                        local s = ""
+                        if text ~= "" then
+                            s = "\n\n"
+                        end
+
+                        text = string.format("%s%s##### %s\n%s", s, text, note.title, note.text)
+                    end
+                end
+            end
+
+            element.text = text
+        end,
+    }
+
+    return resultPanel
 end
 
 function CharacterPanel.AbilitiesPanel(token)
