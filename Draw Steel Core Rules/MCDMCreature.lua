@@ -240,13 +240,41 @@ local g_minionSquadTables = {}
 
 local g_baseRefreshToken = creature.RefreshToken
 
+function creature:GetFollowers()
+    return {}
+end
+
+function character:GetFollowers()
+    return self:get_or_add("followers", {})
+end
+
 creature._tmp_retainer = false
 function creature:IsRetainer()
     return false
 end
 
 function monster:IsRetainer()
-    return self._tmp_retainer
+    return self:try_get("retainer", false)
+end
+
+function creature:Retainers()
+    return {}
+end
+
+function character:Retainers()
+    local retainers = {}
+    local followers = self:GetFollowers()
+
+    for _, follower in ipairs(followers) do
+        if follower and follower.type == "retainer" then
+            local retainerToken = dmhub.GetTokenById(follower.retainerToken)
+            if retainerToken ~= nil then
+                retainers[#retainers + 1] = retainerToken
+            end
+        end
+    end
+
+    return retainers
 end
 
 function creature:IsHero()
@@ -255,6 +283,32 @@ end
 
 function character:IsHero()
     return true
+end
+
+function creature:GetMentor()
+    return
+end
+
+function monster:GetMentor()
+    local token = dmhub.LookupToken(self)
+    if token == nil then
+        return nil
+    end
+    local partyMembers = dmhub.GetCharacterIdsInParty(token.partyid) or {}
+
+    for _, charid in pairs(partyMembers) do
+        local charToken = dmhub.GetTokenById(charid)
+        if charToken ~= nil then
+            local followers = charToken.properties:GetFollowers()
+            for _, follower in ipairs(followers) do
+                if follower.retainerToken == token.charid then
+                    return charToken.properties
+                end
+            end
+        end
+    end
+
+    return
 end
 
 function creature:HeroicResourceHighWaterMarkForTurn()
@@ -813,6 +867,32 @@ creature.RegisterSymbol {
         desc = "The highest number of heroic resources this creature has had this turn. This is the high water mark for the turn and will not go down until the next turn.",
         seealso = { "Resources" },
     }
+}
+
+creature.RegisterSymbol {
+    symbol = "retainer",
+    lookup = function(c)
+        return c:IsRetainer()
+    end,
+    help = {
+        name = "Retainer",
+        type = "boolean",
+        desc = "If this creature is a retainer, this will be true.",
+        seealso = {},
+    },
+}
+
+creature.RegisterSymbol {
+    symbol = "mentor",
+    lookup = function(c)
+        return c:GetMentor()
+    end,
+    help = {
+        name = "Mentor",
+        type = "creature",
+        desc = "The mentor of this Retainer. Only valid if Retainer is true.",
+        seealso = {},
+    },
 }
 
 function creature:RecoveriesAvailableToSpend()
