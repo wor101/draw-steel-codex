@@ -4,7 +4,7 @@ RichFollower.tag = "follower"
 
 function RichFollower.Create()
     return RichFollower.new{
-        follower = Follower.new(),
+        follower = Follower.Create(),
     }
 end
 

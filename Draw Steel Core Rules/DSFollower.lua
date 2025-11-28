@@ -14,16 +14,21 @@ local mod = dmhub.GetModLoading()
 --- @field characteristic string The characteristic code for the follower's additional characteristic
 Follower = RegisterGameType("Follower")
 
-Follower.guid = dmhub.GenerateGuid()
 Follower.type = "artisan"
 Follower.portrait = "DEFAULT_MONSTER_AVATAR"
 Follower.name = "New Follower"
 Follower.characteristic = "mgt"
-Follower.skills = {}
 Follower.ancestry = ""
-Follower.languages = {}
 Follower.retainerToken = ""
 Follower.availableRolls = 0
+
+function Follower.Create()
+    return Follower.new{
+        guid = dmhub.GenerateGuid(),
+        skills = {},
+        languages = {},
+    }
+end
 
 function Follower.GetType(self)
     return self:try_get("type", "artisan")
