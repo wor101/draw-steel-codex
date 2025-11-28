@@ -50,6 +50,17 @@ function Title:RenderToMarkdown(options)
 
     content = content .. "\n**Effect:** " .. effect .. "\n"
 
+    if not options.noninteractive then
+        content = content .. "\n\n:<>"
+        for _,token in ipairs(dmhub.GetTokens{playerControlled = true}) do
+            if token.name ~= "" then
+                content = content .. string.format("[[/granttitle \"%s\" %s|Grant to %s]]", token.name, self.id, token.name)
+            end
+        end
+
+        content = content .. "\n"
+    end
+
 
 
     return MarkdownDocument.new {
