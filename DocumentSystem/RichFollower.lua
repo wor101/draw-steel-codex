@@ -122,7 +122,11 @@ function RichFollower.CreateDisplay(self)
                                     followers[#followers + 1] = newFollower
                                 end
                             }
-                            self.follower:AddAssignedTo(token.id)
+                            local controller = element:FindParentWithClass("documentPanel")
+                            if controller then
+                                self.follower:AddAssignedTo(token.id)
+                                controller:FireEvent("saveDocument")
+                            end
                             resultPanel:FireEventTree("refreshTag")
                         end
                     end,
