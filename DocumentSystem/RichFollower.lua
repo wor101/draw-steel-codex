@@ -120,7 +120,7 @@ function RichFollower.CreateDisplay(self)
                             border = 1,
                             borderColor = "white",
                             cornerRadius = 4,
-                            text = "Assign to " .. token.name,
+                            text = "Assign to " .. (token.name or "Unnamed Hero"),
                         }
                     },
                 }
