@@ -46,6 +46,9 @@ end
 
 function monster:GetMentor()
     local token = dmhub.LookupToken(self)
+    if token == nil then
+        return nil
+    end
     local partyMembers = dmhub.GetCharacterIdsInParty(token.partyid) or {}
 
     for _, charid in pairs(partyMembers) do
