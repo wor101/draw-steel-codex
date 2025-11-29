@@ -2210,7 +2210,9 @@ function ActivatedAbility:GetRange(casterCreature, castingSymbols, selfRange)
 		result = dmhub.unitsPerSquare
 	end
 
-    if casterCreature ~= nil and self:HasKeyword("Ranged") then
+    --we get a ranged bonus, but not if we're invoking from a different ability because this
+    --e.g. applies the bonus to forced movement.
+    if casterCreature ~= nil and self:HasKeyword("Ranged") and self:try_get("invoker") == nil then
         local bonusRange = casterCreature:BonusRange()
         if bonusRange ~= nil then
             result = result + bonusRange
