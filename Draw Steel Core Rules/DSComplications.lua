@@ -87,23 +87,24 @@ local function ShowComplicationsPanel(contentPanel)
 	contentPanel.children = {leftPanel, editorPanel}
 end
 
-creature.complicationid = "none"
+creature.complications = {}
 
-function creature:Complication()
-    if self.complicationid == "none" then
-        return nil
+function creature:Complications()
+    local results = {}
+    local t = dmhub.GetTable(CharacterComplication.tableName) or {}
+    for complicationid, _ in pairs(self.complications) do
+        local complication = t[complicationid]
+        if complication ~= nil then
+            results[#results+1] = complication
+        end
     end
 
-    local t = dmhub.GetTable(CharacterComplication.tableName) or {}
-    return t[self.complicationid]
+    
+    return results
 end
 
-function creature:ComplicationID()
-    return self.complicationid
-end
-
-function creature:SetComplication(complicationid)
-    self.complicationid = complicationid
+function creature:AddComplication(complicationid)
+    self.complications[complicationid] = true
 end
 
 Compendium.Register{

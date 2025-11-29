@@ -9624,6 +9624,10 @@ function creature:IsValid()
         return false
     end
 
+	if self:try_get("complicationid") ~= nil then
+		return false
+	end
+
 	return true
 end
 
@@ -9778,6 +9782,12 @@ function creature:Repair(localOnly)
     if triggeredEvents ~= nil and #triggeredEvents > 0 and triggeredEvents[1] == nil then
         self.triggeredEvents = nil
     end
+
+	if self:try_get("complicationid") ~= nil then
+		printf("Creature validation: repairing complicationid on character %s", charid)
+		self:AddComplication(self.complicationid)
+		self.complicationid = nil
+	end
 
 	if tok ~= nil then
 		tok:CompleteChanges("Repair character")

@@ -83,6 +83,28 @@ local SetTitle = function(tableName, titlePanel, titleid)
 
     local children = {}
 
+    --title id
+    children[#children + 1] = gui.Panel {
+        classes = { 'formPanel' },
+        height = 'auto',
+        gui.Label {
+            text = "ID:",
+            valign = "center",
+            minWidth = 240,
+        },
+        gui.Input {
+            text = title.id,
+            multiline = true,
+            height = 26,
+            width = 350,
+            textAlignment = "topleft",
+            change = function(element)
+                element.text = title.id
+                UploadTitle()
+            end,
+        }
+    }
+
     --the name of the title.
     children[#children + 1] = gui.Panel {
         classes = { 'formPanel' },
@@ -199,29 +221,6 @@ local SetTitle = function(tableName, titlePanel, titleid)
             textAlignment = "topleft",
             change = function(element)
                 title.effect = element.text
-                UploadTitle()
-            end,
-        }
-    }
-
-    --title id
-    children[#children + 1] = gui.Panel {
-        classes = { 'formPanel' },
-        height = 'auto',
-        gui.Label {
-            text = "ID:",
-            valign = "center",
-            minWidth = 240,
-        },
-        gui.Input {
-            text = title.id,
-            multiline = true,
-            minHeight = 50,
-            height = 'auto',
-            width = 400,
-            textAlignment = "topleft",
-            change = function(element)
-                element.text = title.id
                 UploadTitle()
             end,
         }

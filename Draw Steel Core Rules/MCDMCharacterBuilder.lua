@@ -715,21 +715,13 @@ function CharSheet.BuilderSettingsPanel()
         }
     end
 
-    table.sort(complicationOptions, function(a,b)
-        return a.text < b.text
-    end)
-
-    complicationOptions[#complicationOptions+1] = {
-        id = "none",
-        text = "None",
-    }
-
     local complicationPanel
     complicationPanel = gui.Panel {
         vmargin = 32,
-        width = "100%",
+        width = "50%",
         height = "auto",
         flow = "vertical",
+		pad = 5,
 
         gui.Panel{
             height = 40,
@@ -739,63 +731,110 @@ function CharSheet.BuilderSettingsPanel()
                 text = "Complication:",
                 valign = "center",
             },
-            gui.Dropdown {
-                classes = {"formDropdown"},
-                options = complicationOptions,
-                refreshBuilder = function(element)
-                    if not g_creature:IsHero() then
-                        complicationPanel:SetClass("collapsed", true)
-                        return
-                    end
+			gui.Multiselect{
+				options = complicationOptions,
+				width = "auto",
+				height = "auto",
+				margin = 3,
+				flow = "horizontal",
+				sort = true,
+				textDefault = "Add Complication...",
 
-                    complicationPanel:SetClass("collapsed", false)
-                    element.idChosen = g_creature.complicationid
-                end,
-                change = function(element)
-                    g_creature.complicationid = element.idChosen
-                    CharacterSheet.instance:FireEvent("refreshAll")
-                    CharacterSheet.instance:FireEventTree("refreshBuilder")
-                end,
-            },
+				dropdown = {
+					classes = {"formDropdown"},
+					width = 170,
+				},
+
+				chipPos = "right",
+				chipPanel = {
+					width = "100%-160",
+					halign = "left",
+				},
+				chips = {
+					halign = "left",
+					valign = "center",
+				},
+				create = function(element)
+					element:FireEvent("refreshAll")
+				end,
+
+				change = function(element)
+					g_creature.complications = element.value
+					CharacterSheet.instance:FireEvent("refreshAll")
+					CharacterSheet.instance:FireEventTree("refreshBuilder")
+				end,
+
+				refreshAll = function(element)
+					local selected = g_creature.complications or {}
+					element:FireEvent("refreshSet", complicationOptions, selected)
+				end,
+
+				refreshBuilder = function(element)
+					if not g_creature:IsHero() then
+						complicationPanel:SetClass("collapsed", true)
+						return
+					end
+
+					complicationPanel:SetClass("collapsed", false)
+					local selected = g_creature.complications or {}
+					element.value = selected
+				end,
+			},
         },
 
         gui.Panel{
             width = "100%",
-            height = "auto",
+            height = 650,
+            flow = "vertical",
+			vscroll = true,
+            data = {
+                complicationPanels = {},
+            },
             refreshBuilder = function(element)
-                if element.data.complicationid == g_creature.complicationid then
-                    return
-                end
-            
-                element.data.complicationid = g_creature.complicationid
+                local complications = g_creature.complications or {}
 
-                if g_creature.complicationid == "none" then
+				local count = 0
+				for _, _ in pairs(complications) do
+					count = count + 1
+				end
+                if count == 0 then
                     element.children = {}
+                    element.data.complicationPanels = {}
                     return
                 end
 
                 local complicationsTable = dmhub.GetTable(CharacterComplication.tableName) or {}
-                local complication = complicationsTable[g_creature.complicationid]
-                if complication == nil then
-                    element.children = {}
-                    return
+                local newPanels = {}
+                local children = {}
+                
+                for complicationId, _ in pairs(complications) do
+                    local panel = element.data.complicationPanels[complicationId]
+                    if panel == nil then
+                        local complication = complicationsTable[complicationId]
+                        if complication ~= nil then
+                            panel = complication:Render{}
+                            newPanels[complicationId] = panel
+                        end
+                    else
+                        newPanels[complicationId] = panel
+                    end
+                    
+                    if panel ~= nil then
+                        children[#children + 1] = panel
+                    end
                 end
-
-                element.children = {
-                    complication:Render{}
-                }
+                
+                element.data.complicationPanels = newPanels
+                element.children = children
             end,
         },
     }
-
-
-
 
 	local content = gui.Panel{
 		halign = "center",
 		valign = "top",
 		height = "auto",
-		width = "50%",
+		width = "90%",
 		flow = "vertical",
 
 		styles = {
@@ -821,7 +860,7 @@ function CharSheet.BuilderSettingsPanel()
 		gui.Panel{
 			flow = "vertical",
 			height = "auto",
-			width = 400,
+			width = "100%-100",
 			halign = "center",
 
 			gui.Label{
@@ -833,6 +872,7 @@ function CharSheet.BuilderSettingsPanel()
 			gui.Panel{
 				vmargin = 32,
 				height = 40,
+				halign = "center",
 				classes = {"formPanel"},
 				gui.Label{
 					classes = {"formLabel"},
@@ -902,12 +942,22 @@ function CharSheet.BuilderSettingsPanel()
 				},
 			},
 
-            complicationPanel,
-
-
-			characterTypePanel,
-			featsPanel,
-
+			gui.Panel{
+				width = "100%",
+				height = "auto",
+				flow = "horizontal",
+				complicationPanel,
+				gui.Panel{
+					width = "100%",
+					height = "auto",
+					flow = "vertical",
+					pad = 15,
+					vmargin = 32,
+					vscroll = true,
+					characterTypePanel,
+					featsPanel,
+				},
+			},
 
 			refreshBuilder = function(element)
 				local chartype = g_creature:CharacterType()
