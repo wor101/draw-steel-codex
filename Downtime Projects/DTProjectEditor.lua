@@ -392,9 +392,7 @@ function DTProjectEditor:_createProjectForm()
                         for _, id in ipairs(storageArray) do
                             storageDict[id] = true
                         end
-                        if not DTHelpers.DictsAreEqual(uiDict, storageDict) then
-                            element.value = storageDict
-                        end
+                        element.value = storageDict
                     end
                 end,
                 change = function(element)
@@ -409,7 +407,7 @@ function DTProjectEditor:_createProjectForm()
                             end
                         end
                         local storageArray = project:GetTestCharacteristics()
-                        if not DTHelpers.ListsHaveSameValues(uiArray, storageArray) then
+                        if not dmhub.DeepEqual(uiArray, storageArray) then
                             project:SetTestCharacteristics(uiArray)
                             local projectController = element:FindParentWithClass("projectController")
                             if projectController then
@@ -492,9 +490,7 @@ function DTProjectEditor:_createProjectForm()
                         for _, id in ipairs(storageArray) do
                             storageDict[id] = true
                         end
-                        if not DTHelpers.DictsAreEqual(uiDict, storageDict) then
-                            element.value = storageDict
-                        end
+                        element.value = storageDict
                     end
                 end,
                 change = function(element)
@@ -509,7 +505,7 @@ function DTProjectEditor:_createProjectForm()
                             end
                         end
                         local storageArray = project:GetProjectSourceLanguages()
-                        if not DTHelpers.ListsHaveSameValues(uiArray, storageArray) then
+                        if not dmhub.DeepEqual(uiArray, storageArray) then
                             project:SetProjectSourceLanguages(uiArray)
                             local projectController = element:FindParentWithClass("projectController")
                             if projectController then
