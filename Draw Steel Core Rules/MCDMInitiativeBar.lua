@@ -21,7 +21,7 @@ local playersControlInitiativeSetting = setting{
 	id = "permission:playersinitiative",
 	description = "Players can control initiative",
 	editor = "check",
-	default = true,
+	default = false,
 
 	storage = "game",
 	section = "game",
@@ -1511,11 +1511,9 @@ function GameHud.CreateInitiativeBarChoicePanel(self, info)
 				else
 					newEntries[k] = self:CreateInitiativeEntry(info, k, {
 						click = function(element)
-                            if element:HasClass("turn") then
-                                --already our turn.
-                                return
-                            end
-							if CanControlInitiative() == false then --or element:HasClass("unselectable") then
+
+                            print("CLICK:: CONTROL:", CanControlInitiative(), "CHOOSING:", initiativeQueue:ChoosingTurn(), "PLAYERSTURN:", initiativeQueue:IsPlayersTurn(), "UNMOVED:", initiativeQueue:EntriesUnmoved()[k])
+							if CanControlInitiative() == false and ((not initiativeQueue:ChoosingTurn()) or (not initiativeQueue:IsPlayersTurn()) or (not initiativeQueue:EntriesUnmoved()[k]) or (not initiativeQueue:IsEntryPlayer(k))) then --or element:HasClass("unselectable") then
 								return
 							end
 							initiativeQueue:SelectTurn(k)
@@ -2079,6 +2077,7 @@ function GameHud.CreateInitiativeEntry(self, info, initiativeid, options)
 		events = {
 			click = function(element)
 
+                print("CLICK::", options.click ~= nil)
 				if options.click ~= nil then
 					options.click(element)
 				end
