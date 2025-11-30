@@ -1242,6 +1242,16 @@ TriggeredAbility.RegisterTrigger{
             type = "number",
             desc = "The number of surges used for this damage.",
         },
+        edges = {
+            name = "Edges",
+            type = "number",
+            desc = "The number of edges used for this damage.",
+        },
+        banes = {
+            name = "Banes",
+            type = "number",
+            desc = "The number of banes used for this damage.",
+        },
         attacker = {
             name = "Attacker",
             type = "creature",
@@ -1300,6 +1310,16 @@ TriggeredAbility.RegisterTrigger{
             name = "Surges",
             type = "number",
             desc = "The number of surges applied to the damage.",
+        },
+        {
+            name = "Edges",
+            type = "number",
+            desc = "The number of edges used for this damage.",
+        },
+        {
+            name = "Banes",
+            type = "number",
+            desc = "The number of banes used for this damage.",
         },
         {
             name = "HasAbility",
@@ -2633,6 +2653,16 @@ TriggeredAbility.RegisterTrigger{
             type = "number",
             desc = "The number of surges used for this damage.",
         },
+        edges = {
+            name = "Edges",
+            type = "number",
+            desc = "The number of edges used for this damage.",
+        },
+        banes = {
+            name = "Banes",
+            type = "number",
+            desc = "The number of banes used for this damage.",
+        },
         attacker = {
             name = "Attacker",
             type = "creature",
@@ -2691,6 +2721,16 @@ TriggeredAbility.RegisterTrigger{
             name = "Surges",
             type = "number",
             desc = "The number of surges applied to the damage.",
+        },
+        {
+            name = "Edges",
+            type = "number",
+            desc = "The number of edges applied to the triggering damage ability.",
+        },
+        {
+            name = "Banes",
+            type = "number",
+            desc = "The number of banes applied to the triggering damage ability.",
         },
         {
             name = "HasAbility",

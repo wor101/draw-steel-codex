@@ -2990,6 +2990,12 @@ function creature.TakeDamage(self, amount, note, info)
         eventArg.damagetype = eventArg.damagetype or "none"
         eventArg.hasattacker = eventArg.attacker ~= nil
         eventArg.surges = info.surges or 0
+        eventArg.edges = 0
+        eventArg.banes = 0
+        if info.cast then
+            eventArg.edges = info.cast.boonsApplied
+            eventArg.banes = info.cast.banesApplied
+        end
         if (not info.doesNotTrigger) and amount > 0 then
         print("LOSEHITPOINTS:: DO LOSE", info.doesNotTrigger)
             self:DispatchEvent("losehitpoints", eventArg)
@@ -3012,6 +3018,8 @@ function creature.TakeDamage(self, amount, note, info)
                 damagetype = eventArg.damagetype,
                 keywords = eventArg.keywords,
                 surges = eventArg.surges,
+                edges = eventArg.edges,
+                banes = eventArg.banes,
                 hasability = eventArg.hasability,
                 ability = eventArg.ability,
             }
@@ -3060,6 +3068,12 @@ function creature.TakeDamage(self, amount, note, info)
     eventArg.damagetype = eventArg.damagetype or "untyped"
     eventArg.hasattacker = eventArg.attacker ~= nil
     eventArg.surges = info.surges or 0
+    eventArg.edges = 0
+    eventArg.banes = 0
+    if info.cast then
+        eventArg.edges = info.cast.boonsApplied
+        eventArg.banes = info.cast.banesApplied
+    end
 
     if (not info.doesNotTrigger) and original_amount > 0 then
         self:DispatchEvent("losehitpoints", eventArg)
@@ -3092,10 +3106,10 @@ function creature.TakeDamage(self, amount, note, info)
 
     if eventArg.attacker == nil or dmhub.LookupTokenId(eventArg.attacker) == dmhub.LookupTokenId(self) then
         self._tmp_lastattacker = eventArg.pusher
-                    print("ATTACKER::", dmhub.LookupTokenId(self:try_get("_tmp_lastattacker")))
+        print("ATTACKER::", dmhub.LookupTokenId(self:try_get("_tmp_lastattacker")))
     else
         self._tmp_lastattacker = eventArg.attacker
-                    print("ATTACKER::", dmhub.LookupTokenId(self:try_get("_tmp_lastattacker")))
+        print("ATTACKER::", dmhub.LookupTokenId(self:try_get("_tmp_lastattacker")))
     end
 
     if eventArg.attacker ~= nil and not (info.doesNotTrigger) then
@@ -3106,6 +3120,8 @@ function creature.TakeDamage(self, amount, note, info)
             damagetype = eventArg.damagetype,
             keywords = eventArg.keywords,
             surges = eventArg.surges,
+            edges = eventArg.edges,
+            banes = eventArg.banes,
             hasability = eventArg.hasability,
             ability = eventArg.ability,
         }
