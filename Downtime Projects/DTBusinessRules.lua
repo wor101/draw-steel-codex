@@ -189,47 +189,12 @@ function DTBusinessRules.IterateHeroTokens(callback, filter)
 
     local heroes = {}
 
-    -- Iterate through party members
-    local partyTable = dmhub.GetTable(Party.tableName)
-    for partyId, _ in pairs(partyTable) do
-        local characterIds = dmhub.GetCharacterIdsInParty(partyId)
-        for _, characterId in ipairs(characterIds) do
-            local character = dmhub.GetCharacterById(characterId)
-            if character and character.properties and character.properties:IsHero() then
-                if filter == nil or filter(character) then
-                    heroes[#heroes + 1] = character
-                    if callback(character) then
-                        return heroes
-                    end
-                end
-            end
-        end
-    end
-
-    -- Also get unaffiliated characters (director controlled on current map)
-    local unaffiliatedTokens = dmhub.GetTokens{ unaffiliated = true }
-    for _, token in ipairs(unaffiliatedTokens) do
-        local character = dmhub.GetCharacterById(token.charid)
-        if character and character.properties and character.properties:IsHero() then
-            if filter == nil or filter(character) then
-                heroes[#heroes + 1] = character
-                if callback(character) then
-                    return heroes
-                end
-            end
-        end
-    end
-
-    -- Optionally include despawned characters from graveyard
-    local despawnedTokens = dmhub.despawnedTokens or {}
-    for _, token in ipairs(despawnedTokens) do
-        local character = dmhub.GetCharacterById(token.charid)
-        if character and character.properties and character.properties:IsHero() then
-            if filter == nil or filter(character) then
-                heroes[#heroes + 1] = character
-                if callback(character) then
-                    return heroes
-                end
+    local allTokens = table.values(game.GetGameGlobalCharacters())
+    for _,token in ipairs(allTokens) do
+        if token.properties and token.properties:IsHero() then
+            if filter == nil or filter(token) then
+                heroes[#heroes + 1] = token
+                if callback(token) then return heroes end
             end
         end
     end
