@@ -37,7 +37,7 @@ function DTProjectRollDialog._createPanel(options)
     local skillList = roller:GetSkillsKnown()
     local skillLookup = {}
     for _, item in ipairs(skillList) do
-        skillLookup[item.text] = item.text
+        skillLookup[item.id] = item.text
     end
 
     resultPanel = gui.Panel {
