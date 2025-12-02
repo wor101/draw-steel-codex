@@ -735,16 +735,6 @@ end
 --- @param levelChoicesInput table The levelChoices from assembleSkillUpdates
 function CharacterSkillDialog.saveLevelChoices(token, levelChoicesInput)
     local tokenLevelChoices = token.properties:get_or_add("levelChoices", {})
-
-    -- STRICT VALIDATION: All keys from input must exist in token's levelChoices
-    -- for guid, _ in pairs(levelChoicesInput) do
-    --     if tokenLevelChoices[guid] == nil then
-    --         -- Key doesn't exist - abort silently
-    --         return
-    --     end
-    -- end
-
-    -- All keys validated, now update with change detection
     for guid, skillsArray in pairs(levelChoicesInput) do
         if not dmhub.DeepEqual(tokenLevelChoices[guid], skillsArray) then
             tokenLevelChoices[guid] = skillsArray
@@ -779,7 +769,7 @@ function CharacterSkillDialog.CreateAsChild(options)
         flow = "vertical",
         gui.Label{
             classes = {"skilldlg-label", "skilldlg-base"},
-            text = "Manage Character Skills",
+            text = "Manage Skill Selections",
             fontSize = 24,
             width = "100%",
             height = 30,
@@ -810,8 +800,6 @@ function CharacterSkillDialog.CreateAsChild(options)
         },
     }
 
-    -- TODO: If we have identical static skills, add an extra skill in features
-    -- if there isn't one already
     local skillSections = {}
     for id,content in pairs(skillChoices) do
 
