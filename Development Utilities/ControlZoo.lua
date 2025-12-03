@@ -272,7 +272,7 @@ LaunchablePanel.Register {
                     name = "Divider (layout=line)",
                     control = gui.Divider{
                         layout = "line",
-                        width = "20%",
+                        width = "50%",
                     }
                 },
 
@@ -280,7 +280,7 @@ LaunchablePanel.Register {
                     name = "Divider (layout=dot)",
                     control = gui.Divider{
                         layout = "dot",
-                        width = "20%",
+                        width = "50%",
                     }
                 },
 
@@ -288,7 +288,7 @@ LaunchablePanel.Register {
                     name = "Divider (layout=v)",
                     control = gui.Divider{
                         layout = "v",
-                        width = "20%",
+                        width = "50%",
                     }
                 },
 
@@ -296,15 +296,15 @@ LaunchablePanel.Register {
                     name = "Divider (layout=peak)",
                     control = gui.Divider{
                         layout = "peak",
-                        width = "20%",
+                        width = "50%",
                     }
                 },
 
                 ControlEntry {
-                    name = "Divider (layout=v-dot)",
+                    name = "Divider (layout=vdot)",
                     control = gui.Divider{
-                        layout = "v-dot",
-                        width = "20%",
+                        layout = "vdot",
+                        width = "50%",
                     }
                 },
 
