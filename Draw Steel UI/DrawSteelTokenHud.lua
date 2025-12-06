@@ -278,7 +278,7 @@ TokenHud.RegisterPanel{
             m_triggerActivePanel,
 
             gui.Panel{
-                classes = {"swords"},
+                classes = {"swords", "hidden"},
                 floating = true,
                 interactable = false,
                 halign = "center",

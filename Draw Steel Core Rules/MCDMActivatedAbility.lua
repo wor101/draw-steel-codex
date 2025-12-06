@@ -1547,7 +1547,11 @@ function ActivatedAbility:DescribeTarget(casterToken)
         end
 
         if self.objectTarget then
-            result = string.format("%s or %s", result, cond(count <= 1, "object", "objects"))
+            if self.targetAllegiance == "none" then
+                result = string.format("%s", cond(count <= 1, "object", "objects"))
+            else
+                result = string.format("%s or %s", result, cond(count <= 1, "object", "objects"))
+            end
         end
     elseif self.targetType == "self" then
         result = "None/self"

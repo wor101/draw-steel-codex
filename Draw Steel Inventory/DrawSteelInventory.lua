@@ -440,12 +440,12 @@ local CreateInventorySlot = function(dmhud, options)
 							end
 							token:DestroyObject()
                         elseif token.type == "component" and token.properties:Empty() then
-                            local obj = token.objectComponent ~= nil and token.objectComponent.levelObject
+                            local obj = token.levelObject
                             if obj ~= nil then
                                 local appearanceComponent = obj:GetComponent("Appearance")
                                 if appearanceComponent ~= nil then
-                                    --TODO: set to empty appearance.
-                                    
+                                    appearanceComponent:SetProperty("imageNumber", 0)
+                                    appearanceComponent:Upload()
                                 end
                             end
 						end
@@ -2500,6 +2500,15 @@ function GameHud.CreateInventoryDialog(self, options)
 					if token.type == "component" and token.destroyOnEmpty then
 						resultPanel.data.close()
 						token:DestroyObject()
+                    elseif token.type == "component" and token.properties:Empty() then
+                        local obj = token.levelObject
+                        if obj ~= nil then
+                            local appearanceComponent = obj:GetComponent("Appearance")
+                            if appearanceComponent ~= nil then
+                                appearanceComponent:SetProperty("imageNumber", 0)
+                                appearanceComponent:Upload()
+                            end
+                        end
 					end
 
 				end,
