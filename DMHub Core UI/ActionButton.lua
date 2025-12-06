@@ -1,28 +1,21 @@
 local mod = dmhub.GetModLoading()
 
-local gradient = {
-    type = "radial",
-    point_a = {x = 0.5, y = -0.9},
-    point_b = {x = 0.5, y = 0.4},
-    stops = {
-        {position = 0.00, color = "#BC9B7BFF"},
-        {position = 0.15, color = "#BC9B7BE2"},
-        {position = 0.28, color = "#BC9B7BC5"},
-        {position = 0.40, color = "#BC9B7BA8"},
-        {position = 0.51, color = "#BC9B7B8B"},
-        {position = 0.61, color = "#BC9B7B6E"},
-        {position = 0.70, color = "#BC9B7B51"},
-        {position = 0.78, color = "#BC9B7B34"},
-        {position = 0.85, color = "#BC9B7B17"},
-        {position = 1.00, color = "#BC9B7B00"},
-    }
+local gradientStops = {
+    {position = 0.00, color = "#BC9B7BC5"},
+    {position = 0.15, color = "#BC9B7BE2"},
+    {position = 0.28, color = "#BC9B7BC5"},
+    {position = 0.40, color = "#BC9B7BA8"},
+    {position = 0.51, color = "#BC9B7B8B"},
+    {position = 0.61, color = "#BC9B7B6E"},
+    {position = 0.70, color = "#BC9B7B51"},
+    {position = 0.78, color = "#BC9B7B34"},
+    {position = 0.85, color = "#BC9B7B17"},
+    {position = 1.00, color = "#BC9B7B00"},
 }
 
+-- TODO:
+-- - Lighten text color to cream when selected
 local actionButtonStyles = {
-    {
-        selectors = {"action-button", "hover"},
-        brightness = 1.25,
-    },
     {
         selectors = {"action-button", "press"},
         scale = 0.98,
@@ -36,13 +29,22 @@ local actionButtonStyles = {
         color = "#966D4B",
     },
     {
+        selectors = {"action-button-label", "selected"},
+        color = "#BC9B7B",
+    },
+    {
         selectors = {"action-button-hover"},
         bgcolor = "clear",
     },
     {
         selectors = {"action-button-hover", "parent:hover"},
         bgcolor = "white",
-        gradient = gui.Gradient(gradient),
+        gradient = gui.Gradient{
+            type = "radial",
+            point_a = {x = 0.5, y = -0.2},
+            point_b = {x = 0.5, y = 0.4},
+            stops = gradientStops,
+        },
     },
     {
         selectors = {"unavailable"},
@@ -51,7 +53,15 @@ local actionButtonStyles = {
     },
 }
 
-local function _actionButton(options)
+--- Creates a Draw Steel Codex style action button
+--- 
+--- Size via scale option; width & height ignored
+--- 
+--- element:FireEvent("setAvailable", isAvailable)
+--- 
+--- element:FireEvent("setSelected", isSelected)
+--- @return Panel
+function gui.ActionButton(options)
     local opts = dmhub.DeepCopy(options or {})
 
     local mainPanel
@@ -145,6 +155,9 @@ local function _actionButton(options)
                     _setAvailable = function(element, available)
                         element:SetClass("unavailable", not available)
                     end,
+                    _setSelected = function(element, selected)
+                        element:SetClass("selected", selected)
+                    end,
                     _setText = function(element, newText)
                         element.text = newText
                     end,
@@ -168,7 +181,12 @@ local function _actionButton(options)
                 element:SetClass("collapsed", not selected)
             end,
 
-            gradient = gui.Gradient(gradient),
+            gradient = gui.Gradient{
+                type = "radial",
+                point_a = {x = 0.5, y = -0.3},
+                point_b = {x = 0.5, y = 0.4},
+                stops = gradientStops,
+            },
         },
 
         gui.Panel{ -- Hover Overlay
@@ -255,8 +273,4 @@ local function _actionButton(options)
     mainPanel = gui.Panel(opts)
 
     return mainPanel
-end
-
-if gui.ActionButton == nil then
-    gui.ActionButton = _actionButton
 end
