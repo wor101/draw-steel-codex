@@ -133,6 +133,20 @@ function gui.ActionButton(options)
         element:FireEventTree("_setText", newText)
     end
 
+    opts.SetValue = function(element, values)
+        if not values or type(values) ~= "table" then return end
+        if values.text then element:FireEvent("setText", values.text) end
+        if values.available then element.FireEvent("setAvailable", values.available) end
+        if values.selected then element.FireEvent("setSelected", values.selected) end
+    end
+
+    opts.GetValue = function(element)
+        local values = dmhub.DeepCopy(element.data)
+        local label = element:FindChildRecursive(function(e) return e:HasClass("selector-button-label") end)
+        if label then values.text = label.text end
+        return values
+    end
+
     local labelText = opts.text or ""
     opts.text = nil
     local fontFace = opts.fontFace or LABEL_FONT_FACE
@@ -373,9 +387,9 @@ function gui.SelectorButton(options)
 
     local fnCreate = (opts.create and type(opts.create) == "function") and opts.create or nil
     opts.create = function(element, ...)
-        if fnCreate then fnCreate(element, ...) end
         element:FireEvent("setAvailable", element.data.available)
         element:FireEvent("setSelected", element.data.selected)
+        if fnCreate then fnCreate(element, ...) end
     end
 
     opts.setAvailable = function(element, available)
@@ -391,6 +405,20 @@ function gui.SelectorButton(options)
 
     opts.setText = function(element, newText)
         element:FireEventTree("_setText", newText)
+    end
+
+    opts.SetValue = function(element, values)
+        if not values or type(values) ~= "table" then return end
+        if values.text then element:FireEvent("setText", values.text) end
+        if values.available then element.FireEvent("setAvailable", values.available) end
+        if values.selected then element.FireEvent("setSelected", values.selected) end
+    end
+
+    opts.GetValue = function(element)
+        local values = dmhub.DeepCopy(element.data)
+        local label = element:FindChildRecursive(function(e) return e:HasClass("selector-button-label") end)
+        if label then values.text = label.text end
+        return values
     end
 
     local labelText = opts.text or ""
