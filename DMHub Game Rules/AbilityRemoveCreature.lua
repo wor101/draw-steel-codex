@@ -90,6 +90,12 @@ function ActivatedAbilityRemoveCreatureBehavior:DropLoot(token, newObj)
         newObj.y = token.pos.y
     end
 
+    local appearanceComponent = newObj:GetComponent("Appearance")
+    if appearanceComponent ~= nil then
+        appearanceComponent:SetProperty("imageNumber", 1)
+    end
+
+
 	local loot = {
 		["@class"] = "ObjectComponentLoot",
 		destroyOnEmpty = false,

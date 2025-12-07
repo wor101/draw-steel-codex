@@ -272,7 +272,7 @@ function RichEncounter.CreateDisplay(self)
                                 group.spawnlocs = group.spawnlocs or {}
                                 group.spawnlocs[spawnIndex] = token.loc
                                 print("SPAWN:: DESPAWN TOKEN APPEARANCE CHANGED FOR", token.name, "=", token.appearanceChangedFromBestiary)
-                                if token.appearanceChangedFromBestiary then
+                                if self.encounter.saveAppearances and token.appearanceChangedFromBestiary then
                                     group.appearances[#group.appearances+1] = token:SerializeAppearanceToString()
                                     print("SPAWN:: TOKEN APPEARANCE =", group.appearances[#group.appearances])
 
@@ -388,9 +388,13 @@ function RichEncounter.CreateEditor(self)
             valign = "center",
             halign = "right",
             click = function(element)
-                self.encounter:CreateEditorDialog{mode = "Save", save = function()
-                    resultPanel:FireEventTree("refreshEditor")
-                end}
+                self.encounter:CreateEditorDialog{
+                    mode = "Save",
+                    journal = true,
+                    save = function()
+                        resultPanel:FireEventTree("refreshEditor")
+                    end
+                }
             end,
         },
     }

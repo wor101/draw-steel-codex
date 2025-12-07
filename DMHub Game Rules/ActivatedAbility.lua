@@ -2145,6 +2145,7 @@ function ActivatedAbility:Cast(casterToken, targets, options)
 
 	options.alreadyInCoroutine = dmhub.inCoroutine
 	options.symbols.ability = self
+    options.symbols.caster = options.symbols.caster or casterToken.properties
 
 	if self.targetType == 'self' and #targets == 0 then
 		targets[#targets+1] = { loc = casterToken.loc, token = casterToken }

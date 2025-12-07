@@ -75,6 +75,9 @@ Encounter.monsters = {}
 
 Encounter.groups = {}
 
+--if true, then when saving an encounter, we save the appearance of the monsters.
+Encounter.saveAppearances = false
+
 EncounterFolder = RegisterGameType('EncounterFolder')
 
 EncounterFolder.tableName = 'encounterfolders'
@@ -788,6 +791,18 @@ function Encounter.Editor(self, options)
 
     local groupPanel = createGroupPanel(self)
 
+    local appearancesCheck
+
+    if options.journal then
+        appearancesCheck = gui.Check{
+            text = "Save monster appearances",
+            value = self.saveAppearances,
+            change = function(element) 
+                self.saveAppearances = element.value
+            end,
+        }
+    end
+
     resultPanel = gui.Panel {
 
         bgimage = true,
@@ -1127,6 +1142,8 @@ function Encounter.Editor(self, options)
 
 
         },]]
+
+        appearancesCheck,
 
         gui.Button {
 
