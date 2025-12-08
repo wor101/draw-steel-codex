@@ -197,6 +197,7 @@ function RichEncounter.CreateDisplay(self)
                     for i=1,quantity do
                         local loc = (group.spawnlocs or {})[index] or (group.spawnlocs or {})[1]
                         local appearanceInfo = (group.appearances or {})[index]
+                        local invisibleToPlayers = group.invisibleToPlayers or {}
                         index = index+1
 
                         if loc ~= nil then
@@ -209,7 +210,10 @@ function RichEncounter.CreateDisplay(self)
                                 fitLocation = true
                             })
 
-                            print("SPAWN:: SPAWNED TOKEN:", token.name ~= nil, "has appearance =", appearanceInfo)
+                            print("SPAWN:: SPAWNED TOKEN:", token.name ~= nil, "invisible = ", invisibleToPlayers[i] or false, "has appearance =", appearanceInfo)
+                            if invisibleToPlayers[i] then
+                                token.invisibleToPlayers = true
+                            end
 
                             if type(appearanceInfo) == "string" then
                                 token:SerializeAppearanceFromString(appearanceInfo)
@@ -260,6 +264,7 @@ function RichEncounter.CreateDisplay(self)
             print("SPAWN:: DESPAWNING MONSTERS:", #self.encounter.groups)
             for _,group in ipairs(self.encounter.groups) do
                 group.appearances = {}
+                group.invisibleToPlayers = {}
                 if group.minHeroes == nil or numHeroes >= group.minHeroes then
                     local spawnIndex = 1
                     for monsterid,quantity in pairs(group.monsters) do
@@ -271,11 +276,10 @@ function RichEncounter.CreateDisplay(self)
                             if token ~= nil then
                                 group.spawnlocs = group.spawnlocs or {}
                                 group.spawnlocs[spawnIndex] = token.loc
-                                print("SPAWN:: DESPAWN TOKEN APPEARANCE CHANGED FOR", token.name, "=", token.appearanceChangedFromBestiary)
+                                group.invisibleToPlayers[spawnIndex] = token.invisibleToPlayers or false
+                                print("SPAWN:: INVISIBLE", spawnIndex, " =", group.invisibleToPlayers[spawnIndex])
                                 if self.encounter.saveAppearances and token.appearanceChangedFromBestiary then
                                     group.appearances[#group.appearances+1] = token:SerializeAppearanceToString()
-                                    print("SPAWN:: TOKEN APPEARANCE =", group.appearances[#group.appearances])
-
                                 else
                                     group.appearances[#group.appearances+1] = false
                                 end
