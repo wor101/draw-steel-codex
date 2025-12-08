@@ -626,7 +626,8 @@ mod.shared.CreateTriggerPanel = function()
 
 							local m_ping = trigger.ping
 
-							local triggerPanel = gui.Panel{
+                            local triggerPanel
+							triggerPanel = gui.Panel{
                                 data = {
                                     ord = trigger.timestamp,
                                     rays = {},
@@ -673,6 +674,7 @@ mod.shared.CreateTriggerPanel = function()
                                 end,
 
                                 press = function(element)
+                                    print("TRIGGER:: PRESS")
 
                                     audio.DispatchSoundEvent("Notify.TriggerUse", {})
 
@@ -814,6 +816,11 @@ mod.shared.CreateTriggerPanel = function()
 										end,
 									}
 
+                                    print("TRIGGER:: DISMISS =", dismiss)
+                                    if dismiss then
+                                        triggerPanel:SetClass("collapsed", true)
+                                        print("TRIGGER:: COLLAPSE")
+                                    end
                                 end,
 
 								refresh = function(element)
