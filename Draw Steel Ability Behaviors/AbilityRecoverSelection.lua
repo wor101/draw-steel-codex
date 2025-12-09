@@ -367,12 +367,9 @@ function ActivatedAbilityRecoverySelectionBehavior:Cast(ability, casterToken, ta
         local token = dmhub.GetTokenById(tok)
         local targetCreature = token:GetCreature()
         if token.valid then
-            token:BeginChanges()
-                local recoveriesUsed = recoveryTargets[token.id] or 1
-                local healAmount = targetCreature:RecoveryAmount() * recoveriesUsed
-				targetCreature:Heal(healAmount, "Use Recovery")
-                targetCreature:ConsumeResource(recoveryid, recoveryInfo.usageLimit, recoveriesUsed, "Used Recovery")
-            token:CompleteChanges("Use Recovery")
+            local maySpendRecovery = DeepCopy(MCDMUtils.GetStandardAbility("May Spend Recovery"))
+            AbilityUtils.DeepReplaceAbility(maySpendRecovery, "<<numrecoveries>>", string.format("%d", recoveryTargets[token.id] or 1))
+            ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(token, maySpendRecovery, token, "self", options.symbols, options)
 
             for effectId, value in pairs(effectTargets[token.id] or {}) do
                 if value then
