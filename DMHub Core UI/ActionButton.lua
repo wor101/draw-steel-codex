@@ -1,9 +1,11 @@
 local mod = dmhub.GetModLoading()
 
-local COLOR_BTN_BG = "#000000"
-local COLOR_CREAM = "#BC9B7B"
+local COLOR_BLACK02 = "#10110F"
+local COLOR_BLACK03 = "#191A18"
+local COLOR_CREAM04 = "#BC9B7B"
 local COLOR_GOLD = "#966D4B"
-local COLOR_UNAVAILABLE = "#666663"
+local COLOR_GOLD03 = "#F1D3A5"
+local COLOR_GREY02 = "#666663"
 
 local ACTION_BUTTON_WIDTH = 225
 local ACTION_BUTTON_HEIGHT = 52
@@ -33,13 +35,16 @@ local gradientStops = {
 
 local actionButtonStyles = {
     {
+        selectors = {"action-button"},
+    },
+    {
         selectors = {"action-button", "press"},
         scale = 0.98,
     },
     {
         selectors = {"action-button-base"},
-        bgcolor = COLOR_BTN_BG,
-        borderColor = COLOR_CREAM,
+        bgcolor = COLOR_BLACK02,
+        borderColor = COLOR_CREAM04,
     },
     {
         selectors = {"action-button-label"},
@@ -47,7 +52,7 @@ local actionButtonStyles = {
     },
     {
         selectors = {"action-button-label", "selected"},
-        color = COLOR_CREAM,
+        color = COLOR_CREAM04,
     },
     {
         selectors = {"action-button-hover"},
@@ -65,8 +70,8 @@ local actionButtonStyles = {
     },
     {
         selectors = {"unavailable"},
-        borderColor = COLOR_UNAVAILABLE,
-        color = COLOR_UNAVAILABLE,
+        borderColor = COLOR_GREY02,
+        color = COLOR_GREY02,
     },
 }
 
@@ -265,7 +270,7 @@ function gui.ActionButton(options)
                 valign = "top",
                 halign = "center",
                 bgimage = true,
-                bgcolor = COLOR_CREAM,
+                bgcolor = COLOR_CREAM04,
                 interactable = false,
 
             },
@@ -317,41 +322,40 @@ function gui.ActionButton(options)
     return mainPanel
 end
 
-local COLOR_SELECTOR_BTN_BG = "#191A18"
 local SELECTOR_BUTTON_CORNER_RADIUS = 2
 local SELECTOR_LABEL_FONT_SIZE = LABEL_FONT_SIZE + 4
 
 local selectorButtonStyles = {
+    {
+        selectors = {"selector-button"},
+        bgcolor = COLOR_BLACK03,
+    },
     {
         selectors = {"selector-button", "press"},
         scale = 0.98,
     },
     {
         selectors = {"selector-button-base"},
-        bgcolor = COLOR_SELECTOR_BTN_BG,
-        borderColor = COLOR_CREAM,
+        bgcolor = COLOR_BLACK03,
+        borderColor = COLOR_GOLD,
     },
     {
         selectors = {"selector-button-label"},
         color = COLOR_GOLD,
     },
     {
-        selectors = {"selector-button-label", "selected"},
-        color = COLOR_CREAM,
+        selectors = {"selected"},
+        color = COLOR_GOLD03,
+        borderColor = COLOR_GOLD03,
     },
     {
-        selectors = {"selector-button", "hover"},
+        selectors = {"hover"},
         brightness = 1.5,
     },
     {
-        selectors = {"selector-button-base", "unavailable"},
-        borderColor = COLOR_UNAVAILABLE,
-        color = COLOR_UNAVAILABLE,
-    },
-    {
-        selectors = {"selector-button-label", "unavailable"},
-        borderColor = COLOR_UNAVAILABLE,
-        color = COLOR_UNAVAILABLE,
+        selectors = {"unavailable"},
+        borderColor = COLOR_GREY02,
+        color = COLOR_GREY02,
     },
 }
 
@@ -461,6 +465,9 @@ function gui.SelectorButton(options)
             _setAvailable = function(element, available)
                 element.interactable = available
                 element:SetClass("unavailable", not available)
+            end,
+            _setSelected = function(element, selected)
+                element:SetClass("selected", selected)
             end,
 
             gui.Panel{
