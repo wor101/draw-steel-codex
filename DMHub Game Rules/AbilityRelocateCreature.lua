@@ -186,6 +186,7 @@ function ActivatedAbilityRelocateCreatureBehavior:Cast(ability, casterToken, tar
                             attacker = options.symbols.invoker,
                             hasattacker = options.symbols.invoker ~= nil,
                             type = options.symbols.forcedmovement or ability:try_get("forcedMovement", "slide"),
+                            vertical = ability:try_get("forcedMovement", "slide") == "vertical_push" or ability:try_get("forcedMovement", "slide") == "vertical_pull",
                             collision = overshoot,
                             collidewithobject = overshoot > 0 and collisionInfo ~= nil and #(collisionInfo.collideWith or {}) == 0,
                         }

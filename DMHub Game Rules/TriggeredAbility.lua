@@ -205,8 +205,11 @@ TriggeredAbility.triggers = {
 				type = "creature",
 				desc = "The creature who is causing the forced move to occur. Only valid if Has Attacker is true.",
 			},
-
-
+            {
+                name = "Vertical",
+                type = "boolean",
+                desc = "True if the forced movement is vertical.",
+            },
 		}
     },
     {
