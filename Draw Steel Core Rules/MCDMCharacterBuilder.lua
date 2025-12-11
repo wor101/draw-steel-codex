@@ -687,6 +687,12 @@ end
 function CharSheet.BuilderSettingsPanel()
 	local banner
 
+	local featsPanel = CharSheet.FeatureDetailsPanel{
+		alert = function(element)
+			banner:FireEvent("showAlert")
+		end,
+	}
+
 	local characteristicsPanel = CharSheet.BackgroundCharacteristicPanel{
 		GetSelectedBackground = function()
 			return g_creature:CharacterType()
@@ -959,9 +965,22 @@ function CharSheet.BuilderSettingsPanel()
 				height = "auto",
 				flow = "horizontal",
 				complicationPanel,
+				gui.Panel{
+					width = "100%",
+					height = "auto",
+					flow = "vertical",
+					pad = 15,
+					vmargin = 32,
+					vscroll = true,
+					featsPanel,
+				},
 			},
 
 			refreshBuilder = function(element)
+				featsPanel.data.hide = false
+				featsPanel.data.criteria = {
+					feat = "*",
+				}
 			end,
 		},
 
