@@ -26,6 +26,10 @@ local g_powerRollTypes = {
         text = "Resistance Rolls",
     },
     {
+        id = "project_roll",
+        text = "Project Roll",
+    },
+    {
         id = "enemy_ability_power_roll",
         text = "Enemy Ability Rolls vs Us",
     },
@@ -1244,7 +1248,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Modify Potency:",
@@ -1488,7 +1492,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Damage:",
@@ -1515,7 +1519,7 @@ CharacterModifier.TypeInfo.power = {
 				},
             }
 
-            if modifier:try_get("damageModifier", "") ~= "" then
+            if modifier:try_get("damageModifier", "") ~= "" and not (modifier.rollType == "project_roll") then
 
                 local damageTypeOptions = {}
                 damageTypeOptions[#damageTypeOptions+1] = {
@@ -1547,7 +1551,7 @@ CharacterModifier.TypeInfo.power = {
             end
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Damage Multiplier:",
@@ -1644,7 +1648,7 @@ CharacterModifier.TypeInfo.power = {
                 flow = "horizontal",
                 width = "auto",
                 height = "auto",
-                classes = {cond(hasAll, "collapsed")},
+                classes = {cond(hasAll, "collapsed"), cond(modifier.rollType == "project_roll", "collapsed-anim")},
 
                 dropdownSourceType,
                 gui.Label{
@@ -1659,7 +1663,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Damage Type:",
@@ -1673,7 +1677,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Surges:",
@@ -1720,7 +1724,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Adjustments:",
@@ -1821,7 +1825,7 @@ CharacterModifier.TypeInfo.power = {
 
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Add to Table:",
@@ -1842,7 +1846,7 @@ CharacterModifier.TypeInfo.power = {
             }
 
             children[#children+1] = gui.Panel{
-                classes = {"formPanel"},
+                classes = {"formPanel", cond(modifier.rollType == "project_roll", "collapsed-anim")},
                 gui.Label{
                     classes = {"formLabel"},
                     text = "Replace in Table:",
