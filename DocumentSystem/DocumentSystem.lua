@@ -58,6 +58,13 @@ function CustomDocument.ScaleFontSize(size)
     return math.floor(size * g_scale)
 end
 
+function CustomDocument.OnDeserialize(self)
+    print("TYPE:: DESERIALIZE", self.textStorage)
+    if self.textStorage and not getmetatable(self.textStorage) then
+        self.textStorage = nil
+    end
+end
+
 function CustomDocument:Render()
     return nil
 end
@@ -73,7 +80,7 @@ function CustomDocument:Upload(originalDocument)
 end
 
 function CustomDocument:GetTextContent()
-    if not self.textStorage then
+    if (not self.textStorage) or not getmetatable(self.textStorage) then
         return self.content or ""
     end
 
@@ -83,7 +90,7 @@ end
 function CustomDocument:SetTextContent(str)
     --self.content = nil
 
-    if not self.textStorage then
+    if (not self.textStorage) or not getmetatable(self.textStorage) then
         self.textStorage = TextStorage.Create(str)
     else
         self.textStorage:SetContent(str)
