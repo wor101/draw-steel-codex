@@ -432,6 +432,8 @@ CharacterModifier.TypeInfo.modifyability = {
 			if replacementMode == "before" then
 				atend = ability.behaviors
 				ability.behaviors = {}
+			elseif replacementMode == "replaceAll" then
+				ability.behaviors = {}
 			end
 
 			local nstarting = #ability.behaviors
@@ -847,7 +849,11 @@ CharacterModifier.TypeInfo.modifyability = {
 							},
 							{
 								id = "replace",
-								text = "Replace Existing",
+								text = "Replace Matching Behaviors",
+							},
+							{
+								id = "replaceAll",
+								text = "Replace All Behaviors"
 							}
 						},
 						idChosen = ReplaceBehaviorToEnum(modifier:try_get("replaceBehaviors", false)),

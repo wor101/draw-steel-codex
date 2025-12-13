@@ -257,6 +257,34 @@ function monster:IsRetainer()
     return self:try_get("retainer", false)
 end
 
+function creature:IsArtisan()
+    return false
+end
+
+function monster:IsArtisan()
+    return self:try_get("followerType") == "artisan"
+end
+
+function creature:IsSage()
+    return false
+end
+
+function monster:IsSage()
+    return self:try_get("followerType") == "sage"
+end
+
+function creature:IsFollower()
+    return false
+end
+
+function monster:IsFollower()
+    local follower = false
+    if self:IsRetainer() or self:IsArtisan() or self:IsSage() then
+        follower = true
+    end
+    return follower
+end
+
 function creature:Retainers()
     return {}
 end
@@ -267,9 +295,11 @@ function character:Retainers()
 
     for _, follower in ipairs(followers) do
         if follower and follower.type == "retainer" then
-            local retainerToken = dmhub.GetTokenById(follower.retainerToken)
-            if retainerToken ~= nil then
-                retainers[#retainers + 1] = retainerToken
+            if follower:has_key("followerToken") then
+                local retainerToken = dmhub.GetTokenById(follower.followerToken)
+                if retainerToken ~= nil then
+                    retainers[#retainers + 1] = retainerToken
+                end
             end
         end
     end
@@ -294,15 +324,33 @@ function monster:GetMentor()
     if token == nil then
         return nil
     end
-    local partyMembers = dmhub.GetCharacterIdsInParty(token.partyid) or {}
 
+    --Check our party for a Mentor first
+    local partyMembers = dmhub.GetCharacterIdsInParty(token.partyid) or {}
     for _, charid in pairs(partyMembers) do
         local charToken = dmhub.GetTokenById(charid)
         if charToken ~= nil then
             local followers = charToken.properties:GetFollowers()
             for _, follower in ipairs(followers) do
-                if follower.retainerToken == token.charid then
+                if follower.followerToken == token.charid then
                     return charToken.properties
+                end
+            end
+        end
+    end
+
+    --Check other allied parties
+    local partyInfo = GetParty(token.partyid)
+    for id, _ in pairs(partyInfo.allyParties) do
+        partyMembers = dmhub.GetCharacterIdsInParty(id) or {}
+        for _, charid in ipairs(partyMembers) do
+            local charToken = dmhub.GetTokenById(charid)
+            if charToken ~= nil then
+                local followers = charToken.properties:GetFollowers()
+                for _, follower in ipairs(followers) do
+                    if follower.followerToken == token.charid then
+                        return charToken.properties
+                    end
                 end
             end
         end
@@ -1552,6 +1600,16 @@ function creature:IsDying()
 end
 
 --- @return boolean
+function monster:IsDying()
+    if self:IsRetainer() then
+        local hp = self:CurrentHitpoints()
+        return hp <= 0 and hp > -(self:MaxHitpoints()/2)
+    end
+
+    return false
+end
+
+--- @return boolean
 function creature:IsDown()
     return self:IsDead()
 end
@@ -1563,6 +1621,9 @@ end
 
 --- @return boolean
 function monster:IsDead()
+    if self:IsRetainer() then
+        return self:CurrentHitpoints() <= -self:BloodiedThreshold()
+    end
     return self:CurrentHitpoints() <= 0
 end
 
@@ -1676,6 +1737,35 @@ creature.RegisterSymbol {
         name = "Auras Affecting",
         type = "set",
         desc = "The names of auras affecting this creature.",
+        seealso = {},
+    }
+}
+
+creature.RegisterSymbol {
+    symbol = "aurascaster",
+    lookup = function(c)
+        return function(auraname)
+			auraname = string.lower(auraname)
+            local token = dmhub.LookupToken(c)
+
+            if token then
+                local aurasTouching = token.properties:GetAurasAffecting(token) or {}
+                for i, info in ipairs(aurasTouching) do
+                    if string.lower(info.auraInstance.aura.name) == auraname and info.auraInstance.casterid then
+                        local casterToken = dmhub.GetTokenById(info.auraInstance.casterid)
+                        if casterToken ~= nil then
+                            return casterToken.properties
+                        end
+                    end
+                end
+            end
+            return
+        end
+    end,
+    help = {
+        name = "AurasCaster",
+        type = "function",
+        desc = "Given the name of an aura will return the creature that's controlling it.",
         seealso = {},
     }
 }
@@ -3710,6 +3800,32 @@ creature.RegisterSymbol{
         seealso = {},
         examples = {
             'Caster.BoundOngoingEffect(Target, "Bloodbound")',
+        },
+    }
+}
+
+creature.RegisterSymbol{
+    symbol = "complications",
+    lookup = function(c)
+        local results = {}
+
+        local complications = c:Complications()
+
+        for _, complication in ipairs(complications) do
+            results[#results + 1] = complication.name
+        end
+
+        return StringSet.new {
+            strings = results,
+        }
+    end,
+    help = {
+        name = "Complications",
+        type = "set",
+        desc = "Complications the creature has.",
+        seealso = {},
+        examples = {
+            'Complications has "Coward"',
         },
     }
 }
