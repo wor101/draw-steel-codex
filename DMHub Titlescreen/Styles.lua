@@ -945,12 +945,6 @@ Styles = {
             classes = {"framedPanel", "create", "~hidden", "~collapsed"},
             soundEvent = "UI.WindowOpen",
         },
-		gui.Style{
-			classes = {"framedPanel", "fadein"},
-			opacity = 0,
-			uiscale = {x = 0.01, y = 0.01},
-			transitionTime = 0.2,
-		},
 	},
 
 	Table = {
