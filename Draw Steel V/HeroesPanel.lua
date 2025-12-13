@@ -817,36 +817,44 @@ local CreatePlayerPanel = function(userid)
                             return
                         end
 
+                        local delta = nil
                         local p2pping = nil
 
                         element.data.pingTime = t
                         element.data.pingSeq = 1
                         element.thinkTime = 0.1
                         print("PING:: PINGING AT", t)
+
+                        local onping = function()
+                            local tcptext = ""
+                            if delta ~= nil then
+                                tcptext = string.format("Pinged in %.2f seconds", delta)
+                            end
+                            local p2ptext = ""
+                            if p2pping ~= nil then
+                                p2ptext = string.format("Peer-to-peer: %.2f seconds", p2pping)
+                            end
+
+                            element:PulseClassTree("pingsuccess")
+                            gui.Tooltip(table.concat({tcptext, p2ptext}, "\n"))(element)
+                        end
+
+
                         dmhub.PingUser(userid, function()
                                 if (not element.valid) or t ~= element.data.pingTime then
                                     return
                                 end
 
                                 element.data.pingTime = nil
-                                local delta = dmhub.Time() - t
+                                delta = dmhub.Time() - t
                                 print("PING:: Got ping:", delta)
-
-                                local p2ptext = ""
-                                if p2pping ~= nil then
-                                    p2ptext = string.format("\nPeer-to-peer: %.2f seconds", p2pping)
-                                end
-
-                                element:PulseClassTree("pingsuccess")
-                                if element:HasClass("hover") then
-                                    gui.Tooltip(string.format("Pinged in %.2f seconds%s", delta, p2ptext))(element)
-                                end
-                                gui.Tooltip(string.format("Pinged in %.2f seconds%s", delta, p2ptext))(element)
+                                onping()
                             end,
 
                             function(p2ptime)
                                 p2pping = p2ptime
                                 print("PING:: Got peertopeer ping time:", p2ptime)
+                                onping()
                             end)
                     end,
 
