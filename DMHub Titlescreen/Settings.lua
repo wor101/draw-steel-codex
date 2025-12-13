@@ -16,6 +16,14 @@ function SettingMatchesSearch(settingid, str)
 	return false
 end
 
+setting{
+    id = "disableparallax",
+    description = "Disable Parallax",
+    storage = "preference",
+	section = "General",
+    editor = "check",
+    default = false,
+}
 
 setting{
 	id = "sensitivity",
