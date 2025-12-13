@@ -121,7 +121,7 @@ function Aura:CreaturePassesFilter(c, auraInstance)
         caster = casterToken.properties
     end
 
-    local result = dmhub.EvalGoblinScriptDeterministic(self.creatureFilter, c:LookupSymbol { caster = caster },
+    local result = dmhub.EvalGoblinScriptDeterministic(self.creatureFilter, c:LookupSymbol { caster = caster, target = c, aura = auraInstance },
         "Aura Creature Filter")
     return GoblinScriptTrue(result)
 end
@@ -339,6 +339,23 @@ function Aura:GenerateEditor(options)
                         },
                         subject = creature.helpSymbols,
                         subjectDescription = "Creature that is entering the aura.",
+                        symbols = {
+                            caster = {
+                                name = "Caster",
+                                type = "creature",
+                                desc = "The creature that cast the aura.",
+                            },
+                            target = {
+                                name = "Target",
+                                type = "creature",
+                                desc = "The creature being evaluated for inclusion in the aura. This is a synonym for 'Self' for this script.",
+                            },
+                            aura = {
+                                name = "Aura",
+                                type = "aura",
+                                desc = "The aura being applied.",
+                            },
+                        }
 
                     }
                 },
