@@ -3337,6 +3337,9 @@ CreateAbilityController = function()
         --- @param loc Loc
         --- @param point table
         maphover = function(element, loc, point)
+            element.data.lastHoverLoc = loc
+            element.data.lastHoverPoint = point
+
             assert(g_abilityController ~= nil)
             if g_token == nil or (not g_token.valid) then
                 g_abilityController:FireEvent("cancelCasting")
@@ -3391,7 +3394,21 @@ CreateAbilityController = function()
                     end
                 end
 
-                if (shape == 'emptyspace' or shape == 'anyspace') and (targetingType == "pathfind" or targetingType == "vacated") then
+                if shape == "line" and #m_positionTargetsChosen == 0 then
+                    local lineDistance = g_currentAbility:GetLineDistance(g_token.properties, g_currentSymbols)
+                    --still choosing the starting point of the line.
+                    g_pointTargeting.shape = dmhub.CalculateShape {
+                        shape = "cylinder",
+                        targetPoint = point,
+                        token = g_token,
+                        range = lineDistance,
+                        radius = 1,
+                        locOverride = g_currentAbility:try_get("casterLocOverride"),
+                        requireEmpty = requireEmpty,
+                        emptyMayIncludeSelf = true,
+                    }
+                    
+                elseif (shape == 'emptyspace' or shape == 'anyspace') and (targetingType == "pathfind" or targetingType == "vacated") then
                     pathfinding = true
 
                     local waypoints = {}
@@ -3622,13 +3639,21 @@ CreateAbilityController = function()
                 else
                     g_pointTargeting.shapeRequiresConfirm = true
                 end
+
+                local locOverride = nil
+                if shape == "line" and #m_positionTargetsChosen == 0 then
+                    shape = "radius"
+                    radius = 0
+                elseif shape == "line" then
+                    locOverride = m_positionTargetsChosen[1]
+                end
                 g_pointTargeting.shape = dmhub.CalculateShape {
                     shape = shape,
                     targetPoint = point,
                     token = g_token,
                     range = range,
                     radius = radius,
-                    locOverride = g_currentAbility:try_get("casterLocOverride"),
+                    locOverride = locOverride or g_currentAbility:try_get("casterLocOverride"),
                     requireEmpty = requireEmpty,
                     emptyMayIncludeSelf = requireEmpty and (targetingType == "pathfind" or targetingType == "vacated" or targetingType == "straightline" or targetingType == "straightpath" or targetingType == "straightpathignorecreatures"),
                 }
@@ -3712,7 +3737,9 @@ CreateAbilityController = function()
                     local numTargets = g_currentAbility:GetNumTargets(g_token, g_currentSymbols)
                     local clickText = cond(numTargets == 1, "Click to Confirm", "")
                     local targetingType = g_currentAbility:try_get("targeting", "direct")
-                    if targetingType == "pathfind" then
+                    if g_currentAbility.targetType == "line" and #m_positionTargetsChosen == 0 then
+                        clickText = "Select Line Start"
+                    elseif targetingType == "pathfind" then
                         local movementType = g_currentAbility:GetMovementType(g_token, g_currentSymbols)
                         clickText = string.upper_first(movementType or "Move")
 
@@ -3816,6 +3843,15 @@ CreateAbilityController = function()
             assert(g_token ~= nil)
             assert(g_currentAbility ~= nil, "Current ability is not set.")
 
+            local shape = g_currentAbility.targetType
+
+            --set the starting point of the line.
+            if shape == "line" and #m_positionTargetsChosen == 0 then
+                m_positionTargetsChosen[#m_positionTargetsChosen + 1] = loc
+                return
+            end
+
+
             if loc ~= nil and (g_pointTargeting.shapeRequiresConfirm) and g_pointTargeting.shape ~= nil then
                 g_pointTargeting.shapeRequiresConfirm = false
                 g_pointTargeting.shapeConfirmedLoc = loc
@@ -3828,7 +3864,6 @@ CreateAbilityController = function()
                 loc = info.loc
             end
 
-            local shape = g_currentAbility.targetType
 
             local locOverride = g_currentAbility:try_get("casterLocOverride")
             local targetingType = g_currentAbility:try_get("targeting", "direct")
@@ -3845,6 +3880,10 @@ CreateAbilityController = function()
             print("WAYPOINT:: PRESS SHAPE:", g_pointTargeting.shape)
             if g_pointTargeting.shape ~= nil then
                 local targets = m_positionTargetsChosen
+                if g_currentAbility.targetType == "line" then
+                    --line doesn't include the starting point as a target.
+                    targets = {}
+                end
 
                 if g_currentAbility.targetType == 'emptyspace' or g_currentAbility.targetType == 'emptyspacefriend' or g_currentAbility.targetType == 'anyspace' then
                     targets[#targets + 1] = { loc = loc }
@@ -3938,6 +3977,7 @@ CreateAbilityController = function()
                     m_markLineOfSightSourceToken = nil
                 end
 
+                print("CAST::", #targets)
                 local clearAbility = g_currentAbility
                 g_currentAbility:Cast(g_token, targets, {
                     targetArea = g_pointTargeting.shape,
@@ -3964,6 +4004,15 @@ CreateAbilityController = function()
 
         escapePriority = EscapePriority.CANCEL_ACTION_BAR,
         escape = function(element)
+            if g_currentAbility ~= nil and g_currentAbility.targetType == "line" and #m_positionTargetsChosen > 0 then
+                local loc = m_positionTargetsChosen[#m_positionTargetsChosen]
+                --clear the line start point.
+                m_positionTargetsChosen = {}
+                CalculateSpellTargeting()
+                element:FireEvent("maphover", element.data.lastHoverLoc, element.data.lastHoverPoint)
+                return
+            end
+            
             element:FireEvent("cancelCasting")
         end,
     }
@@ -4154,6 +4203,7 @@ CalculateSpellTargeting = function(forceCast, initialSetup)
                 end
             end
 
+                print("CAST::", #targets)
             local clearAbility = g_currentAbility
             g_currentAbility:Cast(g_token, targets, {
                 attachedTriggers = attachedTriggers,
@@ -4205,7 +4255,16 @@ CalculateSpellTargeting = function(forceCast, initialSetup)
             g_potentialTargetTokens = CalculateSpellTargetFocusing(g_range)
 
             --refresh the radius marker.
-            if (g_currentAbility.targetType == "emptyspace" or g_currentAbility.targetType == "anyspace") and (g_currentAbility:try_get("targeting", "direct") == "pathfind" or g_currentAbility:try_get("targeting", "direct") == "vacated" or g_currentAbility:try_get("targeting", "direct") == "vacated") then
+            if g_currentAbility.targetType == "line" then
+                ClearRadiusMarkers()
+
+                if #m_positionTargetsChosen == 0 then
+                    local loc = g_currentAbility:try_get("casterLocOverride")
+                    local lineDistance = g_currentAbility:GetLineDistance(g_token.properties, g_currentSymbols)
+                    AddRadiusMarker(loc, lineDistance, 'white')
+                end
+                
+            elseif (g_currentAbility.targetType == "emptyspace" or g_currentAbility.targetType == "anyspace") and (g_currentAbility:try_get("targeting", "direct") == "pathfind" or g_currentAbility:try_get("targeting", "direct") == "vacated" or g_currentAbility:try_get("targeting", "direct") == "vacated") then
                 ClearRadiusMarkers()
 
                 local waypoints = {}
