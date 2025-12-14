@@ -66,99 +66,91 @@ local Styles = {
     }
 }
 
---Create Follower table if it does not exist
-EnsureFollowers = function(creature)
-    local followers = creature:try_get("followers")
-    if not followers then
-        creature.followers = {}
-    end
-    return creature.followers
-end
-
-CreateFollowerMonster = function(followerInfo, mentorToken, pregenRetainerId)
-    local locs = mentorToken.properties:AdjacentLocations()
-    local loc = #locs and locs[1] or mentorToken.properties.locsOccupying[1]
-    local newCharId
-
-    dmhub.Coroutine(function()
-        if pregenRetainerId then
-            newMonster = game.SpawnTokenFromBestiaryLocally(pregenRetainerId, loc, {fitLocatoin = true})
-            newCharId = newMonster.charid
-            newMonster.ownerId = mentorToken.ownerId
-            newMonster.partyId = mentorToken.partyId
-
-            newMonster.name = followerInfo.name
-            newMonster:UploadToken()
-            game.UpdateCharacterTokens()
-        else
-            newCharId = game.CreateCharacter("monster")
-            for i = 1, 100 do
-                local newMonster = dmhub.GetCharacterById(newCharId)
-                if newMonster ~= nil then
-                    newMonster.properties = monster.CreateNew(followerInfo.type)
-                    local monster = newMonster.properties
-
-                    newMonster.name = followerInfo.name
-                    monster.role = "Follower"
-                    monster.followerType = followerInfo.type
-                    monster.creatureTemplates = {}
-                    monster.creatureTemplates[#monster.creatureTemplates + 1] = "25263715-cef4-4e25-b4bd-ddedc3a87dea"
-
-                    if followerInfo.type ~= "retainer" then
-                        monster.attributes["rea"].baseValue = 1
-                        if monster.followerType == "sage" then
-                            monster.attributes["inu"].baseValue = 1
-                        elseif monster.followerType == "artisan" then
-                            monster.attributes[followerInfo.characteristic].baseValue = 1
-                        end
-                    end
-
-                    local ancestryTable = dmhub.GetTable(Race.tableName)
-                    local ancestry = ancestryTable[followerInfo.ancestry]
-                    local bandTable = dmhub.GetTable(MonsterGroup.tableName)
-                    for id, band in pairs(bandTable) do
-                        if string.lower(band.name) == string.lower(ancestry.name) then
-                            monster.groupid = id
-                            monster.keywords = {}
-                            monster.keywords[band.name] = true
-                        end
-                    end
-
-                    newMonster.ownerId = mentorToken.ownerId
-                    newMonster.partyId = mentorToken.partyId
-                    newMonster:UploadToken()
-                    game.UpdateCharacterTokens()
-                    newMonster:ChangeLocation(core.Loc{x = loc.x, y = loc.y})
-                    break
-                end
-                coroutine.yield(0.1)
-            end
-        end
-        local newMonster = dmhub.GetTokenById(newCharId)
-        followerInfo.followerToken = newMonster.id
-        followerInfo.portrait = newMonster.offTokenPortrait
-
-        mentorToken:ModifyProperties{
-            description = "Assign Follower",
-            execute = function()
-                local followers = EnsureFollowers(mentorToken.properties)
-                followers[#followers + 1] = followerInfo
-            end,
-        }
-        
-        newMonster:ShowSheet()
-    end)
-
-end
-
 local retainerDropdownOptions, retainerLookup = buildRetainerList()
 
 function CharSheet.FollowersInnerPanel()
+    local TokenDropdownOptions = function(partyid)
+        local results = {
+            {
+                id = "none",
+                text = "Select Follower Token",
+            },
+        }
+
+        --Our Party
+        local partyMembers = dmhub.GetCharacterIdsInParty(partyid) or {}
+        for _, charid in ipairs(partyMembers) do
+            local token = dmhub.GetCharacterById(charid)
+            if token ~= nil then
+                if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
+                    results[#results + 1] = {
+                        id = charid,
+                        text = token.name,
+                    }
+                end
+            end
+        end
+
+        --Allied Parties
+        local partyInfo = GetParty(partyid)
+        for id, _ in pairs(partyInfo.allyParties) do
+            partyMembers = dmhub.GetCharacterIdsInParty(id) or {}
+            for _, charid in ipairs(partyMembers) do
+                local token = dmhub.GetCharacterById(charid)
+                if token ~= nil then
+                    if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
+                        results[#results + 1] = {
+                            id = charid,
+                            text = token.name,
+                        }
+                    end
+                end
+            end
+        end
+
+        return results
+    end
+
+    local FollowerTokenSelectionPanel = function(mentorToken)
+        if not mentorToken then return end
+        local resultsPanel
+        resultsPanel = gui.Panel{
+            flow = "horizontal",
+            width = "auto",
+            height = 30,
+
+            gui.Label{
+                classes = { "followerLabel"},
+                width = "auto",
+                height = "auto",
+                text = "Token:",
+            },
+
+            gui.Dropdown{
+                options = TokenDropdownOptions(mentorToken.partyid),
+
+                idChosen = follower.followerToken,
+
+                refreshAll = function(element)
+                    element.options = TokenDropdownOptions(mentorToken.partyid)
+                end,
+                
+                change = function(element)
+                    follower.followerToken = element.idChosen
+                    resultPanel:FireEventTree("refreshAll")
+                end,
+            },
+        }
+
+        return resultsPanel
+    end
+
     local FollowerSelectionDialog = function()
         local resultPanel
 
+        local mentorToken
         local newFollowerType = "none"
-        local follower = Follower.Create()
+        local follower = {}
 
         local retainerType
 
@@ -175,10 +167,18 @@ function CharSheet.FollowersInnerPanel()
             margin = 10,
 
             newFollower = function(element)
-                follower = Follower.Create()
-                follower.characteristic = "mgt"
+                --initialive follower information
+                follower = {
+                    type = "artisan",
+                    name = "New Follower",
+                    characteristic = "mgt",
+                    ancestry = Race.DefaultRace(),
+                    manual = false,
+                    followerToken = "none",
+                }
                 newFollowerType = "none"
                 retainerType = nil
+                mentorToken = CharacterSheet.instance.data.info.token
                 resultPanel:FireEventTree("refreshAll")
             end,
 
@@ -200,7 +200,6 @@ function CharSheet.FollowersInnerPanel()
                     { id = "artisan", text = "Artisan" },
                     { id = "sage", text = "Sage" },
                     { id = "premaderetainer", text = "Premade Retainer" },
-
                     { id = "existing", text = "Manual" },
                 },
 
@@ -208,6 +207,7 @@ function CharSheet.FollowersInnerPanel()
 
                 change = function(element)
                     newFollowerType = element.idChosen
+                    follower.manual = (element.idChosen == "existing")
                     resultPanel:FireEventTree("refreshAll")
                 end,
 
@@ -248,6 +248,7 @@ function CharSheet.FollowersInnerPanel()
                 end,
             },
 
+            --Retainers from Bestiary
             gui.Panel{
                 classes = {"collapsed-anim"},
                 width = "auto",
@@ -350,13 +351,52 @@ function CharSheet.FollowersInnerPanel()
                             },
                         },
 
-                        idChosen = follower.characteristic or "mgt",
+                        idChosen = follower.characteristic,
                         
                         change = function(element)
                             follower.characteristic = element.idChosen
                             resultPanel:FireEventTree("refreshAll")
                         end,
+
+                        refreshAll = function(element)
+                            element.idChosen = follower.characteristic
+                        end,
                     },
+                },
+            },
+
+            gui.Panel{
+                classes = {"collapsed-anim"},
+                flow = "horizontal",
+                width = "auto",
+                height = 30,
+
+                refreshAll = function(element)
+                    if newFollowerType == "existing" then
+                        element:SetClass("collapsed-anim", false)
+                    else
+                        element:SetClass("collapsed-anim", true)
+                    end
+                end,
+
+                gui.Label{
+                    classes = { "followerLabel"},
+                    width = "auto",
+                    height = "auto",
+                    text = "Token:",
+                },
+
+                gui.Dropdown{
+                    idChosen = follower.followerToken or "none",
+
+                    refreshAll = function(element)
+                        element.options = TokenDropdownOptions(mentorToken.partyid)
+                    end,
+                    
+                    change = function(element)
+                        follower.followerToken = element.idChosen
+                        resultPanel:FireEventTree("refreshAll")
+                    end,
                 },
             },
 
@@ -374,22 +414,7 @@ function CharSheet.FollowersInnerPanel()
 
                 click = function(element)
                     local mentorToken = CharacterSheet.instance.data.info.token
-                    if newFollowerType == "existing" then
-                        local followers = EnsureFollowers(mentorToken.properties)
-                        follower.manual = true
-                        followers[#followers + 1] = follower
-                        CharacterSheet.instance:FireEvent("refreshAll")
-                        element.parent:SetClass("collapsed", true)
-                        return
-                    end
-                    if newFollowerType == "artisan" or newFollowerType == "sage" then
-                        follower.type = newFollowerType
-                    else
-                        follower.type = "retainer"
-                    end
-                    follower.assignedTo[mentorToken.charid] = follower.guid
-                    local followerid = CreateFollowerMonster(follower, mentorToken, retainerType)
-
+                    CreateFollowerMonster(follower, newFollowerType, mentorToken, retainerType)
                     CharacterSheet.instance:FireEvent("refreshAll")
                     element.parent:SetClass("collapsed", true)
                 end,
@@ -408,54 +433,12 @@ function CharSheet.FollowersInnerPanel()
         return resultPanel
     end
 
-    local TokenDropdownOptions = function(partyid)
-        local results = {
-            {
-                id = "none",
-                text = "Select Follower Token",
-            },
-        }
-
-        --Our Party
-        local partyMembers = dmhub.GetCharacterIdsInParty(partyid) or {}
-        for _, charid in ipairs(partyMembers) do
-            local token = dmhub.GetCharacterById(charid)
-            if token ~= nil then
-                if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
-                    results[#results + 1] = {
-                        id = charid,
-                        text = token.name,
-                    }
-                end
-            end
-        end
-
-        --Allied Parties
-        local partyInfo = GetParty(partyid)
-        for id, _ in pairs(partyInfo.allyParties) do
-            partyMembers = dmhub.GetCharacterIdsInParty(id) or {}
-            for _, charid in ipairs(partyMembers) do
-                local token = dmhub.GetCharacterById(charid)
-                if token ~= nil then
-                    if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
-                        results[#results + 1] = {
-                            id = charid,
-                            text = token.name,
-                        }
-                    end
-                end
-            end
-        end
-
-        return results
-    end
-
-    local CreateFollowersSection = function(i, params)
+    local CreateFollowersSection = function(id, params)
         local resultPanel
 
         local tok = CharacterSheet.instance.data.info.token
         local followers = tok.properties:GetFollowers()
-        local follower = followers[i]
+        local follower = dmhub.GetCharacterById(id)
 
         local args = {
             classes = {"framedPanel"},
@@ -475,7 +458,7 @@ function CharSheet.FollowersInnerPanel()
 
             refreshToken = function(element, info)
                 followers = info.token.properties:GetFollowers()
-                follower = followers[i]
+                follower = dmhub.GetCharacterById(id)
             end,
 
             gui.Panel{
@@ -485,16 +468,17 @@ function CharSheet.FollowersInnerPanel()
                 vmargin = 4,
                 gui.Label{
                     classes = { "followerNameLabel"},
-                    text = follower.name or "Unnamed",
+                    text = follower and creature.GetTokenDescription(follower) or "Unnamed",
 
                     edit = function(element)
                         element:FireEvent("change")
                     end,
 
                     refreshAll = function(element, info)
-                        local followerToken = dmhub.GetTokenById(follower.followerToken)
-                        if followerToken then
-                            element.text = creature.GetTokenDescription(followerToken)
+                        if follower then
+                            element.text = creature.GetTokenDescription(follower)
+                        else
+                            element.text = "Unnamed"
                         end
                     end,
                 },
@@ -520,17 +504,19 @@ function CharSheet.FollowersInnerPanel()
                     valign = "top",
                     flow = "vertical",
 
-                    bgimage = follower.portrait,
+                    bgimage = follower and follower.offTokenPortrait or "",
 
                     click = function(element)
-                        local followerToken = dmhub.GetTokenById(follower.followerToken)
-                        followerToken:ShowSheet()
+                        if follower then
+                            follower:ShowSheet()
+                        end
                     end,
 
                     refreshAll = function(element)
-                        local followerToken = dmhub.GetTokenById(follower.followerToken)
-                        if followerToken then
-                            element.bgimage = followerToken.offTokenPortrait
+                        if follower then
+                            element.bgimage = follower.offTokenPortrait
+                        else
+                            element.bgimage = ""
                         end
                     end,
                 },
@@ -557,12 +543,20 @@ function CharSheet.FollowersInnerPanel()
                                 text = "Type:",
                             },
                             gui.Label{
-                                classes = { "followerLabel", (cond(follower.manual, "collapsed"))},
+                                classes = { "followerLabel"},
                                 width = "auto",
                                 height = "auto",
-                                text = string.upper_first(follower.type),
+                                text = follower and follower.properties and follower.properties.followerType and string.upper_first(follower.properties.followerType) or "Unknown",
+
+                                refreshAll = function(element)
+                                    if follower and follower.properties and follower.properties.followerType then
+                                        element.text = string.upper_first(follower.properties.followerType)
+                                    else
+                                        element.text = "Unknown"
+                                    end
+                                end,
                             },
-                            gui.Dropdown{
+--[[                             gui.Dropdown{
                                 classes = (cond(not follower.manual, "collapsed")),
                                 options = {
                                     {id = "artisan", text = "Artisan"},
@@ -580,7 +574,7 @@ function CharSheet.FollowersInnerPanel()
                                     follower.type = element.idChosen
                                     resultPanel:FireEventTree("refreshAll")
                                 end,
-                            },
+                            }, ]]
                         },
 
                         gui.Panel{
@@ -596,17 +590,33 @@ function CharSheet.FollowersInnerPanel()
                             },
 
                             gui.Dropdown{
-                                options = TokenDropdownOptions(tok.partyid),
-
-                                idChosen = follower.followerToken or "none",
+                                idChosen = id,
+                                options = (function()
+                                    local mentorToken = CharacterSheet.instance.data.info.token
+                                    return mentorToken and TokenDropdownOptions(mentorToken.partyId) or {}
+                                end)(),
 
                                 refreshAll = function(element)
-                                    element.options = TokenDropdownOptions(tok.partyid)
+                                    local mentorToken = CharacterSheet.instance.data.info.token
+                                    if mentorToken then
+                                        element.options = TokenDropdownOptions(mentorToken.partyId)
+                                        element.idChosen = id
+                                    end
                                 end,
                                 
                                 change = function(element)
-                                    follower.followerToken = element.idChosen
-                                    resultPanel:FireEventTree("refreshAll")
+                                    local mentorToken = CharacterSheet.instance.data.info.token
+                                    if mentorToken then
+                                        mentorToken:ModifyProperties{
+                                            description = "Reassign Follower",
+                                            execute = function()
+                                                local followers = EnsureFollowers(mentorToken.properties)
+                                                followers[id] = nil
+                                                followers[element.idChosen] = true
+                                            end,
+                                        }
+                                        CharacterSheet.instance:FireEvent("refreshAll")
+                                    end
                                 end,
                             },
                         },
@@ -630,8 +640,8 @@ function CharSheet.FollowersInnerPanel()
         text = "Add New Follower",
         click = function(element)
             local followerDiag = element:Get("followerSelectionDialog")
-            followerDiag:SetClass("collapsed", false)
             followerDiag:FireEvent("newFollower")
+            followerDiag:SetClass("collapsed", false)
         end,
     }
 
@@ -661,29 +671,24 @@ function CharSheet.FollowersInnerPanel()
             topPanel,
         
             refreshToken = function(element, info)
-                local followers = info.token.properties:GetFollowers()
+                local mentorToken = info.token
+                local followers = mentorToken.properties:GetFollowers()
                 local children = {topPanel}
                 local newFollowerPanels = {}
 
-                for i, follower in ipairs(followers) do
+                for followerId, _ in pairs(followers) do
                     
-                    local child = followerPanels[follower.guid]
+                    local child = followerPanels[followerId]
                     if not child then
-                        child = CreateFollowersSection(i, {
+                        child = CreateFollowersSection(followerId, {
                             delete = function()
-                                local followers = EnsureFollowers(info.token.properties)
-                                for id, f in ipairs(followers) do
-                                    if f.guid == follower.guid then
-                                        table.remove(followers, id)
-                                        break
-                                    end
-                                end
+                                RemoveFollowerFromMentor(mentorToken, followerId)
                                 CharacterSheet.instance:FireEvent("refreshAll")
                             end,
                         })
                     end
 
-                    newFollowerPanels[follower.guid] = child
+                    newFollowerPanels[followerId] = child
                     children[#children + 1] = child
                 end
 

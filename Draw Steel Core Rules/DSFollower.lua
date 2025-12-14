@@ -1,28 +1,164 @@
 local mod = dmhub.GetModLoading()
 
---- @class Follower
---- @field guid string The unique identifier for the follower
---- @field ancestry string The unique identifier for the follower's ancestry
---- @field portrait string The unique identifier / key for the follower's portrait
---- @field name string The follower's name
---- @field type string The type of follower (artisan, retainer, sage)
---- @field description string The description of the follower
---- @field languages table Flag table of language ID's the follower knows
---- @field skills table Flag table of skill ID's the follower knows
---- @field followerToken string The token ID of the follower token
---- @field availableRolls number The number of downtime rolls allocated to the follower
---- @field characteristic string The characteristic code for the follower's additional characteristic
---- @field assignedTo table Flag list of tokens the follower was assigned to
-Follower = RegisterGameType("Follower", "monster")
+--- @class follower
+--- @field follower.availableRolls number
+--- @field follower.followerType string artisan|sage|retainer
+follower = RegisterGameType("follower", "monster")
 
-Follower.type = "artisan"
-Follower.portrait = "DEFAULT_MONSTER_AVATAR"
-Follower.name = "New Follower"
-Follower.characteristic = "mgt"
-Follower.ancestry = ""
-Follower.followerToken = ""
-Follower.availableRolls = 0
-Follower.manual = false
+follower.availableRolls = 0
+
+function follower.CreateNew(followerType)
+    local result = follower.new{
+		cr = 1,
+
+        followerType = followerType or "artisan",
+        availableRolls = 0,
+
+		monster_type = 'Monster', --this is the specific type of monster. e.g. Adult Black Dragon
+		monster_category = 'Monster', --this is the "Type" of monster. e.g. Dragon
+
+
+		damage_taken = 0,
+		max_hitpoints = 10,
+
+		attributes = creature.CreateAttributes(),
+
+		walkingSpeed = 5,
+
+        equipment = {
+            mainhand1 = "22ab52f5-955b-40c8-80c3-826f823e0a5b",
+        },
+
+		--map of skill id -> rating for that skill. 'true' means the monster is proficient and use proficiency bonus.
+		skillRatings = {
+		},
+
+		--map of saving throw -> rating for that saving throw.
+		savingThrowRatings = {
+		},
+
+		--list of innate attacks (type = AttackDefinition)
+		innateAttacks = {
+		},
+	}
+
+	return result
+end
+
+function creature:EnsureFollowers()
+    return {}
+end
+
+--Create Follower table if it does not exist
+---@return table[] table of followers as charid is true
+function character:EnsureFollowers()
+    local followers = self:try_get("followers")
+    if not followers then
+        self.followers = {}
+    end
+    return self.followers
+end
+
+---@param followerid string
+function character:AddFollowerToMentor(followerid)
+    local token = dmhub.LookupToken(self)
+    token:ModifyProperties{
+        description = "Assign Follower",
+        execute = function()
+            local followers = self:EnsureFollowers()
+            followers[followerid] = true
+        end,
+    }
+end
+
+---@param mentorToken Token[]
+---@param followerid string
+function character:RemoveFollowerFromMentor(followerid)
+    local token = dmhub.LookupToken(self)
+    token:ModifyProperties{
+        description = "Remove Follower",
+        execute = function()
+            local followers = self:EnsureFollowers()
+            followers[followerid] = nil
+        end,
+    }
+end
+
+---@param followerInfo table 
+---@param followerType string artisan, sage, premaderetainer, existing
+---@param mentorToken Token[]
+---@param pregenRetainerId string|nil optional data for creating a pre-made retainer
+CreateFollowerMonster = function(followerInfo, followerType, mentorToken, pregenRetainerId)
+    if followerType == "existing" then
+        AddFollowerToMentor(mentorToken, followerInfo.followerToken)
+        return
+    end
+
+    local locs = mentorToken.properties:AdjacentLocations()
+    local loc = #locs and locs[1] or mentorToken.properties.locsOccupying[1]
+    local newCharId
+
+    dmhub.Coroutine(function()
+        if pregenRetainerId then
+            newMonster = game.SpawnTokenFromBestiaryLocally(pregenRetainerId, loc, {fitLocatoin = true})
+            newCharId = newMonster.charid
+            newMonster.ownerId = mentorToken.ownerId
+            newMonster.partyId = mentorToken.partyId
+
+            newMonster.name = followerInfo.name
+            newMonster:UploadToken()
+            game.UpdateCharacterTokens()
+        else
+            newCharId = game.CreateCharacter("follower")
+            for i = 1, 100 do
+                local newMonster = dmhub.GetCharacterById(newCharId)
+                if newMonster ~= nil then
+                    newMonster.properties = follower.CreateNew(followerInfo.type)
+                    local monster = newMonster.properties
+
+                    newMonster.name = followerInfo.name
+                    monster.role = "Follower"
+                    monster.followerType = followerInfo.type
+                    monster.creatureTemplates = {}
+                    monster.creatureTemplates[#monster.creatureTemplates + 1] = "25263715-cef4-4e25-b4bd-ddedc3a87dea"
+
+                    if followerInfo.type ~= "retainer" then
+                        monster.attributes["rea"].baseValue = 1
+                        if monster.followerType == "sage" then
+                            monster.attributes["inu"].baseValue = 1
+                        elseif monster.followerType == "artisan" then
+                            monster.attributes[followerInfo.characteristic].baseValue = 1
+                        end
+                    end
+
+                    local ancestryTable = dmhub.GetTable(Race.tableName)
+                    local ancestry = ancestryTable[followerInfo.ancestry]
+                    local bandTable = dmhub.GetTable(MonsterGroup.tableName)
+                    for id, band in pairs(bandTable) do
+                        if string.lower(band.name) == string.lower(ancestry.name) then
+                            monster.groupid = id
+                            monster.keywords = {}
+                            monster.keywords[band.name] = true
+                        end
+                    end
+
+                    newMonster.ownerId = mentorToken.ownerId
+                    newMonster.partyId = mentorToken.partyId
+                    newMonster:UploadToken()
+                    game.UpdateCharacterTokens()
+                    newMonster:ChangeLocation(core.Loc{x = loc.x, y = loc.y})
+                    break
+                end
+                coroutine.yield(0.1)
+            end
+        end
+        local newMonster = dmhub.GetTokenById(newCharId)
+        AddFollowerToMentor(mentorToken, newMonster.id)
+        
+        newMonster:ShowSheet()
+    end)
+
+end
 
 
 function Follower.Create()
