@@ -84,20 +84,26 @@ function character:RemoveFollowerFromMentor(followerid)
     }
 end
 
+---@param follower Token[]
+---@param followerInfo table[]
+---@param mentorToken Token[]
 local SetFollowerPartyInfo = function(follower, followerInfo, mentorToken)
     follower.name = followerInfo.name
     follower.ownerId = mentorToken.ownerId
     follower.partyId = mentorToken.partyId        
 end
 
----@param followerInfo table 
+---@param followerInfo table[]
 ---@param followerType string artisan, sage, premaderetainer, existing
 ---@param mentorToken Token[]
 ---@param pregenid string|nil optional data for creating a pre-made retainer
 ---@param open boolean will charactersheet open after creation
-CreateFollowerMonster = function(followerInfo, followerType, mentorToken, pregenid, open)
-    if followerType == "existing" then
-        mentorToken.properties:AddFollowerToMentor(pregenid)
+CreateFollowerMonster = function(followerInfo, followerType, mentorToken, options)
+    local pregenid = options and options.pregenid or nil
+    local open = options and options.open or true
+
+    if followerType == "existing" and options.followerToken then
+        mentorToken.properties:AddFollowerToMentor(options.followerToken)
         return
     end
 
@@ -116,21 +122,22 @@ CreateFollowerMonster = function(followerInfo, followerType, mentorToken, pregen
             newFollower:UploadToken()
             game.UpdateCharacterTokens()
         else
+            --Creates a new follower character
             newCharId = game.CreateCharacter("follower")
+            --Wait for follower character to be created
             for i = 1, 100 do
                 local newFollower = dmhub.GetCharacterById(newCharId)
                 if newFollower ~= nil then
-                    newFollower.properties = follower.CreateNew(followerInfo.type)
+                    newFollower.properties = follower.CreateNew(followerType)
 
                     SetFollowerPartyInfo(newFollower, followerInfo, mentorToken)
 
                     local newFollowerCreature = newFollower.properties
 
+                    --Set basic follower property
                     newFollowerCreature.role = "Follower"
-                    newFollowerCreature.followerType = followerInfo.type
-                    newFollowerCreature.creatureTemplates = {}
-                    newFollowerCreature.creatureTemplates[#newFollowerCreature.creatureTemplates + 1] = "25263715-cef4-4e25-b4bd-ddedc3a87dea"
-
+                    
+                    --Set Attributes based upon followerInfo
                     if followerInfo.type ~= "retainer" then
                         newFollowerCreature.attributes["rea"].baseValue = 1
                         if newFollowerCreature.followerType == "sage" then
@@ -138,22 +145,39 @@ CreateFollowerMonster = function(followerInfo, followerType, mentorToken, pregen
                         elseif newFollowerCreature.followerType == "artisan" then
                             newFollowerCreature.attributes[followerInfo.characteristic].baseValue = 1
                         end
+                    else
+                        --Creature template for retainers in compendium
+                        newFollowerCreature.creatureTemplates = {}
+                        newFollowerCreature.creatureTemplates[#newFollowerCreature.creatureTemplates + 1] = "25263715-cef4-4e25-b4bd-ddedc3a87dea"
                     end
 
+                    --Search for ancestry in compendium bands
                     local ancestryTable = dmhub.GetTable(Race.tableName)
                     local ancestry = ancestryTable[followerInfo.ancestry]
                     local bandTable = dmhub.GetTable(MonsterGroup.tableName)
+                    local found = false
                     for id, band in pairs(bandTable) do
                         if string.lower(band.name) == string.lower(ancestry.name) then
                             newFollowerCreature.groupid = id
                             newFollowerCreature.keywords = {}
                             newFollowerCreature.keywords[band.name] = true
+                            found = true
+                            break
                         end
+                    end
+                    --Set custom keywords for follower if not found in compendium bands
+                    if not found then
+                        newFollowerCreature.keywords = {}
+                        newFollowerCreature.keywords[ancestry.name] = true
                     end
                     if followerInfo.portrait then
                         newFollower.portrait = followerInfo.portrait
                     end
 
+                    --Set skills and languages for followers
+                    newFollowerCreature.skillRatings = followerInfo.skills or {}
+                    newFollowerCreature.innateLanguages = followerInfo.languages or {}
+                    
                     newFollower:UploadToken()
                     game.UpdateCharacterTokens()
                     newFollower:ChangeLocation(core.Loc{x = loc.x, y = loc.y})
