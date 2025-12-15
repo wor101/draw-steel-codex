@@ -9912,13 +9912,14 @@ function creature:Repair(localOnly)
 				followerToken = k.retainerToken
 			end
 
-			if followerToken then
+			if followerToken and followerToken ~= "none" then
 				-- Add the follower using the new structure
 				self:AddFollowerToMentor(followerToken)
 				-- Remove the old entry
 				self.followers[i] = nil
 			else
 				-- No valid token found, attempt to create a follower token
+				local opts = { open = false }
 				if tok == nil then
 					tok = dmhub.LookupToken(self)
 					if tok then
@@ -9926,12 +9927,12 @@ function creature:Repair(localOnly)
 							description = "Translate followers",
 							undoable = false,
 							execute = function()
-								CreateFollowerMonster(k, k.type, tok)
+								CreateFollowerMonster(k, k.type, tok, opts)
 							end,
 						}
 					end
 				else
-					CreateFollowerMonster(k, k.type, tok)
+					CreateFollowerMonster(k, k.type, tok, opts)
 				end
 				self.followers[i] = nil
 			end
