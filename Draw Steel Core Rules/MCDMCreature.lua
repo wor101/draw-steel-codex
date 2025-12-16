@@ -3487,6 +3487,7 @@ function creature:PersistentAbilities()
 
                 ability.persistence = nil
                 ability.actionResourceId = cond(persistenceMode == "recast_maneuver", CharacterResource.maneuverResourceId, "none")
+                ability.resourceNumber = "0"
 
                 --[[ if a.filter ~= nil then
                     ability.abilityFilter = {a.filter}
