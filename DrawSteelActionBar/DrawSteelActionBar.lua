@@ -2661,14 +2661,16 @@ CreateAbilityController = function()
     --- @type Label
     local channeledResourceTitle = gui.Label {
         text = "Channeled Resource",
-        fontSize = 14,
+        fontSize = 24,
+        bold = true,
         markdown = true,
+        bmargin = 5,
         color = Styles.textColor,
         halign = "center",
         valign = "top",
         width = "auto",
         maxWidth = 800,
-        height = 24,
+        height = 30,
     }
 
     --- @type Panel
@@ -2706,11 +2708,11 @@ CreateAbilityController = function()
         styles = {
             {
                 selectors = { "levelPanel" },
-                width = 16,
-                height = 16,
+                width = 20,
+                height = 20,
                 hmargin = 2,
                 valign = "center",
-                fontSize = 14,
+                fontSize = 20,
                 color = Styles.textColor,
                 textAlignment = "center",
                 borderWidth = 1,
