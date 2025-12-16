@@ -9740,6 +9740,7 @@ function creature:IsValid()
 		return false
 	end
 
+	-- TODO: Remove at early access
 	for i, k in pairs(self:GetFollowers()) do
 		if k ~= true then
 			return false
@@ -9905,6 +9906,7 @@ function creature:Repair(localOnly)
 		self.complicationid = nil
 	end
 
+	-- TODO: Remove at early access
 	for i, k in pairs(self:GetFollowers()) do
 		if k ~= true then
 			local followerToken = k.followerToken

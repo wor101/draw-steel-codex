@@ -49,6 +49,18 @@ function creature:EnsureFollowers()
     return {}
 end
 
+function follower:GetAvailableRolls()
+    return self:try_get("availableRolls", 0)
+end
+
+--- Modifies the available rolls counter
+--- @param rolls number The number of rolls to add
+--- @return follower self For chaining
+function follower:GrantRolls(rolls)
+    self.availableRolls = math.max(0, self:GetAvailableRolls() + (rolls or 0))
+    return self
+end
+
 --Create Follower table if it does not exist
 ---@return table[] table of followers as charid is true
 function character:EnsureFollowers()
