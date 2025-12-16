@@ -1659,6 +1659,11 @@ Commands.rollinitiative = function(str)
         end
     end
 
+    print("DISPATCH:: OBJECT BEGIN ROUND", #dmhub.allObjectTokens)
+    for _,tok in ipairs(dmhub.allObjectTokens) do
+        tok.properties:DispatchEvent("beginround")
+    end
+
     local averageVictories = 0
     if #heroVictories > 0 then
         for _,victory in ipairs(heroVictories) do
