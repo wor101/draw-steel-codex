@@ -24,21 +24,33 @@ end
 --- Process an item to determine the game element it came from
 --- @param item table An item to process
 --- @return string|nil source The source or nil if not found / invalid
-local function processChoiceSource(item)
-    if item.background then return "career" end
-    if item.upbringing or item.organization or item.environment then
-        return "culture"
-    end
-    if item.class then return "class" end
-    if item.race then return "ancestry" end
-    if item.feat then
-        if item.feat.typeName == "CharacterComplication" then
-            return "complication"
-        else
-            return "perk"
+local function translateChoiceSource(item)
+
+    -- Find the name of the choice source
+    local choiceSource = nil
+    for k,_ in pairs(item) do
+        if k ~= "feature" then
+            choiceSource = k
+            break
         end
     end
-    return nil
+
+    -- Translate it
+    if choiceSource == "background" then
+        choiceSource "career"
+    elseif choiceSource == "upbringing" or choiceSource == "organization" or choiceSource == "environment" then
+        choiceSource = "culture"
+    elseif choiceSource == "race" then
+        choiceSource = "ancestry"
+    elseif choiceSource == "feat" then
+        if item.feat.typeName == "CharacterComplication" then
+            choiceSource = "complication"
+        else
+            choiceSource = "perk"
+        end
+    end
+
+    return choiceSource
 end
 
 --- Process data of CharacterFeature type
@@ -122,7 +134,7 @@ local function aggregateSkillChoices(selectedFeatures, customFeatures, levelChoi
                 end
 
                 if skillInfo and #skillInfo > 0 then
-                    local source = processChoiceSource(item)
+                    local source = translateChoiceSource(item)
                     if source then
                         if skillChoices[source] == nil then
                             skillChoices[source] = {}
