@@ -235,6 +235,7 @@ function CharacterBuilder._inputStyles()
             selectors = {"text-entry"},
             bgcolor = "#191A18",
             borderColor = "#666663",
+            cornerRadius = 4,
         },
         {
             selectors = {"primary"},
@@ -259,6 +260,8 @@ function CharacterBuilder._dropdownStyles()
             bgcolor = "#191A18",
             borderColor = "#666663",
             fontSize = 36,
+            cornerRadius = 4,
+            borderWidth = 2,
         },
         {
             selectors = {"dropdownLabel"},

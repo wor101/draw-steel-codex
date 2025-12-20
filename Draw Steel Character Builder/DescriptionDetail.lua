@@ -13,13 +13,24 @@ local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 --- @return Panel
 function CharacterBuilder._descriptionEdit()
 
-    local function wrapEditor(editor)
+    local function wrapEditor(editor, labelText)
         return gui.Panel{
             classes = {"builder-base", "panel-base"},
             width = "96%",
             height = "auto",
             valign = "top",
+            flow = "vertical",
             vmargin = 12,
+            (labelText and #labelText > 0) and gui.Label{
+                classes = {"builder-base", "label", "label-info"},
+                width = "100%",
+                height = "auto",
+                halign = "left",
+                bmargin = 2,
+                textAlignment = "left",
+                text = labelText .. ":",
+                color = CharacterBuilder.COLORS.GRAY02,
+            } or nil,
             editor,
         }
     end
@@ -67,7 +78,7 @@ function CharacterBuilder._descriptionEdit()
             element:FireEvent("change")
         end
 
-        return wrapEditor(gui.Input(inputConfig))
+        return wrapEditor(gui.Input(inputConfig), placeholderText)
     end
 
     local header = gui.Panel{

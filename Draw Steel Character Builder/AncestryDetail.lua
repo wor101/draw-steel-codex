@@ -380,10 +380,6 @@ function CharacterBuilder._ancestryDetail()
             element:SetClass("collapsed", not visible)
         end,
 
-        refreshToken = function(element)
-            element:FireEvent("refreshBuilderState", _getState(element))
-        end,
-
         ancestryNavPanel,
         ancestryDetailPanel,
     }

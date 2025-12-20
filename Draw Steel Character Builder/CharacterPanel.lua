@@ -9,7 +9,75 @@ local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
 
-local INITIAL_TAB = "builder"
+local INITIAL_TAB = "description"
+
+local function processFeature(feature)
+
+    local modifiers = feature:try_get("modifiers")
+    if modifiers then
+        local choiceInfo = {}
+        for _,item in ipairs(modifiers) do
+            if item.typeName and item.typeName == "CharacterModifier" then
+                
+            end
+        end
+    end
+
+    return nil
+end
+
+local function processChoice(feature, levelChoices)
+
+    local function translateTypeName(typeName)
+        local s = typeName:match("Character(.+)Choice")
+    end
+
+    local guid = feature:try_get("guid")
+    if guid then
+        local selected = levelChoices[guid]
+        return {{
+            guid = guid,
+            type = translateTypeName(feature.typeName),
+            numChoices = feature:try_get("numChoices", 1),
+            numSelected = selected and #selected or 0
+        }}
+    end
+
+    return nil
+end
+
+local function aggregateBuilderChoices(creature)
+    local choices = {}
+
+    local function typeNameIsChoice(typeName)
+        return typeName == "CharacterDeityChoice"
+            or typeName == "CharacterFeatChoice"
+            or typeName == "CharacterFeatureChoice"
+            or typeName == "CharacterLanguageChoice"
+            or typeName == "CharacterSkillChoice"
+            or typeName == "CharacterSubclassChoice"
+    end
+
+    if creature then
+        local levelChoices = creature:GetLevelChoices()
+        local selectedFeatures = creature:GetClassFeaturesAndChoicesWithDetails()
+
+        for _,item in ipairs(selectedFeatures) do
+            local typeName = item.feature and item.feature.typeName
+            if typeName then
+                local choiceInfo
+                if typeNameIsChoice(typeName) then
+                    choiceInfo = processChoice(item.feature, levelChoices)
+                elseif typeName == "CharacterFeatureList" then
+                    -- iterate over feature.features #39
+                elseif typeName == "CharacterFeature" then
+                end
+            end
+        end
+    end
+
+    return choices
+end
 
 function CharacterBuilder._characterBuilderPanel(tabId)
     return gui.Panel {
@@ -408,11 +476,6 @@ function CharacterBuilder._characterTacticalPanel(tabId)
     }
 end
 
---- Create the tabs panel
---- @return Panel
-function CharacterBuilder._characterDetailTabsPanel()
-end
-
 --- Create the tabbed detail panel for the character pane
 --- @return Panel
 function CharacterBuilder._characterDetailPanel()
@@ -441,7 +504,7 @@ function CharacterBuilder._characterDetailPanel()
             content = CharacterBuilder._characterTacticalPanel,
         }
     }
-    local tabOrder = {"builder", "description", "exploration", "tactical"}
+    local tabOrder = {"description", "builder", "exploration", "tactical"}
 
     local tabButtons = {}
     for _,tabId in ipairs(tabOrder) do

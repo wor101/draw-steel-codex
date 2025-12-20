@@ -72,3 +72,17 @@ end
 function LuaPath:CalculateHazards(tok)
 	-- dummy implementation for documentation purposes only
 end
+
+--- GetCreaturesCollidingWith
+--- @param token any
+--- @return any
+function LuaPath:GetCreaturesCollidingWith(token)
+	-- dummy implementation for documentation purposes only
+end
+
+--- GetObjectsCollidingWith
+--- @param token any
+--- @return any
+function LuaPath:GetObjectsCollidingWith(token)
+	-- dummy implementation for documentation purposes only
+end

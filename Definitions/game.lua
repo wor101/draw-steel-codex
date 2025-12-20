@@ -1,6 +1,7 @@
 --- @class game 
 --- @field currentMap any 
 --- @field currentMapId any 
+--- @field currentFloorIndex any 
 --- @field currentFloor any 
 --- @field currentFloorId any 
 --- @field coverart string 
