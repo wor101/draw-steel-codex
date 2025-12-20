@@ -47,7 +47,6 @@ function RichFollower:_validate()
     if self.follower == nil then
         self.follower = RichFollower._fresh()
     elseif type(self.follower.try_get) == "function" then
-        print("THC:: PREVAL::", json(self.follower))
         local newFollower = RichFollower._fresh()
         self.follower = {
             guid = self.follower:try_get("guid", newFollower.guid),
@@ -64,7 +63,6 @@ function RichFollower:_validate()
             retainerToken = self.follower:try_get("retainerToken", "")
         }
         self.follower.type = calcFollowerType(self.follower)
-        print("THC:: POSTVAL::", json(self.follower))
     end
 end
 
