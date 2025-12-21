@@ -288,10 +288,10 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
         local skills = dmhub.GetTableVisible(Skill.tableName)
         for key,item in pairs(skills) do
             if (individual and individual[key]) or (categories and categories[item.category]) then
-                candidateSkills[#candidateSkills+1] = { id = key, text = item.name }
+                candidateSkills[#candidateSkills+1] = item
             end
         end
-        table.sort(candidateSkills, function(a,b) return a.text < b.text end)
+        table.sort(candidateSkills, function(a,b) return a.name < b.name end)
     else
         candidateSkills = Skill.skillsDropdownOptions
     end
@@ -317,13 +317,13 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
             data = {
                 featureGuid = feature.guid,
                 itemIndex = i,
-                selectedId = nil,
+                selectedItem = nil,
             },
             click = function(element)
                 _fireControllerEvent(element, "deleteSkill", {
                     levelChoiceGuid = element.data.featureGuid,
                     itemIndex = element.data.itemIndex,
-                    selectedId = element.data.selectedId,
+                    selectedId = element.data.selectedItem.id,
                 })
             end,
             linger = function(element)
@@ -332,7 +332,7 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
                 end
             end,
             refreshBuilderState = function(element, state)
-                element.data.selectedId = nil
+                element.data.selectedItem = nil
                 element.text = "Empty Slot"
                 local creature = state:Get("token").properties
                 if creature then
@@ -340,18 +340,19 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
                     if levelChoices then
                         local selectedItems = levelChoices[element.data.featureGuid]
                         if selectedItems and #selectedItems >= element.data.itemIndex then
-                            element.data.selectedId = selectedItems[element.data.itemIndex]
-                            if element.data.selectedId then
-                                local skillItem = dmhub.GetTableVisible(Skill.tableName)[element.data.selectedId]
+                            local selectedId = selectedItems[element.data.itemIndex]
+                            if selectedId then
+                                local skillItem = dmhub.GetTableVisible(Skill.tableName)[selectedId]
                                 if skillItem then
+                                    element.data.selectedItem = skillItem
                                     element.text = skillItem.name
                                 end
                             end
                         end
                     end
                 end
-                element:SetClass("filled", element.data.selectedId ~= nil)
-                element:SetClass("empty", element.data.selectedId == nil)
+                element:SetClass("filled", element.data.selectedItem ~= nil)
+                element:SetClass("empty", element.data.selectedItem == nil)
             end,
         }
     end
@@ -359,7 +360,7 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
     children[#children+1] = gui.MCDMDivider{
         classes = {"builder-divider"},
         layout = "v",
-        width = "100%",
+        width = "96%",
         vpad = 4,
         bgcolor = CharacterBuilder.COLORS.GOLD,
     }
@@ -368,23 +369,52 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
     for _,item in ipairs(candidateSkills) do
         children[#children+1] = gui.Label{
             classes = {"builder-base", "label", "choice-option"},
-            text = item.text,
+            valign = "top",
+            text = item.name,
             data = {
                 id = item.id,
+                item = item,
             },
             click = function(element)
                 local parent = element:FindParentWithClass("skillSelector")
                 if parent then
-                    parent:FireEvent("selectItem", element.data.id)
+                    parent:FireEvent("selectItem", element.data.item.id)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                local creature = state:Get("token").properties
+                if creature then
+                    element:SetClass("collapsed", creature:ProficientInSkill(element.data.item))
                 end
             end,
             refreshSkillSelection = function(element, selectedId)
-                element:SetClass("selected", selectedId == element.data.id)
+                element:SetClass("selected", selectedId == element.data.item.id)
             end,
         }
     end
 
-    children[#children+1] = CharacterBuilder._selectButton{
+    local innerScrollPanel = gui.Panel{
+        classes = {"builder-base", "panel"},
+        width = "100%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        flow = "vertical",
+        children = children,
+    }
+
+    local scrollPanel = gui.Panel {
+        classes = {"builder-base", "panel"},
+        width = "100%",
+        height = "100%-60",
+        halign = "left",
+        valign = "top",
+        flow = "vertical",
+        vscroll = true,
+        innerScrollPanel,
+    }
+
+    local selectButton = CharacterBuilder._selectButton{
         click = function(element)
             local parent = element:FindParentWithClass("skillSelector")
             if parent then
@@ -398,8 +428,8 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
 
     return gui.Panel{
         classes = {"skillSelector", "builder-base", "panel"},
-        width = "96%",
-        height = "auto",
+        width = "100%",
+        height = "100%",
         halign = "left",
         flow = "vertical",
 
@@ -426,7 +456,15 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
             element:FireEventTree("refreshSkillSelection", itemId)
         end,
 
-        children = children,
+        scrollPanel,
+        gui.MCDMDivider{
+            classes = {"builder-divider"},
+            layout = "line",
+            width = "96%",
+            vpad = 4,
+            bgcolor = "white"
+        },
+        selectButton,
     }
 end
 
@@ -483,13 +521,13 @@ function CharacterBuilder._featureRegistry(feature, selectorId, selectedId, getS
             },
             panel = gui.Panel{
                 classes = {"featurePanel", "builder-base", "panel-base", "collapsed"},
-                width = "96%",
-                height = "96%",
+                width = "100%",
+                height = "98%",
                 flow = "vertical",
                 valign = "top",
                 halign = "center",
                 tmargin = 12,
-                vscroll = true,
+                -- vscroll = true,
                 data = {
                     featureId = feature.guid,
                 },
@@ -509,6 +547,7 @@ end
 --- @return PrettyButton|Panel
 function CharacterBuilder._ancestrySelectButton()
     return CharacterBuilder._selectButton{
+        classes = {"ancestrySelectButton"},
         click = function(element)
             _fireControllerEvent(element, "applyCurrentAncestry")
         end,
@@ -544,7 +583,7 @@ function CharacterBuilder._ancestryDetail()
 
         registerFeaturePanel = function(element, panel)
             element:AddChild(panel)
-            local selectButton = element:FindChildRecursive(function(element) return element:HasClass("button-select") end)
+            local selectButton = element:FindChildRecursive(function(e) return e:HasClass("ancestrySelectButton") end)
             if selectButton then selectButton:SetAsLastSibling() end
         end,
 

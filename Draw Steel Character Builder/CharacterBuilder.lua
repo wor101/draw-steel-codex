@@ -169,6 +169,9 @@ function CharacterBuilder._selectButton(options)
     local opts = dmhub.DeepCopy(options)
 
     opts.classes = {"builder-base", "button", "button-select"}
+    if options.classes then
+        table.move(options.classes, 1, #options.classes, #opts.classes + 1, opts.classes)
+    end
     opts.width = CharacterBuilder.SIZES.SELECT_BUTTON_WIDTH
     opts.height = CharacterBuilder.SIZES.SELECT_BUTTON_HEIGHT
     opts.text = "SELECT"
