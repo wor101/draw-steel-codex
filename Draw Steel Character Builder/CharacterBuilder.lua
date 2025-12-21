@@ -147,6 +147,21 @@ end
     Consistent UI
 ]]
 
+--- Build a Category button, forcing consistent styling.
+--- Be sure to add behaviors for click and refreshBuilderState
+--- @param options ButtonOptions
+--- @return SelectorButton|Panel
+function CharacterBuilder._makeCategoryButton(options)
+    options.width = CharacterBuilder.SIZES.CATEGORY_BUTTON_WIDTH
+    options.height = CharacterBuilder.SIZES.CATEGORY_BUTTON_HEIGHT
+    options.valign = "top"
+    options.bmargin = CharacterBuilder.SIZES.CATEGORY_BUTTON_MARGIN
+    options.bgcolor = CharacterBuilder.COLORS.BLACK03
+    options.borderColor = CharacterBuilder.COLORS.GRAY02
+    return gui.SelectorButton(options)
+end
+
+
 --- Build a Select button, forcing consistent styling
 --- @param options ButtonOptions 
 --- @return PrettyButton|Panel
@@ -157,6 +172,7 @@ function CharacterBuilder._selectButton(options)
     opts.width = CharacterBuilder.SIZES.SELECT_BUTTON_WIDTH
     opts.height = CharacterBuilder.SIZES.SELECT_BUTTON_HEIGHT
     opts.text = "SELECT"
+    opts.floating = true
     opts.halign = "center"
     opts.valign = "bottom"
     opts.bmargin = -10

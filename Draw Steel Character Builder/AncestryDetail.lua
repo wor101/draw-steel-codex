@@ -6,23 +6,18 @@ local mod = dmhub.GetModLoading()
 
 local SELECTOR = "ancestry"
 local INITIAL_CATEGORY = "overview"
-local UNAVAILABLE_WITHOUT_ANCESTRY = {features = true, traits = true}
+local AVAILABLE_WITHOUT_ANCESTRY = {overview = true, lore = true}
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getCreature = CharacterBuilder._getCreature
 local _getState = CharacterBuilder._getState
+local _makeCategoryButton = CharacterBuilder._makeCategoryButton
 
 --- Generate the Ancestry Category Navigation panel
 --- @return Panel
 function CharacterBuilder._ancestryNavPanel()
 
     local function makeCategoryButton(options)
-        options.width = CharacterBuilder.SIZES.CATEGORY_BUTTON_WIDTH
-        options.height = CharacterBuilder.SIZES.CATEGORY_BUTTON_HEIGHT
-        options.valign = "top"
-        options.bmargin = CharacterBuilder.SIZES.CATEGORY_BUTTON_MARGIN
-        options.bgcolor = CharacterBuilder.COLORS.BLACK03
-        options.borderColor = CharacterBuilder.COLORS.GRAY02
         if options.click == nil then
             options.click = function(element)
                 _fireControllerEvent(element, "updateState", {
@@ -37,7 +32,7 @@ function CharacterBuilder._ancestryNavPanel()
                 element:FireEvent("setSelected", state:Get(SELECTOR .. ".category.selectedId") == element.data.category)
             end
         end
-        return gui.SelectorButton(options)
+        return _makeCategoryButton(options)
     end
 
     local overview = makeCategoryButton{
@@ -48,29 +43,8 @@ function CharacterBuilder._ancestryNavPanel()
         text = "Lore",
         data = { category = "lore" },
     }
-    local features = makeCategoryButton{
-        text = "Features",
-        data = { category = "features" },
-        refreshBuilderState = function(element, state)
-            local creature = state:Get("token").properties
-            if creature then
-                element:FireEvent("setAvailable", creature:try_get("raceid") ~= nil)
-                element:FireEvent("setSelected", state:Get(SELECTOR .. ".category.selectedId") == element.data.category)
-            end
-        end,
-    }
-    local traits = makeCategoryButton{
-        text = "Traits",
-        data = { category = "traits" },
-        refreshBuilderState = function(element, state)
-            local creature = state:Get("token").properties
-            if creature then
-                element:FireEvent("setAvailable", creature:try_get("raceid") ~= nil)
-                element:FireEvent("setSelected", state:Get(SELECTOR .. ".category.selectedId") == element.data.category)
-            end
-        end,
-    }
     local change = makeCategoryButton{
+        classes = {"changeAncestry"},
         text = "Change Ancestry",
         data = { category = "change" },
         click = function(element)
@@ -106,10 +80,14 @@ function CharacterBuilder._ancestryNavPanel()
             })
         end,
 
+        registerFeatureButton = function(element, button)
+            element:AddChild(button)
+            local changeButton = element:FindChildRecursive(function(element) return element:HasClass("changeAncestry") end)
+            if changeButton then changeButton:SetAsLastSibling() end
+        end,
+
         overview,
         lore,
-        features,
-        traits,
         change,
     }
 end
@@ -134,7 +112,6 @@ function CharacterBuilder._ancestryOverviewPanel()
                 local race = state:Get(SELECTOR .. ".selectedItem")
                 if not race then
                     race = dmhub.GetTable(Race.tableName)[ancestryId]
-                    print("THC:: NOCACHE:: RACE:: NAME::", race.name)
                 end
                 if race then text = race.name end
             end
@@ -159,7 +136,6 @@ function CharacterBuilder._ancestryOverviewPanel()
                 local race = state:Get(SELECTOR .. ".selectedItem")
                 if not race then
                     race = dmhub.GetTable(Race.tableName)[ancestryId]
-                    print("THC:: NOCACHE:: RACE:: INTRO::", race.name)
                 end
                 if race then text = CharacterBuilder._trimToLength(race.details, 300) end
             end
@@ -183,31 +159,24 @@ function CharacterBuilder._ancestryOverviewPanel()
             local ancestryId = state:Get(SELECTOR .. ".selectedId")
             if ancestryId then
                 local race = state:Get(SELECTOR .. ".selectedItem")
-                if not race then
-                    race = dmhub.GetTable(Race.tableName)[ancestryId]
-                    print("THC:: NOCACHE:: RACE:: DETAIL::", race.name)
-                end
-                if race then
-                    local textItems = {
-                        string.format(tr("<b>Size.</b>  Your people are size %s creatures."), race.size),
-                        string.format(tr("<b>Height.</b>  Your people are %s tall."), race.height),
-                        string.format(tr("<b>Weight.</b>  Your people weigh %s pounds."), race.weight),
-                        string.format(tr("<b>Life Expectancy.</b>  Your people live %s years."), race.lifeSpan),
-                        string.format(tr("<b>Speed.</b>  Your base walking speed is %s"),
+                local textItems = {
+                    string.format(tr("<b>Size.</b>  Your people are size %s creatures."), race.size),
+                    string.format(tr("<b>Height.</b>  Your people are %s tall."), race.height),
+                    string.format(tr("<b>Weight.</b>  Your people weigh %s pounds."), race.weight),
+                    string.format(tr("<b>Life Expectancy.</b>  Your people live %s years."), race.lifeSpan),
+                    string.format(tr("<b>Speed.</b>  Your base walking speed is %s"),
                         MeasurementSystem.NativeToDisplayStringWithUnits(race.moveSpeeds.walk)),
-                    }
+                }
 
-                    local featureDetails = {}
-                    race:FillFeatureDetails(nil, {}, featureDetails)
-                    for _,item in ipairs(featureDetails) do
-                        local s = item.feature:GetSummaryText()
-                        if s ~= nil and #s > 0 then
-                            textItems[#textItems+1] = s
-                        end
+                local featureDetails = state:Get(SELECTOR .. ".featureDetails")
+                for _,item in ipairs(featureDetails) do
+                    local s = item.feature:GetSummaryText()
+                    if s ~= nil and #s > 0 then
+                        textItems[#textItems+1] = s
                     end
-
-                    text = table.concat(textItems, "\n\n")
                 end
+
+                text = table.concat(textItems, "\n\n")
             end
             element.text = text
         end
@@ -240,7 +209,6 @@ function CharacterBuilder._ancestryOverviewPanel()
             local race = state:Get(SELECTOR .. ".selectedItem")
             if not race then
                 race = dmhub.GetTable(Race.tableName)[ancestryId]
-                print("THC:: NOCACHE:: RACE:: IMAGE::", race.name)
             end
             if race then element.bgimage = race.portraitid end
         end,
@@ -298,7 +266,6 @@ function CharacterBuilder._ancestryLorePanel()
                     local race = state:Get(SELECTOR .. ".selectedItem")
                     if not race then
                         race = dmhub.GetTable(Race.tableName)[ancestryId]
-                        print("THC:: NOCACHE:: RACE:: LORE::", race.name)
                     end
                     element.text = (race and race.lore and #race.lore > 0)
                         and race.lore
@@ -309,12 +276,220 @@ function CharacterBuilder._ancestryLorePanel()
     }
 end
 
+--- Render a skill choice panel
+--- @param feature CharacterSkillChoice
+--- @return Panel|nil
+function CharacterBuilder._featureSkillChoicePanel(feature)
+
+    local candidateSkills = {}
+    local categories = feature:try_get("categories", {})
+    local individual = feature:try_get("individual", {})
+    if (categories and next(categories)) or (individual and next(individual)) then
+        local skills = dmhub.GetTableVisible(Skill.tableName)
+        for key,item in pairs(skills) do
+            if (individual and individual[key]) or (categories and categories[item.category]) then
+                candidateSkills[#candidateSkills+1] = { id = key, text = item.name }
+            end
+        end
+        table.sort(candidateSkills, function(a,b) return a.text < b.text end)
+    else
+        candidateSkills = Skill.skillsDropdownOptions
+    end
+
+    local children = {}
+
+    children[#children+1] = gui.Label {
+        classes = {"builder-base", "label", "label-feature-name"},
+        text = feature.name,
+    }
+
+    children[#children+1] = gui.Label {
+        classes = {"builder-base", "label", "label-feature-desc"},
+        text = feature:GetDescription(),
+    }
+
+    -- Selection targets
+    local numChoices = feature:NumChoices(creature)
+    for i = 1, numChoices do
+        children[#children+1] = gui.Label{
+            classes = {"builder-base", "label", "choice-selection", "empty"},
+            text = "Empty Slot",
+            data = {
+                featureGuid = feature.guid,
+                itemIndex = i,
+                selectedId = nil,
+            },
+            click = function(element)
+                _fireControllerEvent(element, "deleteSkill", {
+                    levelChoiceGuid = element.data.featureGuid,
+                    itemIndex = element.data.itemIndex,
+                    selectedId = element.data.selectedId,
+                })
+            end,
+            linger = function(element)
+                if element.data.selectedId then
+                    gui.Tooltip("Press to delete")(element)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                element.data.selectedId = nil
+                element.text = "Empty Slot"
+                local creature = state:Get("token").properties
+                if creature then
+                    local levelChoices = creature:GetLevelChoices()
+                    if levelChoices then
+                        local selectedItems = levelChoices[element.data.featureGuid]
+                        if selectedItems and #selectedItems >= element.data.itemIndex then
+                            element.data.selectedId = selectedItems[element.data.itemIndex]
+                            if element.data.selectedId then
+                                local skillItem = dmhub.GetTableVisible(Skill.tableName)[element.data.selectedId]
+                                if skillItem then
+                                    element.text = skillItem.name
+                                end
+                            end
+                        end
+                    end
+                end
+                element:SetClass("filled", element.data.selectedId ~= nil)
+                element:SetClass("empty", element.data.selectedId == nil)
+            end,
+        }
+    end
+
+    children[#children+1] = gui.MCDMDivider{
+        classes = {"builder-divider"},
+        layout = "v",
+        width = "100%",
+        vpad = 4,
+        bgcolor = CharacterBuilder.COLORS.GOLD,
+    }
+
+    -- Items to select
+    for _,item in ipairs(candidateSkills) do
+        children[#children+1] = gui.Label{
+            classes = {"builder-base", "label", "choice-option"},
+            text = item.text,
+            data = {
+                id = item.id,
+            },
+            click = function(element)
+                local parent = element:FindParentWithClass("skillSelector")
+                if parent then
+                    parent:FireEvent("selectItem", element.data.id)
+                end
+            end,
+            refreshSkillSelection = function(element, selectedId)
+                element:SetClass("selected", selectedId == element.data.id)
+            end,
+        }
+    end
+
+    return gui.Panel{
+        classes = {"skillSelector", "builder-base", "panel"},
+        width = "96%",
+        height = "auto",
+        halign = "left",
+        flow = "vertical",
+
+        data = {
+            feature = feature,
+            selectedId = nil,
+        },
+
+        refreshBuilderState = function(element, state)
+            local creature = state:Get("token").properties
+        end,
+
+        selectItem = function(element, itemId)
+            element.data.selectedId = itemId
+            element:FireEventTree("refreshSkillSelection", itemId)
+        end,
+
+        children = children,
+    }
+end
+
+--- Build a feature panel with selections
+--- @return Panel|nil
+function CharacterBuilder._featurePanel(feature)
+    -- print("THC:: FEATUREPANEL::", feature)
+    -- print("THC:: FEATUREPANEL::", json(feature))
+
+    local typeName = feature.typeName or ""
+    if typeName == "CharacterDeityChoice" then
+    elseif typeName == "CharacterFeatChoice" then
+    elseif typeName == "CharacterFeatureChoice" then
+    elseif typeName == "CharacterLanguageChoice" then
+    elseif typeName == "CharacterSkillChoice" then
+        return CharacterBuilder._featureSkillChoicePanel(feature)
+    elseif typeName == "CharacterSubclassChoice" then
+    end
+
+    return nil
+end
+
+--- Create the Ancestry Features panel
+--- @parameter feature CharacterFeature
+--- @parameter selectorId string The selector this is a category under
+--- @parameter selectedId string The unique identifier of the item associated with the feature
+--- @parameter getSelected function(creature)
+--- @return Panel|nil
+function CharacterBuilder._featureRegistry(feature, selectorId, selectedId, getSelected)
+
+    local featurePanel = CharacterBuilder._featurePanel(feature)
+
+    if featurePanel then
+        return {
+            button = _makeCategoryButton{
+                text = feature.name,
+                data = {
+                    featureId = feature.guid,
+                    selectedId = selectedId,
+                },
+                click = function(element)
+                    _fireControllerEvent(element, "updateState", {
+                        key = selectorId .. ".category.selectedId",
+                        value = element.data.featureId
+                    })
+                end,
+                refreshBuilderState = function(element, state)
+                    local tokenSelected = getSelected(state:Get("token").properties) or "nil"
+                    local isVisible = tokenSelected == element.data.selectedId
+                    element:FireEvent("setAvailable", isVisible)
+                    element:FireEvent("setSelected", element.data.featureId == state:Get(selectorId .. ".category.selectedId"))
+                    element:SetClass("collapsed", not isVisible)
+                end,
+            },
+            panel = gui.Panel{
+                classes = {"featurePanel", "builder-base", "panel-base", "collapsed"},
+                width = "96%",
+                height = "96%",
+                flow = "vertical",
+                valign = "top",
+                halign = "center",
+                tmargin = 12,
+                vscroll = true,
+                data = {
+                    featureId = feature.guid,
+                },
+                refreshBuilderState = function(element, state)
+                    local isVisible = element.data.featureId == state:Get(selectorId .. ".category.selectedId")
+                    element:SetClass("collapsed", not isVisible)
+                end,
+                featurePanel,
+            },
+        }
+    end
+
+    return nil
+end
+
 --- Build the Ancestry Select button
 --- @return PrettyButton|Panel
 function CharacterBuilder._ancestrySelectButton()
     return CharacterBuilder._selectButton{
         click = function(element)
-            _fireControllerEvent(element, "selectCurrentAncestry")
+            _fireControllerEvent(element, "applyCurrentAncestry")
         end,
         refreshBuilderState = function(element, state)
             local creature = state:Get("token").properties
@@ -346,6 +521,12 @@ function CharacterBuilder._ancestryDetail()
         halign = "center",
         borderColor = "teal",
 
+        registerFeaturePanel = function(element, panel)
+            element:AddChild(panel)
+            local selectButton = element:FindChildRecursive(function(element) return element:HasClass("button-select") end)
+            if selectButton then selectButton:SetAsLastSibling() end
+        end,
+
         ancestryOverviewPanel,
         ancestryLorePanel,
         ancestrySelectButton,
@@ -362,22 +543,41 @@ function CharacterBuilder._ancestryDetail()
         borderColor = "yellow",
         data = {
             selector = SELECTOR,
+            features = {},
         },
 
         refreshBuilderState = function(element, state)
-            local creature = state:Get("token").properties
-            if creature then
-                local hasAncestry = creature:try_get("raceid") ~= nil
-                if not hasAncestry then
-                    local categoryKey = SELECTOR .. ".category.selectedId"
-                    local currentCategory = state:Get(categoryKey)
-                    if currentCategory and UNAVAILABLE_WITHOUT_ANCESTRY[currentCategory] then
-                        state:Set({key = categoryKey, value = INITIAL_CATEGORY})
+            local visible = state:Get("activeSelector") == element.data.selector
+            element:SetClass("collapsed", not visible)
+            if visible then
+                local creature = state:Get("token").properties
+                if creature then
+                    local creatureAncestry = creature:try_get("raceid")
+
+                    if creatureAncestry ~= nil then
+                        for _,f in pairs(state:Get(SELECTOR .. ".featureDetails")) do
+                            local featureId = f.feature:try_get("guid")
+                            if featureId and element.data.features[featureId] == nil then
+                                local featureRegistry = CharacterBuilder._featureRegistry(f.feature, SELECTOR, creatureAncestry, function(creature)
+                                    return creature:try_get("raceid")
+                                end)
+                                if featureRegistry then
+                                    element.data.features[featureId] = true
+                                    ancestryNavPanel:FireEvent("registerFeatureButton", featureRegistry.button)
+                                    ancestryDetailPanel:FireEvent("registerFeaturePanel", featureRegistry.panel)
+                                end
+                            end
+                        end
+                    else
+                        -- No ancestry selected on creature
+                        local categoryKey = SELECTOR .. ".category.selectedId"
+                        local currentCategory = state:Get(categoryKey)
+                        if currentCategory and not AVAILABLE_WITHOUT_ANCESTRY[currentCategory] then
+                            state:Set({key = categoryKey, value = INITIAL_CATEGORY})
+                        end
                     end
                 end
             end
-            local visible = state:Get("activeSelector") == element.data.selector
-            element:SetClass("collapsed", not visible)
         end,
 
         ancestryNavPanel,

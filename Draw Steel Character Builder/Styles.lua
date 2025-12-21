@@ -14,6 +14,13 @@ CharacterBuilder.COLORS = {
     GOLD03 = "#F1D3A5",
     GRAY02 = "#666663",
     PANEL_BG = "#080B09",
+
+    -- For selections like skills etc.
+    FILLED_ITEM_BG = "#E9B86F40",
+    FILLED_ITEM_BORDER = "#E9B86F",
+
+    DELETE_WARN_BG = "#660000",
+    DELETE_WARN_BORDER = "#CC3333",
 }
 
 CharacterBuilder.SIZES = {
@@ -181,6 +188,82 @@ function CharacterBuilder._labelStyles()
             valign = "center",
             halign = "center",
             fontSize = 36,
+        },
+
+        -- Feature names & descriptions for selection panels
+        {
+            selectors = {"label-feature-name"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            vpad = 14,
+            bmargin = 10,
+            textAlignment = "center",
+            fontSize = 20,
+            bgimage = true,
+            borderColor = CharacterBuilder.COLORS.CREAM03,
+            border = 1,
+            cornerRadius = 5,
+        },
+        {
+            selectors = {"label-feature-desc"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            textAlignment = "center",
+            fontSize = 18,
+        },
+
+        -- Selector target for skill selection etc.
+        {
+            selectors = {"choice-selection"},
+            width = "100%",
+            height = "auto",
+            tmargin = 10,
+            vpad = 8,
+            bgimage = true,
+            bgcolor = "clear",
+            cornerRadius = 5,
+            borderWidth = 1,
+        },
+        {
+            selectors = {"choice-selection", "empty"},
+            borderColor = CharacterBuilder.COLORS.GOLD,
+        },
+        {
+            selectors = {"choice-selection", "filled"},
+            fontSize = 18,
+            textAlignment = "left",
+            bold = false,
+            hpad = 20,
+            bgcolor = CharacterBuilder.COLORS.FILLED_ITEM_BG,
+            borderColor = CharacterBuilder.COLORS.FILLED_ITEM_BORDER,
+        },
+        {
+            selectors = {"choice-selection", "filled", "hover"},
+            bgcolor = CharacterBuilder.COLORS.DELETE_WARN_BG,
+            borderColor = CharacterBuilder.COLORS.DELETE_WARN_BORDER,
+        },
+
+        -- Options for skill selection etc.
+        {
+            selectors = {"choice-option"},
+            width = "100%",
+            height = "auto",
+            tmargin = 10,
+            vpad = 18,
+            hpad = 20,
+            textAlignment = "left",
+            bold = true,
+            bgimage = true,
+            bgcolor = "clear",
+            cornerRadius = 5,
+            borderWidth = 1,
+            borderColor = CharacterBuilder.COLORS.GOLD,
+        },
+        {
+            selectors = {"choice-option", "selected"},
+            borderColor = CharacterBuilder.COLORS.GOLD03,
         }
     }
 end
