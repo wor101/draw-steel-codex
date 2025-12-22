@@ -9879,7 +9879,7 @@ function creature:Repair(localOnly)
 	-- TODO: Remove at early access
 	for i, k in pairs(self:GetFollowers()) do
 		if k ~= true then
-			local followerToken = k.followerToken
+			local followerToken = rawget(k, "followerToken")
 			if followerToken == nil then
 				followerToken = k.retainerToken
 			end
@@ -9911,9 +9911,11 @@ function creature:Repair(localOnly)
 		end
 	end
 
-	if tok ~= nil then
-		tok:CompleteChanges("Repair character")
-	end
+	if not localOnly then
+	    if tok ~= nil then
+	    	tok:CompleteChanges("Repair character")
+	    end
+    end
 end
 
 function creature:CalculateCustomVision(visionInfo)
