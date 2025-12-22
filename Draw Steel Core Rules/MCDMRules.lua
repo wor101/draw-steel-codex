@@ -2234,6 +2234,7 @@ GameSystem.RegisterAbilityKeyword("Beastheart")
 GameSystem.RegisterAbilityKeyword("Companion")
 GameSystem.RegisterAbilityKeyword("Charge")
 GameSystem.RegisterAbilityKeyword("Telekinesis")
+GameSystem.RegisterAbilityKeyword("Chronopathy")
 
 GameSystem.RegisterItemKeyword("Potion")
 GameSystem.RegisterItemKeyword("Neck")

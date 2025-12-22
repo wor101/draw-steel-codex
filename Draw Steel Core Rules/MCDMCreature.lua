@@ -3487,6 +3487,7 @@ function creature:PersistentAbilities()
 
                 ability.persistence = nil
                 ability.actionResourceId = cond(persistenceMode == "recast_maneuver", CharacterResource.maneuverResourceId, "none")
+                ability.resourceNumber = "0"
 
                 --[[ if a.filter ~= nil then
                     ability.abilityFilter = {a.filter}
@@ -3606,7 +3607,7 @@ creature.RegisterSymbol {
     end,
     help = {
         name = "Keywords",
-        type = "string",
+        type = "set",
         desc = "The keywords associated with this creature.",
         seealso = {},
     }

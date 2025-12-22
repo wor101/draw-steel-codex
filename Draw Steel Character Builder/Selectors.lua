@@ -4,6 +4,7 @@
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getCreature = CharacterBuilder._getCreature
+local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
 
 --- Creates a panel of selectable item buttons that expands when its selector is active.
@@ -25,25 +26,36 @@ function CharacterBuilder._createDetailedSelectorPanel(config)
             text = item.name,
             data = { id = item.id },
             available = true,
-            
+
             create = function(element)
-                element:FireEvent("refreshToken")
+                element:FireEvent("refreshBuilderState", _getState(element))
             end,
-            
+
             click = function(element)
-                local newState = {
-                    { key = config.selectorName .. ".selectedId", value = element.data.id }
-                }
-                if config.getItem then
-                    newState[#newState+1] = { key = config.selectorName .. ".selectedItem", value = config.getItem(element.data.id) }
-                end
-                _fireControllerEvent(element, "updateState", newState)
+                _fireControllerEvent(element, "selectItem", {
+                    selector = config.selectorName,
+                    id = element.data.id,
+                })
+                -- local newState = {
+                --     { key = config.selectorName .. ".selectedId", value = element.data.id }
+                -- }
+                -- if config.getItem then
+                --     local item = config.getItem(element.data.id)
+                --     newState[#newState+1] = { key = config.selectorName .. ".selectedItem", value = item }
+                --     if item.FillFeatureDetails then
+                --         local featureDetails = {}
+                --         item:FillFeatureDetails(nil, {}, featureDetails)
+                --         newState[#newState+1] = { key = config.selectorName .. ".featureDetails", value = featureDetails }
+                --     end
+                -- end
+                -- _fireControllerEvent(element, "updateState", newState)
             end,
 
             refreshBuilderState = function(element, state)
                 local creature = state:Get("token").properties
                 if creature then
                     local tokenSelected = config.getSelected(creature)
+                    -- print(string.format("THC:: SEL:: RBS:: T:: %s ID:: %s", tokenSelected, element.data.id))
                     element:SetClass("collapsed", tokenSelected and tokenSelected ~= element.data.id)
                     element:FireEvent("setAvailable", not tokenSelected or tokenSelected == element.data.id)
                     if tokenSelected and tokenSelected == element.data.id and tokenSelected ~= state:Get(config.selectorName .. ".selectedId") then
@@ -296,8 +308,8 @@ function CharacterBuilder._kitSelector()
     return CharacterBuilder._makeSelectorButton{
         text = "Kit",
         data = { selector = "kit" },
-        refreshToken = function(element)
-            local c = _getCreature(element)
+        refreshBuilderState = function(element, state)
+            local c = state:Get("token").properties
             element:SetClass("collapsed", not c or not c:IsHero() or not c:CanHaveKits() )
         end,
     }
@@ -320,7 +332,8 @@ CharacterBuilder.RegisterSelector{
 CharacterBuilder.RegisterSelector{
     id = "character",
     ord = 2,
-    selector = CharacterBuilder._characterSelector
+    selector = CharacterBuilder._characterSelector,
+    detail = CharacterBuilder._descriptionDetail,
 }
 
 CharacterBuilder.RegisterSelector{

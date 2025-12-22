@@ -2661,8 +2661,10 @@ CreateAbilityController = function()
     --- @type Label
     local channeledResourceTitle = gui.Label {
         text = "Channeled Resource",
-        fontSize = 16,
+        fontSize = 24,
+        bold = true,
         markdown = true,
+        bmargin = 5,
         color = Styles.textColor,
         halign = "center",
         valign = "top",

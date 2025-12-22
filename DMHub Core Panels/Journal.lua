@@ -943,12 +943,27 @@ local GetRecentDocumentsSetting = setting {
 
 }
 
+local GetRecentDocumentsSettingPlayers = setting {
+
+    id = "recentDocumentsPlayers",
+    description = "Recent Documents",
+    storage = "preference",
+    default = { { id = "e6cab5b7-a1c9-4b12-ad06-ed573f6ba904" } },
+
+}
+
 
 local function GetRecentDocuments()
     local result = {}
     local docs = assets.pdfDocumentsTable
 
-    for k, entry in ipairs(GetRecentDocumentsSetting:Get()) do
+    local setting = GetRecentDocumentsSetting
+
+    if not dmhub.isDM then
+        setting = GetRecentDocumentsSettingPlayers
+    end
+
+    for k, entry in ipairs(setting:Get()) do
         local doc = docs[entry.id]
 
         result[#result + 1] = doc
@@ -1097,7 +1112,7 @@ CreateJournalPanel = function()
             documentFoldersTable = {},
         },
 
-        --vback
+
         gui.Panel {
             flow = "horizontal",
             bgcolor = "clear",

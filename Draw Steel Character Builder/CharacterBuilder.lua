@@ -46,6 +46,14 @@ end
     Utilities
 ]]
 
+--- If the string passed is nil or empty returns '--'
+--- @param s? string The string to evaluate
+--- @return string
+function CharacterBuilder._blankToDashes(s)
+    if s == nil or #s == 0 then return "--" end
+    return s
+end
+
 --- Fires an event on the main builder panel
 --- @param element Panel The element calling this method
 --- @param eventName string
@@ -104,12 +112,25 @@ function CharacterBuilder._sortArrayByProperty(items, propertyName)
     return items
 end
 
+function CharacterBuilder._stripSignatureTrait(str)
+    local result = regex.MatchGroups(str, "(?i)^signature\\s+trait:?\\s*(?<name>.*)$")
+    if result and result.name then return result.name end
+    return str
+end
+
 function CharacterBuilder._toArray(t)
     local a = {}
     for _,item in pairs(t) do
         a[#a+1] = item
     end
     return a
+end
+
+function CharacterBuilder._ucFirst(str)
+    if str and #str > 0 then
+        return str:sub(1,1):upper() .. str:sub(2)
+    end
+    return str
 end
 
 --- Trims and truncates a string to a maximum length
@@ -139,6 +160,21 @@ end
     Consistent UI
 ]]
 
+--- Build a Category button, forcing consistent styling.
+--- Be sure to add behaviors for click and refreshBuilderState
+--- @param options ButtonOptions
+--- @return SelectorButton|Panel
+function CharacterBuilder._makeCategoryButton(options)
+    options.width = CharacterBuilder.SIZES.CATEGORY_BUTTON_WIDTH
+    options.height = CharacterBuilder.SIZES.CATEGORY_BUTTON_HEIGHT
+    options.valign = "top"
+    options.bmargin = CharacterBuilder.SIZES.CATEGORY_BUTTON_MARGIN
+    options.bgcolor = CharacterBuilder.COLORS.BLACK03
+    options.borderColor = CharacterBuilder.COLORS.GRAY02
+    return gui.SelectorButton(options)
+end
+
+
 --- Build a Select button, forcing consistent styling
 --- @param options ButtonOptions 
 --- @return PrettyButton|Panel
@@ -146,9 +182,13 @@ function CharacterBuilder._selectButton(options)
     local opts = dmhub.DeepCopy(options)
 
     opts.classes = {"builder-base", "button", "button-select"}
+    if options.classes then
+        table.move(options.classes, 1, #options.classes, #opts.classes + 1, opts.classes)
+    end
     opts.width = CharacterBuilder.SIZES.SELECT_BUTTON_WIDTH
     opts.height = CharacterBuilder.SIZES.SELECT_BUTTON_HEIGHT
     opts.text = "SELECT"
+    opts.floating = true
     opts.halign = "center"
     opts.valign = "bottom"
     opts.bmargin = -10

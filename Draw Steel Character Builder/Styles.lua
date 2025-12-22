@@ -14,11 +14,22 @@ CharacterBuilder.COLORS = {
     GOLD03 = "#F1D3A5",
     GRAY02 = "#666663",
     PANEL_BG = "#080B09",
+
+    -- For selections like skills etc.
+    FILLED_ITEM_BG = "#E9B86F40",
+    FILLED_ITEM_BORDER = "#E9B86F",
+
+    DELETE_WARN_BG = "#660000",
+    DELETE_WARN_BORDER = "#CC3333",
 }
 
 CharacterBuilder.SIZES = {
     -- Panels
     CHARACTER_PANEL_WIDTH = 447,
+    CHARACTER_PANEL_HEADER_HEIGHT = 270,
+
+    DESCRIPTION_PANEL_WIDTH = 450,
+
     AVATAR_DIAMETER = 185,
 
     -- Labels
@@ -85,8 +96,14 @@ function CharacterBuilder._panelStyles()
             cornerRadius = 10,
         },
         {
-            selectors = {"builderPanel"},
-            bgcolor = CharacterBuilder.COLORS.PANEL_BG,
+            selectors = {"panel-charpanel-detail"},
+            width = "96%",
+            height = "80%",
+            halign = "center",
+            valign = "top",
+            flow = "vertical",
+            borderColor = "yellow",
+            border = 1,
         },
         {
             selectors = {CharacterBuilder.CONTROLLER_CLASS},
@@ -110,6 +127,23 @@ function CharacterBuilder._panelStyles()
                 },
             },
         },
+
+        -- For the right side character pane
+        {
+            selectors = {"charpanel-detail-header"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+        },
+        {
+            selectors = {"feature-detail-panel"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+            flow = "horizontal",
+        },
     }
 end
 
@@ -117,6 +151,7 @@ function CharacterBuilder._labelStyles()
     return {
         {
             selectors = {"label"},
+            height = "auto",
             textAlignment = "center",
             fontSize = 14,
             color = Styles.textColor,
@@ -136,7 +171,17 @@ function CharacterBuilder._labelStyles()
             bold = true,
         },
         {
-            selectors = {"description-label"},
+            selectors = {"label-charname"},
+            width = "98%",
+            height = "auto",
+            halign = "center",
+            valign = "top",
+            textAlignment = "center",
+            fontSize = 24,
+            tmargin = 12,
+        },
+        {
+            selectors = {"label-description"},
             width = "50%",
             height = "auto",
             halign = "left",
@@ -146,14 +191,149 @@ function CharacterBuilder._labelStyles()
             bold = true,
         },
         {
-            selectors = {"description-item"},
+            selectors = {"label-desc-item"},
             width = "50%",
             height = "auto",
             halign = "left",
             vpad = CharacterBuilder.SIZES.DESCRIPTION_LABEL_PAD,
             textAlignment = "left",
             fontSize = 18,
-        }
+        },
+        {
+            selectors = {"label-panel-placeholder"},
+            width = "auto",
+            height = "auto",
+            valign = "center",
+            halign = "center",
+            fontSize = 36,
+        },
+
+        -- Feature names & descriptions for selection panels
+        {
+            selectors = {"label-feature-name"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            vpad = 14,
+            bmargin = 10,
+            textAlignment = "center",
+            fontSize = 20,
+            bgimage = true,
+            borderColor = CharacterBuilder.COLORS.CREAM03,
+            border = 1,
+            cornerRadius = 5,
+        },
+        {
+            selectors = {"label-feature-desc"},
+            width = "80%",
+            height = "auto",
+            halign = "center",
+            valign = "top",
+            textAlignment = "center",
+            fontSize = 18,
+            italics = true,
+        },
+
+        -- Selector target for skill selection etc.
+        {
+            selectors = {"choice-selection"},
+            width = "100%",
+            height = "auto",
+            tmargin = 10,
+            vpad = 8,
+            bgimage = true,
+            bgcolor = "clear",
+            cornerRadius = 5,
+            borderWidth = 1,
+        },
+        {
+            selectors = {"choice-selection", "empty"},
+            borderColor = CharacterBuilder.COLORS.GOLD,
+        },
+        {
+            selectors = {"choice-selection", "filled"},
+            fontSize = 18,
+            textAlignment = "left",
+            bold = false,
+            hpad = 20,
+            bgcolor = CharacterBuilder.COLORS.FILLED_ITEM_BG,
+            borderColor = CharacterBuilder.COLORS.FILLED_ITEM_BORDER,
+        },
+        {
+            selectors = {"choice-selection", "filled", "hover"},
+            bgcolor = CharacterBuilder.COLORS.DELETE_WARN_BG,
+            borderColor = CharacterBuilder.COLORS.DELETE_WARN_BORDER,
+        },
+
+        -- Options for skill selection etc.
+        {
+            selectors = {"choice-option"},
+            width = "100%",
+            height = "auto",
+            tmargin = 10,
+            vpad = 18,
+            hpad = 20,
+            textAlignment = "left",
+            bold = true,
+            bgimage = true,
+            bgcolor = "clear",
+            cornerRadius = 5,
+            borderWidth = 1,
+            borderColor = CharacterBuilder.COLORS.GOLD,
+        },
+        {
+            selectors = {"choice-option", "selected"},
+            borderColor = CharacterBuilder.COLORS.GOLD03,
+        },
+
+        -- For the right-side character pane / builder tab
+        {
+            selectors = {"charpanel-detail-header-label"},
+            halign = "left",
+            valign = "bottom",
+            width = "90%",
+            textAlignment = "left",
+            vpad = 4,
+            fontSize = 24,
+            bgimage = true,
+            border = {y1 = 2, y2 = 0, x1 = 0, x2 = 0},
+            borderColor = Styles.textColor,
+        },
+        {
+            selectors = {"charpanel-check"},
+            halign = "left",
+            valign = "center",
+            hmargin = 150,
+            width = 24,
+            height = 24,
+            bgimage = "icons/icon_common/icon_common_29.png",
+            bgcolor = "clear",
+        },
+        {
+            selectors = {"charpanel-check", "complete"},
+            bgcolor = Styles.textColor,
+        },
+        {
+            selectors = {"feature-detail-id-label"},
+            width = "20%",
+            halign = "left",
+            textAlignment = "left",
+            fontSize = 18,
+        },
+        {
+            selectors = {"feature-detail-status-label"},
+            width = "15%",
+            hmargin = 2,
+            fontSize = 18,
+        },
+        {
+            selectors = {"feature-detail-detail-label"},
+            width = "60%",
+            halign= "left",
+            hmargin = 2,
+            textAlignment = "left",
+            fontSize = 18,
+        },
     }
 end
 
@@ -207,14 +387,38 @@ function CharacterBuilder._inputStyles()
             selectors = {"text-entry"},
             bgcolor = "#191A18",
             borderColor = "#666663",
+            cornerRadius = 4,
         },
         {
             selectors = {"primary"},
             height = 48,
+            fontSize = 20,
         },
         {
             selectors = {"secondary"},
             height = 36,
+        },
+        {
+            selectors = {"multiline"},
+            height = 48*3,
+        },
+    }
+end
+
+function CharacterBuilder._dropdownStyles()
+    return {
+        {
+            selectors = {"dropdown"},
+            bgcolor = "#191A18",
+            borderColor = "#666663",
+            fontSize = 36,
+            cornerRadius = 4,
+            borderWidth = 2,
+        },
+        {
+            selectors = {"dropdownLabel"},
+            textAlignment = "left",
+            halign = "left",
         },
     }
 end
@@ -223,12 +427,35 @@ function CharacterBuilder._characterPanelTabStyles()
     return {
         {
             selectors = {"char-tab-btn"},
+            bgimage = true,
+            border = 0,
+            pad = 4,
+            borderColor = CharacterBuilder.COLORS.CREAM03,
+        },
+        {
+            selectors = {"char-tab-border"},
+            width = "100%",
+            height = "100%",
+            border = 0,
+            borderColor = CharacterBuilder.COLORS.CREAM03,
+            bgimage = "panels/square.png",
+            bgcolor = "clear",
+        },
+        {
+            selectors = {"char-tab-border", "parent:selected"},
+            border = {y1 = 0, y2 = 2, x1 = 2, x2 = 2},
+        },
+        {
+            selectors = {"char-tab-icon"},
             width = 24,
             height = 24,
             bgcolor = CharacterBuilder.COLORS.GOLD,
         },
         {
-            selectors = {"char-tab-btn", "selected"},
+            selectors = {"char-tab-label"},
+        },
+        {
+            selectors = {"char-tab-icon", "selected"},
             bgcolor = CharacterBuilder.COLORS.CREAM03,
         },
     }
@@ -248,6 +475,7 @@ function CharacterBuilder._getStyles()
     mergeStyles(CharacterBuilder._labelStyles())
     mergeStyles(CharacterBuilder._buttonStyles())
     mergeStyles(CharacterBuilder._inputStyles())
+    mergeStyles(CharacterBuilder._dropdownStyles())
     mergeStyles(CharacterBuilder._characterPanelTabStyles())
 
     return styles
