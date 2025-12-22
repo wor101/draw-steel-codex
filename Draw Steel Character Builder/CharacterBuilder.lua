@@ -112,12 +112,25 @@ function CharacterBuilder._sortArrayByProperty(items, propertyName)
     return items
 end
 
+function CharacterBuilder._stripSignatureTrait(str)
+    local result = regex.MatchGroups(str, "(?i)^signature\\s+trait:?\\s*(?<name>.*)$")
+    if result and result.name then return result.name end
+    return str
+end
+
 function CharacterBuilder._toArray(t)
     local a = {}
     for _,item in pairs(t) do
         a[#a+1] = item
     end
     return a
+end
+
+function CharacterBuilder._ucFirst(str)
+    if str and #str > 0 then
+        return str:sub(1,1):upper() .. str:sub(2)
+    end
+    return str
 end
 
 --- Trims and truncates a string to a maximum length

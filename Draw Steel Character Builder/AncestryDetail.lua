@@ -298,10 +298,10 @@ function CharacterBuilder._featureSkillChoicePanel(feature)
 
     local children = {}
 
-    -- children[#children+1] = gui.Label {
-    --     classes = {"builder-base", "label", "label-feature-name"},
-    --     text = feature.name,
-    -- }
+    children[#children+1] = gui.Label {
+        classes = {"builder-base", "label", "label-feature-name"},
+        text = feature.name,
+    }
 
     children[#children+1] = gui.Label {
         classes = {"builder-base", "label", "label-feature-desc"},
@@ -500,7 +500,7 @@ function CharacterBuilder._featureRegistry(feature, selectorId, selectedId, getS
     if featurePanel then
         return {
             button = _makeCategoryButton{
-                text = feature.name,
+                text = CharacterBuilder._stripSignatureTrait(feature.name),
                 data = {
                     featureId = feature.guid,
                     selectedId = selectedId,

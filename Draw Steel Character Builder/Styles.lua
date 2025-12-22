@@ -127,6 +127,16 @@ function CharacterBuilder._panelStyles()
                 },
             },
         },
+
+        -- For the right side character pane
+        {
+            selectors = {"feature-detail-panel"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+            flow = "horizontal",
+        },
     }
 end
 
@@ -134,6 +144,7 @@ function CharacterBuilder._labelStyles()
     return {
         {
             selectors = {"label"},
+            height = "auto",
             textAlignment = "center",
             fontSize = 14,
             color = Styles.textColor,
@@ -207,11 +218,13 @@ function CharacterBuilder._labelStyles()
         },
         {
             selectors = {"label-feature-desc"},
-            width = "100%",
+            width = "80%",
             height = "auto",
+            halign = "center",
             valign = "top",
-            textAlignment = "left",
+            textAlignment = "center",
             fontSize = 18,
+            italics = true,
         },
 
         -- Selector target for skill selection etc.
@@ -264,7 +277,30 @@ function CharacterBuilder._labelStyles()
         {
             selectors = {"choice-option", "selected"},
             borderColor = CharacterBuilder.COLORS.GOLD03,
-        }
+        },
+
+        -- For the right-side character pane / builder tab
+        {
+            selectors = {"feature-detail-id-label"},
+            width = "20%",
+            halign = "left",
+            textAlignment = "left",
+            fontSize = 18,
+        },
+        {
+            selectors = {"feature-detail-status-label"},
+            width = "15%",
+            hmargin = 2,
+            fontSize = 18,
+        },
+        {
+            selectors = {"feature-detail-detail-label"},
+            width = "60%",
+            halign= "left",
+            hmargin = 2,
+            textAlignment = "left",
+            fontSize = 18,
+        },
     }
 end
 

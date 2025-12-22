@@ -8,6 +8,7 @@ local _blankToDashes = CharacterBuilder._blankToDashes
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
+local _ucFirst = CharacterBuilder._ucFirst
 
 local INITIAL_TAB = "description"
 
@@ -79,21 +80,210 @@ local function aggregateBuilderChoices(creature)
     return choices
 end
 
+--- Create a panel displaying feature information for a single feature type
+--- @param featureTypeInfo table
+--- @return Panel
+function CharacterBuilder._characterBuilderPanelStatusFeature(featureTypeInfo)
+    local idLabel = gui.Label{
+        classes = {"builder-base", "label", "feature-detail-id-label"},
+        refreshDetail = function(element, info)
+            element.text = info.id
+        end,
+    }
+    local statusLabel = gui.Label{
+        classes = {"builder-base", "label", "feature-detail-status-label"},
+        refreshDetail = function(element, info)
+            element.text = string.format("%d/%d", info.selected, info.available)
+        end,
+    }
+    local detailLabel = gui.Label{
+        classes = {"builder-base", "label", "feature-detail-detail-label"},
+        refreshDetail = function(element, info)
+            element.text = table.concat(info.selectedDetail, "\n\n")
+        end
+    }
+    return gui.Panel{
+        classes = {"builder-base", "panel-base", "feature-detail-panel"},
+        data = featureTypeInfo,
+        refreshBuilderState = function(element, state)
+            local visible = element.data and element.data.available > 0
+            element:SetClass("collapsed", not visible)
+            if visible then
+                element:FireEventTree("refreshDetail", element.data)
+            end
+        end,
+        idLabel,
+        statusLabel,
+        detailLabel,
+    }
+end
+
+--- Create a panel to display an element of builder status
+--- @param selector string The primary selector for querying state
+--- @param getSelected function(character) Return the selected item on the character
+--- @return Panel
+function CharacterBuilder._characterBuilderPanelStatusItem(selector, getSelected)
+
+    local function translateTypeName(typeName)
+        local s = typeName:match("Character(.+)Choice")
+        return s
+    end
+
+    local function typeNameIsChoice(typeName)
+        return typeName == "CharacterDeityChoice"
+            or typeName == "CharacterFeatChoice"
+            or typeName == "CharacterFeatureChoice"
+            or typeName == "CharacterLanguageChoice"
+            or typeName == "CharacterSkillChoice"
+            or typeName == "CharacterSubclassChoice"
+    end
+
+    local function typeNameOrder(typeName)
+        -- The input is translated
+        local typeOrders = { Subclass = 1, Feature = 2, Skill = 3, Language = 4, Feat = 5, Deity = 6, }
+        return string.format("%d-%s", typeOrders[typeName] or 9, typeName)
+    end
+
+    local function typeNameToTableName(typeName)
+        if typeName == "CharacterDeityChoice" then return Deity.tableName end
+        if typeName == "CharacterFeatChoice" then return CharacterFeat.tableName end
+        if typeName == "CharacterFeatureChoice" then return nil end
+        if typeName == "CharacterLanguageChoice" then return Language.tableName end
+        if typeName == "CharacterSkillChoice" then return Skill.tableName end
+        if typeName == "CharacterSubclassChoice" then return Class.tableName end
+    end
+
+    return gui.Panel{
+        classes = {"builder-base", "panel-base"},
+        width = "100%",
+        height = "auto",
+        valign = "top",
+        flow = "vertical",
+        data = {
+            heading = _ucFirst(selector),
+            featureTypes = {},
+        },
+        create = function(element)
+            element:FireEvent("refreshBuilderState", _getState(element))
+        end,
+        calculateStatus = function(element, state)
+            local featureTypes = element.data.featureTypes
+            featureTypes = {
+                [element.data.heading] = {
+                    id = element.data.heading,
+                    order = "0-".. element.data.heading,
+                    available = 1,
+                    selected = 0,
+                    selectedDetail = {},
+                },
+            }
+            local character = state:Get("token").properties
+            local featureDetails = state:Get(selector .. ".featureDetails")
+            if character and featureDetails then
+                local selectedItem = getSelected(character)
+                if selectedItem then
+                    featureTypes[element.data.heading].selected = 1
+                    featureTypes[element.data.heading].selectedDetail = { selectedItem.name }
+
+                    local levelChoices = character:GetLevelChoices()
+                    if levelChoices then
+                        for _,f in ipairs(featureDetails) do
+                            local guid = f.feature:try_get("guid")
+                            if guid and typeNameIsChoice(f.feature.typeName) then
+                                local typeName = translateTypeName(f.feature.typeName)                                
+                                if featureTypes[typeName] == nil then
+                                    featureTypes[typeName] = {
+                                        id = typeName,
+                                        order = typeNameOrder(typeName),
+                                        available = 0,
+                                        selected = 0,
+                                        selectedDetail = {},
+                                    }
+                                end
+
+                                local numChoices = f.feature:NumChoices() or 1
+                                if numChoices < 1 then numChoices = 1 end
+                                featureTypes[typeName].available = featureTypes[typeName].available + numChoices
+
+                                if levelChoices[guid] then
+                                    featureTypes[typeName].selected = featureTypes[typeName].selected + #levelChoices[guid]
+
+                                    local detail = {}
+                                    local itemTable = dmhub.GetTableVisible(typeNameToTableName(f.feature.typeName))
+                                    if itemTable then
+                                        for _,id in ipairs(levelChoices[guid]) do
+                                            local item = itemTable[id]
+                                            if item then detail[#detail+1] = item.name end
+                                        end
+                                    end
+                                    if #detail then
+                                        table.move(detail, 1, #detail, #featureTypes[typeName].selectedDetail + 1, featureTypes[typeName].selectedDetail)
+                                    end
+                                end
+
+                            end
+                        end
+                    end
+                end
+            end
+            element.data.featureTypes = featureTypes
+        end,
+        reconcileChildren = function(element)
+            if element.data.featureTypes then
+                local children = element.children
+                local featureTypes = element.data.featureTypes
+                local numChildren = #children
+                local index = 0
+
+                for _,featureType in pairs(featureTypes) do
+                    index = index + 1
+                    if children[index] then
+                        children[index].data = featureType
+                    else
+                        children[index] = CharacterBuilder._characterBuilderPanelStatusFeature(featureType)
+                    end
+                end
+
+                for i = index + 1, numChildren do
+                    children[i].data = nil
+                end
+
+                table.sort(children, function(a,b)
+                    local aOrd = a.data and a.data.order or "999"
+                    local bOrd = b.data and b.data.order or "999"
+                    return aOrd < bOrd
+                end)
+
+                element.children = children
+            end
+        end,
+        refreshBuilderState = function(element, state)
+            element:FireEvent("calculateStatus", state)
+            element:FireEvent("reconcileChildren")
+        end
+    }
+end
+
 function CharacterBuilder._characterBuilderPanel(tabId)
+
+    local ancestryStatusItem = CharacterBuilder._characterBuilderPanelStatusItem("ancestry", function(character)
+        return character:Race()
+    end)
     return gui.Panel {
         classes = {"builder-base", "panel-base", "panel-charpanel-detail"},
         data = {
             id = tabId,
         },
 
+        create = function(element)
+            element:FireEventTree("refreshBuilderState", _getState(element))
+        end,
+
         _refreshTabs = function(element, tabId)
             element:SetClass("collapsed", tabId ~= element.data.id)
         end,
 
-        gui.Label{
-            classes = {"builder-base", "label-panel-placeholder"},
-            text = "Builder content here...",
-        }
+        ancestryStatusItem,
     }
 end
 
@@ -454,7 +644,6 @@ function CharacterBuilder._characterTacticalPanel(tabId)
         refreshBuilderState = function(element, state)
             local t = state:Get("token")
             if #element.children == 0 then
-                print("THC:: CREATEPANEL::")
                 element:AddChild(CharacterPanel.CreateCharacterDetailsPanel(t))
                 element:AddChild(gui.Label{
                     width = "auto",
@@ -469,7 +658,6 @@ function CharacterBuilder._characterTacticalPanel(tabId)
                     text = "PLACEHOLDER",
                 })
             else
-                print("THC:: REFRESHTOKEN::")
                 element:FireEventTree("refreshToken", t)
             end
         end
