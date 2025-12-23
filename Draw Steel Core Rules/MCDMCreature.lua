@@ -3463,6 +3463,10 @@ function creature:PersistentAbilities()
                     break
                 end
 
+                if persistenceMode == "recast_new" and a.ability:try_get("recastNewAbility") then
+                    ability = a.ability.recastNewAbility:MakeTemporaryClone()
+                end
+
                 local newAbility = TriggeredAbility.Create()
                 newAbility.trigger = "beginturn"
                 newAbility.guid = dmhub.GenerateGuid()                

@@ -1223,6 +1223,11 @@ ActivatedAbility.PersistenceModes = {
         id = "recast_with_one_target",
         text = "Recast With One Target",
     },
+	--Allow a new ability to be used for recast
+	{
+		id = "recast_new",
+		text = "Recast with New Ability",
+	},
 }
 
 function ActivatedAbility:IsStrain()
@@ -1336,6 +1341,32 @@ function ActivatedAbility:PersistencePanel()
 					local persistence = self:get_or_add("persistence", {})
 					persistence.inrange = element.value
 				end,
+			},
+
+			gui.Panel{
+				classes = {"formPanel"},
+				flow = "horizontal",
+				width = "auto",
+				height = "auto",
+				refreshPersistence = function(element)
+					element:SetClass("collapsed", self:Persistence().mode ~= "recast_new")
+				end,
+
+				gui.Button{
+					text = "Edit Ability",
+					click = function(element)
+						if self:try_get("recastNewAbility") == nil then
+							self.recastNewAbility = ActivatedAbility.Create{
+								name = self.name,
+								categorization = self.categorization,
+								iconid = self.iconid,
+								domains = self.domains,
+							}
+						end
+
+						element.root:AddChild(self.recastNewAbility:ShowEditActivatedAbilityDialog{})
+					end,
+				}
 			},
 		}
 	}
