@@ -83,7 +83,7 @@ FollowerTokenDropdownOptions = function(partyid, alliesOnly)
                 for _, charid in ipairs(partyMembers) do
                     local token = dmhub.GetCharacterById(charid)
                     if token ~= nil then
-                        if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
+                        if token.properties:IsFollower() then
                             results[#results + 1] = {
                                 id = charid,
                                 text = token.name,
@@ -99,7 +99,7 @@ FollowerTokenDropdownOptions = function(partyid, alliesOnly)
             for _, charid in ipairs(partyMembers) do
                 local token = dmhub.GetCharacterById(charid)
                 if token ~= nil then
-                    if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
+                    if token.properties:IsFollower() then
                         results[#results + 1] = {
                             id = charid,
                             text = token.name,
@@ -115,7 +115,7 @@ FollowerTokenDropdownOptions = function(partyid, alliesOnly)
                 for _, charid in ipairs(partyMembers) do
                     local token = dmhub.GetCharacterById(charid)
                     if token ~= nil then
-                        if token.properties:IsRetainer() or token.properties:IsArtisan() or token.properties:IsSage() then
+                        if token.properties:IsFollower() then
                             results[#results + 1] = {
                                 id = charid,
                                 text = token.name,
