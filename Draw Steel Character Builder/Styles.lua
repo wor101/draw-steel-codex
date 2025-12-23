@@ -59,7 +59,28 @@ CharacterBuilder.SIZES.CENTER_PANEL_WIDTH = "100%-" .. (30 + CharacterBuilder.SI
     Styles
 ]]
 
-function CharacterBuilder._baseStyles()
+--- Prepend root selectors to each style's selectors array
+--- @param rootSelectors string|table The selectors to prepend
+--- @param styles table The list of styles to modify
+--- @return table styles The modified styles array
+local function _applyRootSelectors(rootSelectors, styles)
+    local rootArray = type(rootSelectors) == "table" and rootSelectors or {rootSelectors}
+
+    for _, style in ipairs(styles) do
+        if style.selectors then
+            local newSelectors = {}
+            table.move(rootArray, 1, #rootArray, 1, newSelectors)
+            table.move(style.selectors, 1, #style.selectors, #rootArray + 1, newSelectors)
+            style.selectors = newSelectors
+        else
+            style.selectors = rootArray
+        end
+    end
+
+    return styles
+end
+
+local function _baseStyles()
     return {
         {
             selectors = {"builder-base"},
@@ -75,10 +96,10 @@ function CharacterBuilder._baseStyles()
     }
 end
 
-function CharacterBuilder._panelStyles()
-    return {
+local function _panelStyles()
+    return _applyRootSelectors("panel-base", {
         {
-            selectors = {"panel-base"},
+            selectors = {},
             height = "auto",
             width = "auto",
             pad = 2,
@@ -88,15 +109,15 @@ function CharacterBuilder._panelStyles()
             border = DEBUG_PANEL_BG and 1 or 0
         },
         {
-            selectors = {"panel-border"},
-            -- bgimage = true,
-            -- bgcolor = "#ffffff",
+            selectors = {"border"},
             borderColor = CharacterBuilder.COLORS.CREAM,
             border = 2,
             cornerRadius = 10,
         },
+
+        -- Right-side character panel
         {
-            selectors = {"panel-charpanel-detail"},
+            selectors = {"charpanel", "builder-content"},
             width = "96%",
             height = "80%",
             halign = "center",
@@ -105,6 +126,37 @@ function CharacterBuilder._panelStyles()
             borderColor = "yellow",
             border = 1,
         },
+        {
+            selectors = {"charpanel", "builder-header"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+        },
+        {
+            selectors = {"charpanel", "builder-check"},
+            halign = "left",
+            valign = "center",
+            hmargin = 150,
+            width = 24,
+            height = 24,
+            bgimage = "icons/icon_common/icon_common_29.png",
+            bgcolor = "clear",
+        },
+        {
+            selectors = {"charpanel", "builder-check", "complete"},
+            bgcolor = Styles.textColor,
+        },
+        {
+            selectors = {"charpanel", "builder-feature-content"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+            flow = "horizontal",
+        },
+
+        -- Contains all the tab content
         {
             selectors = {CharacterBuilder.CONTROLLER_CLASS},
             bgcolor = "#ffffff",
@@ -127,40 +179,13 @@ function CharacterBuilder._panelStyles()
                 },
             },
         },
-
-        -- For the right side character pane
-        { 
-            selectors = {"charpanel-check"},
-            halign = "left",
-            valign = "center",
-            hmargin = 150,
-            width = 24,
-            height = 24,
-            bgimage = "icons/icon_common/icon_common_29.png",
-            bgcolor = "clear",
-        },
-        {
-            selectors = {"charpanel-detail-header"},
-            width = "100%",
-            height = "auto",
-            valign = "top",
-            halign = "left",
-        },
-        {
-            selectors = {"feature-detail-panel"},
-            width = "100%",
-            height = "auto",
-            valign = "top",
-            halign = "left",
-            flow = "horizontal",
-        },
-    }
+    })
 end
 
-function CharacterBuilder._labelStyles()
-    return {
+local function _labelStyles()
+    return _applyRootSelectors("label", {
         {
-            selectors = {"label"},
+            selectors = {},
             height = "auto",
             textAlignment = "center",
             fontSize = 14,
@@ -168,7 +193,7 @@ function CharacterBuilder._labelStyles()
             bold = false,
         },
         {
-            selectors = {"label-info"},
+            selectors = {"info"},
             hpad = 12,
             fontSize = 18,
             textAlignment = "left",
@@ -176,12 +201,12 @@ function CharacterBuilder._labelStyles()
             bgcolor = "#10110FE5",
         },
         {
-            selectors = {"label-header"},
+            selectors = {"header"},
             fontSize = 40,
             bold = true,
         },
         {
-            selectors = {"label-charname"},
+            selectors = {"charname"},
             width = "98%",
             height = "auto",
             halign = "center",
@@ -190,37 +215,10 @@ function CharacterBuilder._labelStyles()
             fontSize = 24,
             tmargin = 12,
         },
-        {
-            selectors = {"label-description"},
-            width = "50%",
-            height = "auto",
-            halign = "left",
-            vpad = CharacterBuilder.SIZES.DESCRIPTION_LABEL_PAD,
-            textAlignment = "left",
-            fontSize = 18,
-            bold = true,
-        },
-        {
-            selectors = {"label-desc-item"},
-            width = "50%",
-            height = "auto",
-            halign = "left",
-            vpad = CharacterBuilder.SIZES.DESCRIPTION_LABEL_PAD,
-            textAlignment = "left",
-            fontSize = 18,
-        },
-        {
-            selectors = {"label-panel-placeholder"},
-            width = "auto",
-            height = "auto",
-            valign = "center",
-            halign = "center",
-            fontSize = 36,
-        },
 
         -- Feature names & descriptions for selection panels
         {
-            selectors = {"label-feature-name"},
+            selectors = {"feature-header", "name"},
             width = "100%",
             height = "auto",
             valign = "top",
@@ -234,19 +232,19 @@ function CharacterBuilder._labelStyles()
             cornerRadius = 5,
         },
         {
-            selectors = {"label-feature-desc"},
+            selectors = {"feature-header", "desc"},
             width = "80%",
             height = "auto",
             halign = "center",
             valign = "top",
             textAlignment = "center",
-            fontSize = 18,
+            fontSize = 16,
             italics = true,
         },
 
         -- Selector target for skill selection etc.
         {
-            selectors = {"choice-selection"},
+            selectors = {"feature-target"},
             width = "100%",
             height = "auto",
             tmargin = 10,
@@ -257,11 +255,11 @@ function CharacterBuilder._labelStyles()
             borderWidth = 1,
         },
         {
-            selectors = {"choice-selection", "empty"},
+            selectors = {"feature-target", "empty"},
             borderColor = CharacterBuilder.COLORS.GOLD,
         },
         {
-            selectors = {"choice-selection", "filled"},
+            selectors = {"feature-target", "filled"},
             fontSize = 18,
             textAlignment = "left",
             bold = false,
@@ -270,14 +268,14 @@ function CharacterBuilder._labelStyles()
             borderColor = CharacterBuilder.COLORS.FILLED_ITEM_BORDER,
         },
         {
-            selectors = {"choice-selection", "filled", "hover"},
+            selectors = {"feature-target", "filled", "hover"},
             bgcolor = CharacterBuilder.COLORS.DELETE_WARN_BG,
             borderColor = CharacterBuilder.COLORS.DELETE_WARN_BORDER,
         },
 
         -- Options for skill selection etc.
         {
-            selectors = {"choice-option"},
+            selectors = {"feature-choice"},
             width = "100%",
             height = "auto",
             tmargin = 10,
@@ -292,13 +290,32 @@ function CharacterBuilder._labelStyles()
             borderColor = CharacterBuilder.COLORS.GOLD,
         },
         {
-            selectors = {"choice-option", "selected"},
+            selectors = {"feature-choice", "selected"},
             borderColor = CharacterBuilder.COLORS.GOLD03,
         },
 
-        -- For the right-side character pane / builder tab
+        -- For the right-side character panel / builder tab
         {
-            selectors = {"charpanel-detail-header-label"},
+            selectors = {"charpanel", "desc-item-label"},
+            width = "50%",
+            height = "auto",
+            halign = "left",
+            vpad = CharacterBuilder.SIZES.DESCRIPTION_LABEL_PAD,
+            textAlignment = "left",
+            fontSize = 18,
+            bold = true,
+        },
+        {
+            selectors = {"charpanel", "desc-item-detail"},
+            width = "50%",
+            height = "auto",
+            halign = "left",
+            vpad = CharacterBuilder.SIZES.DESCRIPTION_LABEL_PAD,
+            textAlignment = "left",
+            fontSize = 18,
+        },
+        {
+            selectors = {"charpanel", "builder-header"},
             halign = "left",
             valign = "bottom",
             width = "90%",
@@ -310,11 +327,7 @@ function CharacterBuilder._labelStyles()
             borderColor = Styles.textColor,
         },
         {
-            selectors = {"charpanel-check", "complete"},
-            bgcolor = Styles.textColor,
-        },
-        {
-            selectors = {"feature-detail-id-label"},
+            selectors = {"charpanel", "builder-category"},
             width = "20%",
             halign = "left",
             valign = "top",
@@ -322,7 +335,7 @@ function CharacterBuilder._labelStyles()
             fontSize = 18,
         },
         {
-            selectors = {"feature-detail-status-label"},
+            selectors = {"charpanel", "builder-status"},
             width = "15%",
             valign = "top",
             textAlignment = "topleft",
@@ -330,7 +343,7 @@ function CharacterBuilder._labelStyles()
             fontSize = 18,
         },
         {
-            selectors = {"feature-detail-detail-label"},
+            selectors = {"charpanel", "builder-detail"},
             width = "60%",
             halign = "left",
             valign = "top",
@@ -338,13 +351,13 @@ function CharacterBuilder._labelStyles()
             textAlignment = "topleft",
             fontSize = 18,
         },
-    }
+    })
 end
 
-function CharacterBuilder._buttonStyles()
-    return {
+local function _buttonStyles()
+    return _applyRootSelectors("button", {
         {
-            selectors = {"button"},
+            selectors = {},
             border = 1,
             borderWidth = 1,
         },
@@ -361,7 +374,7 @@ function CharacterBuilder._buttonStyles()
             bold = false,
         },
         {
-            selectors = {"button-select"},
+            selectors = {"select"},
             width = CharacterBuilder.SIZES.SELECT_BUTTON_WIDTH,
             height = CharacterBuilder.SIZES.SELECT_BUTTON_HEIGHT,
             fontSize = 36,
@@ -372,23 +385,23 @@ function CharacterBuilder._buttonStyles()
             borderColor = CharacterBuilder.COLORS.GOLD03,
             color = CharacterBuilder.COLORS.GOLD03,
         },
-        {
-            selectors = {"available"},
-            borderColor = CharacterBuilder.COLORS.CREAM,
-            color = CharacterBuilder.COLORS.GOLD,
-        },
-        {
-            selectors = {"unavailable"},
-            borderColor = CharacterBuilder.COLORS.GRAY02,
-            color = CharacterBuilder.COLORS.GRAY02,
-        }
-    }
+        -- {
+        --     selectors = {"available"},
+        --     borderColor = CharacterBuilder.COLORS.CREAM,
+        --     color = CharacterBuilder.COLORS.GOLD,
+        -- },
+        -- {
+        --     selectors = {"unavailable"},
+        --     borderColor = CharacterBuilder.COLORS.GRAY02,
+        --     color = CharacterBuilder.COLORS.GRAY02,
+        -- }
+    })
 end
 
-function CharacterBuilder._inputStyles()
-    return {
+local function _inputStyles()
+    return _applyRootSelectors("input", {
         {
-            selectors = {"text-entry"},
+            selectors = {},
             bgcolor = "#191A18",
             borderColor = "#666663",
             cornerRadius = 4,
@@ -406,13 +419,13 @@ function CharacterBuilder._inputStyles()
             selectors = {"multiline"},
             height = 48*3,
         },
-    }
+    })
 end
 
-function CharacterBuilder._dropdownStyles()
-    return {
+local function _dropdownStyles()
+    return _applyRootSelectors("dropdown", {
         {
-            selectors = {"dropdown"},
+            selectors = {},
             bgcolor = "#191A18",
             borderColor = "#666663",
             fontSize = 36,
@@ -424,20 +437,25 @@ function CharacterBuilder._dropdownStyles()
             textAlignment = "left",
             halign = "left",
         },
-    }
+        {
+            selectors = {"primary"},
+            height = 48,
+            fontSize = 20,
+        },
+    })
 end
 
-function CharacterBuilder._characterPanelTabStyles()
+local function _characterPanelTabStyles()
     return {
         {
-            selectors = {"char-tab-btn"},
+            selectors = {"charpanel", "tab-button"},
             bgimage = true,
             border = 0,
             pad = 4,
             borderColor = CharacterBuilder.COLORS.CREAM03,
         },
         {
-            selectors = {"char-tab-border"},
+            selectors = {"charpanel", "tab-border"},
             width = "100%",
             height = "100%",
             border = 0,
@@ -446,21 +464,29 @@ function CharacterBuilder._characterPanelTabStyles()
             bgcolor = "clear",
         },
         {
-            selectors = {"char-tab-border", "parent:selected"},
+            selectors = {"charpanel", "tab-border", "parent:selected"},
             border = {y1 = 0, y2 = 2, x1 = 2, x2 = 2},
         },
         {
-            selectors = {"char-tab-icon"},
+            selectors = {"charpanel", "tab-icon"},
             width = 24,
             height = 24,
             bgcolor = CharacterBuilder.COLORS.GOLD,
         },
         {
-            selectors = {"char-tab-label"},
+            selectors = {"charpanel", "tab-label"},
         },
         {
-            selectors = {"char-tab-icon", "selected"},
+            selectors = {"charpanel", "tab-icon", "selected"},
             bgcolor = CharacterBuilder.COLORS.CREAM03,
+        },
+    }
+end
+
+local function _modifierStyles()
+    return {
+        {
+
         },
     }
 end
@@ -474,13 +500,14 @@ function CharacterBuilder._getStyles()
         end
     end
 
-    mergeStyles(CharacterBuilder._baseStyles())
-    mergeStyles(CharacterBuilder._panelStyles())
-    mergeStyles(CharacterBuilder._labelStyles())
-    mergeStyles(CharacterBuilder._buttonStyles())
-    mergeStyles(CharacterBuilder._inputStyles())
-    mergeStyles(CharacterBuilder._dropdownStyles())
-    mergeStyles(CharacterBuilder._characterPanelTabStyles())
+    mergeStyles(_baseStyles())
+    mergeStyles(_panelStyles())
+    mergeStyles(_labelStyles())
+    mergeStyles(_buttonStyles())
+    mergeStyles(_inputStyles())
+    mergeStyles(_dropdownStyles())
+    mergeStyles(_characterPanelTabStyles())
+    mergeStyles(_modifierStyles())
 
     return styles
 end

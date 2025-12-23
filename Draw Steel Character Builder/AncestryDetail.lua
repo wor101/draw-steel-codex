@@ -98,7 +98,7 @@ end
 function CharacterBuilder._ancestryOverviewPanel()
 
     local nameLabel = gui.Label{
-        classes = {"builder-base", "label", "label-info", "label-header"},
+        classes = {"builder-base", "label", "info", "header"},
         width = "100%",
         height = "auto",
         hpad = 12,
@@ -120,7 +120,7 @@ function CharacterBuilder._ancestryOverviewPanel()
     }
 
     local introLabel = gui.Label{
-        classes = {"builder-base", "label", "label-info"},
+        classes = {"builder-base", "label", "info"},
         width = "100%",
         height = "auto",
         vpad = 6,
@@ -144,7 +144,7 @@ function CharacterBuilder._ancestryOverviewPanel()
     }
 
     local detailLabel = gui.Label{
-        classes = {"builder-base", "label", "label-info"},
+        classes = {"builder-base", "label", "info"},
         width = "100%",
         height = "auto",
         vpad = 6,
@@ -184,7 +184,7 @@ function CharacterBuilder._ancestryOverviewPanel()
 
     return gui.Panel{
         id = "ancestryOverviewPanel",
-        classes = {"ancestryOverviewPanel", "builder-base", "panel-base", "panel-border", "collapsed"},
+        classes = {"ancestryOverviewPanel", "builder-base", "panel-base", "border", "collapsed"},
         width = "96%",
         height = "99%",
         valign = "center",
@@ -251,7 +251,7 @@ function CharacterBuilder._ancestryLorePanel()
         end,
 
         gui.Label{
-            classes = {"builder-base", "label", "label-info"},
+            classes = {"builder-base", "label", "info"},
             width = "96%",
             height = "auto",
             valign = "top",

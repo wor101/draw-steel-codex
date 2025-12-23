@@ -22,7 +22,7 @@ function CharacterBuilder._descriptionEdit()
             flow = "vertical",
             vmargin = 12,
             (labelText and #labelText > 0) and gui.Label{
-                classes = {"builder-base", "label", "label-info"},
+                classes = {"builder-base", "label", "info"},
                 width = "100%",
                 height = "auto",
                 halign = "left",
@@ -39,7 +39,7 @@ function CharacterBuilder._descriptionEdit()
         local inputConfig = dmhub.DeepCopy(opts or {})
 
         -- If opts had classes, append them to the base classes
-        local baseClasses = {"builder-base", "text-entry", "primary"}
+        local baseClasses = {"builder-base", "input", "primary"}
         if inputConfig.classes then
             for _, cls in ipairs(inputConfig.classes) do
                 table.insert(baseClasses, cls)
@@ -98,7 +98,7 @@ function CharacterBuilder._descriptionEdit()
             bgcolor = "white",
         },
         gui.Label{
-            classes = {"builder-base", "label", "label-header"},
+            classes = {"builder-base", "label", "header"},
             width = "98%-70",
             height = "auto",
             halign = "left",
@@ -216,7 +216,8 @@ function CharacterBuilder._descriptionEdit()
         function(desc, val) desc:SetPhysicalFeatures(val) end,
         {
             classes = {"multiline"},
-            multiline = true, 
+            multiline = true,
+            textAlignment = "topleft",
             lineType = "MultiLineNewLine"
         })
 
@@ -246,7 +247,7 @@ end
 
 function CharacterBuilder._descriptionArtPane()
     return gui.Panel{
-        classes = {"builder-base", "panel-base", "panel-border"},
+        classes = {"builder-base", "panel-base", "border"},
         width = 300,
         height = 975,
         halign = "center",

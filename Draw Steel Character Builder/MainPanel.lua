@@ -6,6 +6,7 @@ local mod = dmhub.GetModLoading()
 ]]
 
 local _getCreature = CharacterBuilder._getCreature
+local _getToken = CharacterBuilder._getToken
 
 --- Minimal implementation for the center panel. Non-reactive.
 function CharacterBuilder._detailPanel()
@@ -65,16 +66,16 @@ function CharacterBuilder.CreatePanel()
                 else
                     -- TODO: Can we create a token without attaching it to the game immediately?
                 end
-                return element.data.state:Get("token")
+                return _getToken(element.data.state)
             end,
         },
 
         applyCurrentAncestry = function(element)
             local ancestryId = element.data.state:Get("ancestry.selectedId")
             if ancestryId then
-                local token = element.data.state:Get("token")
-                if token then
-                    token.properties.raceid = ancestryId
+                local creature = _getCreature(element.data.source)
+                if creature then
+                    creature.raceid = ancestryId
                     element:FireEvent("tokenDataChanged")
                 end
             end

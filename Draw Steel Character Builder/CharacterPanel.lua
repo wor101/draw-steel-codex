@@ -74,29 +74,29 @@ end
 --- @return Panel
 function CBCharPanel._statusFeature(featureTypeInfo)
     local idLabel = gui.Label{
-        classes = {"builder-base", "label", "feature-detail-id-label"},
+        classes = {"builder-base", "label", "charpanel", "builder-category"},
         refreshDetail = function(element, info)
             element.text = info.id
         end,
     }
     local statusLabel = gui.Label{
-        classes = {"builder-base", "label", "feature-detail-status-label"},
+        classes = {"builder-base", "label", "charpanel", "builder-status"},
         refreshDetail = function(element, info)
             element.text = string.format("%d/%d", info.selected, info.available)
         end,
     }
     local detailLabel = gui.Label{
-        classes = {"builder-base", "label", "feature-detail-detail-label"},
+        classes = {"builder-base", "label", "charpanel", "builder-detail"},
         refreshDetail = function(element, info)
             table.sort(info.selectedDetail)
             element.text = table.concat(info.selectedDetail, "\n")
         end
     }
     return gui.Panel{
-        classes = {"builder-base", "panel-base", "feature-detail-panel"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-feature-content"},
         data = featureTypeInfo,
         refreshBuilderState = function(element, state)
-            local visible = element.data and element.data.available > 0
+            local visible = element.data and (element.data.available or 0) > 0
             element:SetClass("collapsed", not visible)
             if visible then
                 element:FireEventTree("refreshDetail", element.data)
@@ -137,23 +137,23 @@ function CBCharPanel._statusItem(selector, getSelected)
     local headingText = _ucFirst(selector)
 
     local headerPanel = gui.Panel{
-        classes = {"builder-base", "panel-base", "charpanel-detail-header"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-header"},
         click = function(element)
             local controller = element:FindParentWithClass("panelStatusController")
             if controller then controller:FireEvent("toggleExpanded") end
         end,
         gui.Label{
-            classes = {"builder-base", "label", "charpanel-detail-header-label"},
+            classes = {"builder-base", "label", "charpanel", "builder-header"},
             text = headingText,
         },
         gui.Panel{
-            classes = {"builder-base", "panel-base", "charpanel-check"},
+            classes = {"builder-base", "panel-base", "charpanel", "builder-check"},
             setStatus = function(element, info)
                 element:SetClass("complete", info.complete)
             end,
         },
         gui.Label{
-            classes = {"builder-base", "label", "charpanel-detail-header-label"},
+            classes = {"builder-base", "label", "charpanel", "builder-header"},
             width = "auto",
             halign = "right",
             hmargin = 40,
@@ -335,7 +335,7 @@ function CBCharPanel._builderPanel(tabId)
         return character:Background()
     end)
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "panel-charpanel-detail"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
         data = {
             id = tabId,
         },
@@ -357,7 +357,7 @@ function CBCharPanel._descriptorsPanel()
 
     local function makeDescriptionLabel(labelText, eventHandlers)
         local itemConfig = {
-            classes = {"label", "label-desc-item"},
+            classes = {"label", "charpanel", "desc-item-detail"},
             width = "50%",
             halign = "right",
             text = "--",
@@ -375,7 +375,7 @@ function CBCharPanel._descriptorsPanel()
             width = "auto",
             flow = "horizontal",
             gui.Label{
-                classes = {"label", "label-description"},
+                classes = {"label", "charpanel", "desc-item-label"},
                 halign = "left",
                 width = "50%",
                 text = labelText .. ":",
@@ -517,14 +517,14 @@ function CBCharPanel._descriptionPanel(tabId)
         vscroll = true,
 
         gui.Label{
-            classes = {"label", "label-description"},
+            classes = {"label", "charpanel", "desc-item-label"},
             halign = "left",
             valign = "top",
             width = "auto",
             text = "Physical Features:",
         },
         gui.Label{
-            classes = {"label", "label-desc-item"},
+            classes = {"label", "charpanel", "desc-item-detail"},
             hmargin = 4,
             width = "98%",
             halign = "left",
@@ -544,7 +544,7 @@ function CBCharPanel._descriptionPanel(tabId)
     }
 
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "panel-charpanel-detail"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
         data = {
             id = tabId,
         },
@@ -581,13 +581,13 @@ function CBCharPanel._explorationPanel(tabId)
             borderColor = Styles.textColor,
             border = {y1 = 1, y2 = 0, x1 = 0, x2 = 0},
             gui.Label{
-                classes = {"builder-base", "label", "label-description"},
+                classes = {"builder-base", "label", "charpanel", "desc-item-label"},
                 text = "Skills",
             }
         },
 
         gui.Label{
-            classes = {"builder-base", "label", "label-desc-item"},
+            classes = {"builder-base", "label", "charpanel", "desc-item-detail"},
             width = "98%",
             valign = "top",
             text = "calculating...",
@@ -637,13 +637,13 @@ function CBCharPanel._explorationPanel(tabId)
             borderColor = Styles.textColor,
             border = {y1 = 1, y2 = 0, x1 = 0, x2 = 0},
             gui.Label{
-                classes = {"builder-base", "label", "label-description"},
+                classes = {"builder-base", "label", "charpanel", "desc-item-label"},
                 text = "Languages",
             }
         },
 
         gui.Label{
-            classes = {"builder-base", "label", "label-desc-item"},
+            classes = {"builder-base", "label", "charpanel", "desc-item-detail"},
             width = "98%",
             valign = "top",
             text = "calculating...",
@@ -673,7 +673,7 @@ function CBCharPanel._explorationPanel(tabId)
     }
 
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "panel-charpanel-detail"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
         data = {
             id = tabId,
         },
@@ -693,7 +693,7 @@ end
 
 function CBCharPanel._tacticalPanel(tabId)
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "panel-charpanel-detail"},
+        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
         vscroll = true,
         data = {
             id = tabId,
@@ -764,7 +764,7 @@ function CBCharPanel._detailPanel()
     for _,tabId in ipairs(tabOrder) do
         local tabInfo = tabs[tabId]
         local btn = gui.Panel{
-            classes = {"char-tab-icon"},
+            classes = {"charpanel", "tab-icon"},
             halign = "right",
             hmargin = 8,
             bgimage = tabInfo.icon,
@@ -775,7 +775,7 @@ function CBCharPanel._detailPanel()
             end,
         }
         local label = gui.Label{
-            classes = {"builder-base", "label", "char-tab-label"},
+            classes = {"builder-base", "label", "charpanel", "tab-label"},
             height = "auto",
             width = "auto",
             hpad = 8,
@@ -788,7 +788,7 @@ function CBCharPanel._detailPanel()
             end,
         }
         local tab = gui.Panel{
-            classes = {"builder-base", "panel", "char-tab-btn"},
+            classes = {"builder-base", "panel", "charpanel", "tab-button"},
             width = "auto",
             height = "100%",
             halign = "right",
@@ -947,7 +947,7 @@ function CBCharPanel._headerPanel()
     }
 
     local characterName = gui.Label {
-        classes = {"builder-base", "label", "label-charname"},
+        classes = {"builder-base", "label", "charname"},
         text = "calculating...",
         editable = true,
         data = {
@@ -971,7 +971,7 @@ function CBCharPanel._headerPanel()
     }
 
     local levelClass = gui.Label {
-        classes = {"builder-base", "label", "label-charname"},
+        classes = {"builder-base", "label", "charname"},
         text = "(class & level)",
         tmargin = 4,
         refreshBuilderState = function(element, state)
@@ -1008,7 +1008,7 @@ function CBCharPanel.CreatePanel()
 
     return gui.Panel{
         id = "characterPanel",
-        classes = {"builder-base", "panel-base", "panel-border", "characterPanel"},
+        classes = {"builder-base", "panel-base", "border", "characterPanel"},
         width = CharacterBuilder.SIZES.CHARACTER_PANEL_WIDTH,
         height = "99%",
         valign = "center",

@@ -17,6 +17,7 @@ function CBFeatureSelector.Panel(feature)
     if typeName == "CharacterDeityChoice" then
     elseif typeName == "CharacterFeatChoice" then
     elseif typeName == "CharacterFeatureChoice" then
+        return CBFeatureSelector.FeaturePanel(feature)
     elseif typeName == "CharacterLanguageChoice" then
     elseif typeName == "CharacterSkillChoice" then
         return CBFeatureSelector.SkillPanel(feature)
@@ -26,9 +27,60 @@ function CBFeatureSelector.Panel(feature)
     return nil
 end
 
+--- Render a feature choice panel
+--- @param feature CharacterFeatureChoice
+--- @return Panel
+function CBFeatureSelector.FeaturePanel(feature)
+    local targets = {}
+
+    local options = {}
+    for _,f in ipairs(feature.options) do
+        local titleLabel = gui.Label{
+            classes = {"builder-base", "label", "feature-header", "name"},
+            text = f.name
+        }
+        local descriptionLabel = gui.Label{
+            classes = {"builder-base", "label", "feature-header", "desc"},
+            textAlignment = "left",
+            text = f.description
+        }
+        options[#options+1] = gui.Panel{
+            classes = {"builder-base", "panel-base", "feature-option-panel"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            halign = "left",
+            flow = "vertical",
+            data = {
+                id = f.guid,
+                item = f,
+            },
+            click = function(element)
+                local parent = element:FindParentWithClass("featureSelector")
+                if parent then
+                    parent:FireEvent("selectItem", element.data.id)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                local creature = _getCreature(state)
+                if creature then
+                    -- TODO: Hide if it's already selected
+                end
+            end,
+            refreshSelection = function(element, selectedId)
+                element:SetClass("selected", selectedId == element.data.id)
+            end,
+            titleLabel,
+            descriptionLabel,
+        }
+    end
+
+    return CBFeatureSelector._mainPanel(feature, targets, options)
+end
+
 --- Render a skill choice panel
 --- @param feature CharacterSkillChoice
---- @return Panel|nil
+--- @return Panel
 function CBFeatureSelector.SkillPanel(feature)
 
     local candidateSkills = {}
@@ -51,7 +103,7 @@ function CBFeatureSelector.SkillPanel(feature)
     local numChoices = feature:NumChoices(creature)
     for i = 1, numChoices do
         targets[#targets+1] = gui.Label{
-            classes = {"builder-base", "label", "choice-selection", "empty"},
+            classes = {"builder-base", "label", "feature-target", "empty"},
             text = "Empty Slot",
             data = {
                 featureGuid = feature.guid,
@@ -100,7 +152,7 @@ function CBFeatureSelector.SkillPanel(feature)
     local options = {}
     for _,item in ipairs(candidateSkills) do
         options[#options+1] = gui.Label{
-            classes = {"builder-base", "label", "choice-option"},
+            classes = {"builder-base", "label", "feature-choice"},
             valign = "top",
             text = item.name,
             data = {
@@ -110,7 +162,7 @@ function CBFeatureSelector.SkillPanel(feature)
             click = function(element)
                 local parent = element:FindParentWithClass("featureSelector")
                 if parent then
-                    parent:FireEvent("selectItem", element.data.item.id)
+                    parent:FireEvent("selectItem", element.data.id)
                 end
             end,
             refreshBuilderState = function(element, state)
@@ -120,7 +172,7 @@ function CBFeatureSelector.SkillPanel(feature)
                 end
             end,
             refreshSelection = function(element, selectedId)
-                element:SetClass("selected", selectedId == element.data.item.id)
+                element:SetClass("selected", selectedId == element.data.id)
             end,
         }
     end
@@ -137,12 +189,12 @@ function CBFeatureSelector._buildChildren(feature, targets, options)
     local children = {}
 
     children[#children+1] = gui.Label {
-        classes = {"builder-base", "label", "label-feature-name"},
+        classes = {"builder-base", "label", "feature-header", "name"},
         text = feature.name,
     }
 
     children[#children+1] = gui.Label {
-        classes = {"builder-base", "label", "label-feature-desc"},
+        classes = {"builder-base", "label", "feature-header", "desc"},
         text = feature:GetDescription(),
     }
 
