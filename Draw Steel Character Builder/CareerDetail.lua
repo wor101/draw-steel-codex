@@ -7,6 +7,7 @@ local mod = dmhub.GetModLoading()
 
 local SELECTOR = "career"
 local INITIAL_CATEGORY = "overview"
+local AVAILABLE_WITHOUT_CAREER = {overview = true}
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getCreature = CharacterBuilder._getCreature
@@ -237,11 +238,29 @@ function CBCareerDetail.CreatePanel()
             if visible then
                 local creature = _getCreature(state)
                 if creature then
-                    local creatureCareer = creature:try_get("backgroundi")
+                    local creatureCareer = creature:try_get("backgroundid")
                     if creatureCareer ~= nil then
-                        -- TODO:
+                        local featureDetails = state:Get(SELECTOR .. ".featureDetails")
+                        for _,f in pairs(featureDetails) do
+                            local featureId = f.feature:try_get("guid")
+                            if featureId and element.data.features[featureId] == nil then
+                                local featureRegistry = CharacterBuilder._makeFeatureRegistry(f.feature, SELECTOR, creatureCareer, function(creature)
+                                    return creature:try_get("backgroundid")
+                                end)
+                                if featureRegistry then
+                                    element.data.features[featureId] = true
+                                    navPanel:FireEvent("registerFeatureButton", featureRegistry.button)
+                                    detailPanel:FireEvent("registerFeaturePanel", featureRegistry.panel)
+                                end
+                            end
+                        end
                     else
-                        -- TODO: No career selected
+                        -- No career selected on creature
+                        local categoryKey = SELECTOR .. ".category.selectedId"
+                        local currentCategory = state:Get(categoryKey)
+                        if currentCategory and not AVAILABLE_WITHOUT_CAREER[currentCategory] then
+                            state:Set({key = categoryKey, value = INITIAL_CATEGORY})
+                        end
                     end
                 end
             end

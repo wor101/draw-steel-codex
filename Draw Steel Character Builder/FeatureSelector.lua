@@ -16,9 +16,11 @@ function CBFeatureSelector.Panel(feature)
     local typeName = feature.typeName or ""
     if typeName == "CharacterDeityChoice" then
     elseif typeName == "CharacterFeatChoice" then
+        return CBFeatureSelector.PerkPanel(feature)
     elseif typeName == "CharacterFeatureChoice" then
         return CBFeatureSelector.FeaturePanel(feature)
     elseif typeName == "CharacterLanguageChoice" then
+        return CBFeatureSelector.LanguagePanel(feature)
     elseif typeName == "CharacterSkillChoice" then
         return CBFeatureSelector.SkillPanel(feature)
     elseif typeName == "CharacterSubclassChoice" then
@@ -171,24 +173,240 @@ function CBFeatureSelector.FeaturePanel(feature)
     return CBFeatureSelector._mainPanel(feature, targets, options)
 end
 
+--- Render a language choice panel
+--- @param feature CharacterLanguageChoice
+--- @return Panel
+function CBFeatureSelector.LanguagePanel(feature)
+
+    local candidateItems = Language.GetDropdownList()
+
+    -- Selection targets
+    local targets = {}
+    local numChoices = feature:NumChoices(creature)
+    for i = 1, numChoices do
+        targets[#targets+1] = gui.Panel{
+            classes = {"builder-base", "panel-base", "feature-target", "empty"},
+            data = {
+                featureGuid = feature.guid,
+                itemIndex = i,
+                selectedItem = nil,
+            },
+            click = function(element)
+                _fireControllerEvent(element, "removeLevelChoice", {
+                    levelChoiceGuid = element.data.featureGuid,
+                    selectedId = element.data.selectedItem.id,
+                })
+            end,
+            linger = function(element)
+                if element.data.selectedId then
+                    gui.Tooltip("Press to delete")(element)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                element.data.selectedItem = nil
+                local newText = "Empty Slot"
+                local creature = _getCreature(state)
+                if creature then
+                    local levelChoices = creature:GetLevelChoices()
+                    if levelChoices then
+                        local selectedItems = levelChoices[element.data.featureGuid]
+                        if selectedItems and #selectedItems >= element.data.itemIndex then
+                            local selectedId = selectedItems[element.data.itemIndex]
+                            if selectedId then
+                                local item = dmhub.GetTableVisible(Language.tableName)[selectedId]
+                                if item then
+                                    element.data.selectedItem = item
+                                    newText = item.name
+                                end
+                            end
+                        end
+                    end
+                end
+                element:FireEventTree("updateText", newText)
+                element:SetClass("filled", element.data.selectedItem ~= nil)
+            end,
+            gui.Label{
+                classes = {"builder-base", "label", "feature-target"},
+                text = "Empty Slot",
+                updateText = function(element, text)
+                    element.text = text
+                end,
+            }
+        }
+    end
+
+    -- Candidate items
+    local options = {}
+    for _,item in ipairs(candidateItems) do
+        options[#options+1] = gui.Panel{
+            classes = {"builder-base", "panel-base", "feature-choice"},
+            valign = "top",
+            data = {
+                id = item.id,
+                item = item,
+            },
+            click = function(element)
+                local parent = element:FindParentWithClass("featureSelector")
+                if parent then
+                    parent:FireEvent("selectItem", element.data.id)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                local creature = _getCreature(state)
+                if creature then
+                    local langsKnown = creature:LanguagesKnown()
+                    if langsKnown then
+                        element:SetClass("collapsed", langsKnown[element.data.id])
+                    end
+                end
+            end,
+            refreshSelection = function(element, selectedId)
+                element:SetClass("selected", selectedId == element.data.id)
+            end,
+            gui.Label{
+                classes = {"builder-base", "label", "feature-choice"},
+                text = item.text,
+            }
+        }
+    end
+
+    return CBFeatureSelector._mainPanel(feature, targets, options)
+end
+
+--- Render a language choice panel
+--- @param feature CharacterFeatChoice
+--- @return Panel
+function CBFeatureSelector.PerkPanel(feature)
+
+    local candidateItems = {}
+    local includeTags = {}
+    for tag in feature.tag:gmatch("[^,]+") do
+        tag = tag:match("^%s*(.-)%s*$")
+        includeTags[tag:lower()] = true
+    end
+    local perks = dmhub.GetTableVisible(CharacterFeat.tableName)
+    for id,item in pairs(perks) do
+        if includeTags[item.tag:lower()] then
+            candidateItems[#candidateItems+1] = {
+                id = id,
+                item = item
+            }
+        end
+    end
+    table.sort(candidateItems, function(a,b) return a.item.name < b.item.name end)
+    print("THC:: PERKITEMS::", json(candidateItems))
+
+    -- Selection targets
+    local targets = {}
+    local numChoices = feature:NumChoices(creature)
+    for i = 1, numChoices do
+        targets[#targets+1] = gui.Panel{
+            classes = {"builder-base", "panel-base", "feature-target", "empty"},
+            data = {
+                featureGuid = feature.guid,
+                itemIndex = i,
+                selectedItem = nil,
+            },
+            click = function(element)
+                _fireControllerEvent(element, "removeLevelChoice", {
+                    levelChoiceGuid = element.data.featureGuid,
+                    selectedId = element.data.selectedItem.id,
+                })
+            end,
+            linger = function(element)
+                if element.data.selectedId then
+                    gui.Tooltip("Press to delete")(element)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                element.data.selectedItem = nil
+                local newText = "Empty Slot"
+                local creature = _getCreature(state)
+                if creature then
+                    local levelChoices = creature:GetLevelChoices()
+                    if levelChoices then
+                        local selectedItems = levelChoices[element.data.featureGuid]
+                        if selectedItems and #selectedItems >= element.data.itemIndex then
+                            local selectedId = selectedItems[element.data.itemIndex]
+                            if selectedId then
+                                local item = dmhub.GetTableVisible(CharacterFeat.tableName)[selectedId]
+                                if item then
+                                    element.data.selectedItem = item
+                                    newText = item.name
+                                end
+                            end
+                        end
+                    end
+                end
+                element:FireEventTree("updateText", newText)
+                element:SetClass("filled", element.data.selectedItem ~= nil)
+            end,
+            gui.Label{
+                classes = {"builder-base", "label", "feature-target"},
+                text = "Empty Slot",
+                updateText = function(element, text)
+                    element.text = text
+                end,
+            }
+        }
+    end
+
+    -- Candidate items
+    local options = {}
+    for _,item in ipairs(candidateItems) do
+        options[#options+1] = gui.Panel{
+            classes = {"builder-base", "panel-base", "feature-choice"},
+            valign = "top",
+            data = {
+                id = item.id,
+                item = item.item,
+            },
+            click = function(element)
+                local parent = element:FindParentWithClass("featureSelector")
+                if parent then
+                    parent:FireEvent("selectItem", element.data.id)
+                end
+            end,
+            refreshBuilderState = function(element, state)
+                local creature = _getCreature(state)
+                if creature then
+                    -- TODO: There is currently no way to easily get the list of
+                    -- perks / feats selected for a character. We need to add
+                    -- one to the character object, then we can exclude already
+                    -- selected items from this list.
+                end
+            end,
+            refreshSelection = function(element, selectedId)
+                element:SetClass("selected", selectedId == element.data.id)
+            end,
+            gui.Label{
+                classes = {"builder-base", "label", "feature-choice"},
+                text = item.item.name,
+            }
+        }
+    end
+
+    return CBFeatureSelector._mainPanel(feature, targets, options)
+end
+
 --- Render a skill choice panel
 --- @param feature CharacterSkillChoice
 --- @return Panel
 function CBFeatureSelector.SkillPanel(feature)
 
-    local candidateSkills = {}
+    local candidateItems = {}
     local categories = feature:try_get("categories", {})
     local individual = feature:try_get("individual", {})
     if (categories and next(categories)) or (individual and next(individual)) then
         local skills = dmhub.GetTableVisible(Skill.tableName)
         for key,item in pairs(skills) do
             if (individual and individual[key]) or (categories and categories[item.category]) then
-                candidateSkills[#candidateSkills+1] = item
+                candidateItems[#candidateItems+1] = item
             end
         end
-        table.sort(candidateSkills, function(a,b) return a.name < b.name end)
+        table.sort(candidateItems, function(a,b) return a.name < b.name end)
     else
-        candidateSkills = Skill.skillsDropdownOptions
+        candidateItems = Skill.skillsDropdownOptions
     end
 
     -- Selection targets
@@ -224,10 +442,10 @@ function CBFeatureSelector.SkillPanel(feature)
                         if selectedItems and #selectedItems >= element.data.itemIndex then
                             local selectedId = selectedItems[element.data.itemIndex]
                             if selectedId then
-                                local skillItem = dmhub.GetTableVisible(Skill.tableName)[selectedId]
-                                if skillItem then
-                                    element.data.selectedItem = skillItem
-                                    newText = skillItem.name
+                                local item = dmhub.GetTableVisible(Skill.tableName)[selectedId]
+                                if item then
+                                    element.data.selectedItem = item
+                                    newText = item.name
                                 end
                             end
                         end
@@ -248,7 +466,7 @@ function CBFeatureSelector.SkillPanel(feature)
 
     -- Candidate items
     local options = {}
-    for _,item in ipairs(candidateSkills) do
+    for _,item in ipairs(candidateItems) do
         options[#options+1] = gui.Panel{
             classes = {"builder-base", "panel-base", "feature-choice"},
             valign = "top",
