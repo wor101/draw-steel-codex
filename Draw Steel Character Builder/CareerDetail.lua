@@ -175,6 +175,15 @@ function CBCareerDetail._navPanel()
             if changeButton then changeButton:SetAsLastSibling() end
         end,
 
+        destroyFeature = function(element, featureId)
+            local child = element:FindChildRecursive(function(e)
+                return e.data and e.data.featureId == featureId
+            end)
+            if child then
+                child:DestroySelf()
+            end
+        end,
+
         overviewButton,
         changeButton,
     }
@@ -214,6 +223,15 @@ function CBCareerDetail.CreatePanel()
             element:AddChild(panel)
             local selectButton = element:FindChildRecursive(function(e) return e:HasClass("selectButton") end)
             if selectButton then selectButton:SetAsLastSibling() end
+        end,
+
+        destroyFeature = function(element, featureId)
+            local child = element:FindChildRecursive(function(e)
+                return e.data and e.data.featureId == featureId
+            end)
+            if child then
+                child:DestroySelf()
+            end
         end,
 
         overviewPanel,
@@ -258,6 +276,15 @@ function CBCareerDetail.CreatePanel()
                                 else
                                     element.data.features[featureId] = true
                                 end
+                            end
+                        end
+
+                        -- Clean up orphaned features
+                        for id, active in pairs(element.data.features) do
+                            if active == false then
+                                navPanel:FireEvent("destroyFeature", id)
+                                detailPanel:FireEvent("destroyFeature", id)
+                                element.data.features[id] = nil
                             end
                         end
                     else

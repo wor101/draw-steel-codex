@@ -138,6 +138,15 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        cacheLevelChoices = function(element)
+            local state = element.data.state
+            local hero = _getHero(state)
+            if hero then
+                local levelChoices = hero:GetLevelChoices()
+                state:Set{ key = "levelChoices", value = dmhub.DeepCopy(levelChoices) }
+            end
+        end,
+
         cachePerks = function(element)
             local perks = {}
 
@@ -236,6 +245,7 @@ function CharacterBuilder.CreatePanel()
 
                     -- TODO: Remaining data stored into state
 
+                    element:FireEvent("cacheLevelChoices")
                     element:FireEvent("cachePerks")
 
                     element:FireEventTree("refreshBuilderState", element.data.state)
@@ -244,38 +254,62 @@ function CharacterBuilder.CreatePanel()
         end,
 
         selectAncestry = function(element, ancestryId, noFire)
-            local state = {
+            local state = element.data.state
+            local cachedAncestryId = state:Get("ancestry.selectedId")
+            local cachedLevelChoices = state:Get("levelChoices")
+            local hero = _getHero(state)
+            local levelChoices = hero and hero:GetLevelChoices() or {}
+
+            local ancestryChanged = ancestryId ~= cachedAncestryId
+            local levelChoicesChanged = not dmhub.DeepEqual(cachedLevelChoices, levelChoices)
+
+            if not (ancestryChanged or levelChoicesChanged) then
+                return
+            end
+
+            local newState = {
                 { key = "ancestry.selectedId", value = ancestryId },
             }
             local ancestryItem = dmhub.GetTableVisible(Race.tableName)[ancestryId]
             if ancestryItem then
                 local featureDetails = {}
-                local hero = _getHero(element.data.state)
-                ancestryItem:FillFeatureDetails(nil, hero and hero:GetLevelChoices() or {}, featureDetails)
-                state[#state+1] = { key = "ancestry.selectedItem", value = ancestryItem }
-                state[#state+1] = { key = "ancestry.featureDetails", value = featureDetails }
+                ancestryItem:FillFeatureDetails(nil, levelChoices, featureDetails)
+                newState[#newState+1] = { key = "ancestry.selectedItem", value = ancestryItem }
+                newState[#newState+1] = { key = "ancestry.featureDetails", value = featureDetails }
             end
-            element.data.state:Set(state)
+            state:Set(newState)
             if not noFire then
-                element:FireEventTree("refreshBuilderState", element.data.state)
+                element:FireEventTree("refreshBuilderState", state)
             end
         end,
 
         selectCareer = function(element, careerId, noFire)
-            local state = {
+            local state = element.data.state
+            local cachedCareerId = state:Get("career.selectedId")
+            local cachedLevelChoices = state:Get("levelChoices")
+            local hero = _getHero(state)
+            local levelChoices = hero and hero:GetLevelChoices() or {}
+
+            local careerChanged = careerId ~= cachedCareerId
+            local levelChoicesChanged = not dmhub.DeepEqual(cachedLevelChoices, levelChoices)
+
+            if not (careerChanged or levelChoicesChanged) then
+                return
+            end
+
+            local newState = {
                 { key = "career.selectedId", value = careerId },
             }
             local careerItem = dmhub.GetTableVisible(Background.tableName)[careerId]
             if careerItem then
                 local featureDetails = {}
-                local hero = _getHero(element.data.state)
-                careerItem:FillFeatureDetails(hero and hero:GetLevelChoices() or {}, featureDetails)
-                state[#state+1] = { key = "career.selectedItem", value = careerItem }
-                state[#state+1] = { key = "career.featureDetails", value = featureDetails }
+                careerItem:FillFeatureDetails(levelChoices, featureDetails)
+                newState[#newState+1] = { key = "career.selectedItem", value = careerItem }
+                newState[#newState+1] = { key = "career.featureDetails", value = featureDetails }
             end
-            element.data.state:Set(state)
+            state:Set(newState)
             if not noFire then
-                element:FireEventTree("refreshBuilderState", element.data.state)
+                element:FireEventTree("refreshBuilderState", state)
             end
         end,
 

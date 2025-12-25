@@ -57,6 +57,15 @@ function CBAncestryDetail._navPanel()
             if changeButton then changeButton:SetAsLastSibling() end
         end,
 
+        destroyFeature = function(element, featureId)
+            local child = element:FindChildRecursive(function(e)
+                return e.data and e.data.featureId == featureId
+            end)
+            if child then
+                child:DestroySelf()
+            end
+        end,
+
         overviewButton,
         loreButton,
         changeButton,
@@ -283,6 +292,15 @@ function CBAncestryDetail.CreatePanel()
             if selectButton then selectButton:SetAsLastSibling() end
         end,
 
+        destroyFeature = function(element, featureId)
+            local child = element:FindChildRecursive(function(e)
+                return e.data and e.data.featureId == featureId
+            end)
+            if child then
+                child:DestroySelf()
+            end
+        end,
+
         overviewPanel,
         lorePanel,
         selectButton,
@@ -326,6 +344,14 @@ function CBAncestryDetail.CreatePanel()
                                 else
                                     element.data.features[featureId] = true
                                 end
+                            end
+                        end
+
+                        for id, active in pairs(element.data.features) do
+                            if active == false then
+                                navPanel:FireEvent("destroyFeature", id)
+                                detailPanel:FireEvent("destroyFeature", id)
+                                element.data.features[id] = nil
                             end
                         end
                     else
