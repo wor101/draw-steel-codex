@@ -1,16 +1,80 @@
---- Character Sheet Builder  building a character step by step
---- Functions standalone or plugs in to CharacterSheet
---- 
---- - State of the builder is managed via the main window's data.state object,
----   which you should always pass to the `refreshBuilderState` event.
----   Reference `CharacterBuilderState` to understand this object.
---- - You should always update the state object via firing the updateState event
----   on the main window and passing {key = x, value = y} to it. It will then
----   fire the `refreshBuilderState` event tree for you.
---- - There are lots of helper functions, the most frequently used of which
----   are probably `_fireControllerEvent()`, `_getCreature()`, and `_getToken()`. 
---- - Do not respond to `refreshToken`. The controller processes this event and
----   translates into call to `refreshBuilderState`. Respond to that instead.
+--[[
+ Character Builder:  Building a character step by step.
+ Functions standalone or as a tab in CharacterSheet.
+
+ - Overall Design
+ - Responding to Events
+ - Managing State
+ - Helper Functions
+ - Opptimization Opportunities
+ 
+ OVERALL DESIGN
+
+ The builder uses an MVC approach, as best it can. Its main window is
+ the controller, which contains a state object (see MANAGING STATE).
+ All interactions with the token or character, like setting values into
+ the character, should be executed in events on the controller. There are
+ helper functions (see HELPER FUNCTIONS) to make this a little easier.
+
+ Big UI panels are typically lazy-loaded, meaning their UI is not created
+ until it is needed.
+
+ RESPONDING TO EVENTS
+
+ The main window in MainPanel.lua handles the __refreshToken__ event.
+ In return, it fires the __refreshBuilderState__ event on its entire tree.
+ refreshBuilderState is the preferred method to responding to changes
+ because it always receives a state object, which contains the token
+ and so much more. See MANAGING STATE below.
+
+ MANAGING STATE
+
+ State is managed via a state object that is carried on the main window
+ and passed through to all children via FireEventTree("refreshBuilderState", state).
+ The State object contains information about the state of the token being
+ edited and the rest of the builder, so that is preferable to using any other
+ method to obtain this type of data.
+
+ The State object stores data in keys, with a naming convention using dots to
+ separate ideas, like "ancestry.selectedId", the currently selected GUID for
+ Ancestry in the builder. It's important to note that these are not necessarily
+ stored in a table structure. So, while "token" is a key, you cannot use
+ "token.properties" to get the creature on the token.
+
+ Typically you will only need the state object when responding to refreshBuilderState
+ and that event always provides it. There is a helper function to get state. See
+ HELPER FUNCTIONS below.
+
+ HELPER FUNCTIONS
+
+ There are several helper functions to make it easier for you to do things.
+ These helper functions are all managed in this file and aliased as locals in
+ the files where they're used.
+
+ The helper functions used most frequently include:
+
+ _fireControllerEvent(element, eventName, ...)
+ Fires an event on the main window / controller. Pass the current UI element.
+
+ _getHero(source)
+ Returns the character in the token in the state object. Source can be any UI
+ element or the state object. Ensures the value returned is a hero via :IsHero()
+ or returns nil.
+
+ _getToken(source)
+ Returns the token in the state object. Source can be any UI element or the
+ state object.
+
+ OPTIMIZATION OPPORTUNITIES
+
+ When responding to refreshBuilderState, if your element might not be visible,
+ check that first. If it's not visible, then don't bother calculating anything
+ else unless it needs to be used elsewhere.
+ 
+ We might consider re-using the choice selection UI - panels built in
+ FeatureSelector.lua.
+]]
+
 CharacterBuilder = RegisterGameType("CharacterBuilder")
 
 CharacterBuilder.CONTROLLER_CLASS = "builderPanel"
@@ -92,10 +156,10 @@ end
 --- Fires an event on the main builder panel
 --- @param element Panel The element calling this method
 --- @param eventName string
---- @param info any|nil
-function CharacterBuilder._fireControllerEvent(element, eventName, info)
+--- @param ... any|nil
+function CharacterBuilder._fireControllerEvent(element, eventName, ...)
     local controller = CharacterBuilder._getController(element)
-    if controller then controller:FireEvent(eventName, info) end
+    if controller then controller:FireEvent(eventName, ...) end
 end
 
 --- Returns the character sheet instance if we're operating inside it
@@ -114,12 +178,14 @@ function CharacterBuilder._getController(element)
     return element.data.controller
 end
 
---- Returns the creature (character) we're working on
+--- Returns the hero (character where :IsHero() is true) we're working on
 --- @param source CharacterBuilderState|Panel
---- @return creature|nil
-function CharacterBuilder._getCreature(source)
+--- @return character|nil
+function CharacterBuilder._getHero(source)
     local token = CharacterBuilder._getToken(source)
-    if token then return token.properties end
+    if token and token.properties and token.properties:IsHero() then
+        return token.properties
+    end
     return nil
 end
 
@@ -240,7 +306,7 @@ end
 --- @parameter feature CharacterFeature
 --- @parameter selectorId string The selector this is a category under
 --- @parameter selectedId string The unique identifier of the item associated with the feature
---- @parameter getSelected function(creature)
+--- @parameter getSelected function(character)
 --- @return Panel|nil
 function CharacterBuilder._makeFeatureRegistry(feature, selectorId, selectedId, getSelected)
 
@@ -261,7 +327,7 @@ function CharacterBuilder._makeFeatureRegistry(feature, selectorId, selectedId, 
                     })
                 end,
                 refreshBuilderState = function(element, state)
-                    local tokenSelected = getSelected(CharacterBuilder._getCreature(state)) or "nil"
+                    local tokenSelected = getSelected(CharacterBuilder._getHero(state)) or "nil"
                     local isVisible = tokenSelected == element.data.selectedId
                     element:FireEvent("setAvailable", isVisible)
                     element:FireEvent("setSelected", element.data.featureId == state:Get(selectorId .. ".category.selectedId"))

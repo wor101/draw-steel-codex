@@ -5,7 +5,7 @@ CBFeatureSelector = RegisterGameType("CBFeatureSelector")
 
 local _characterHasLevelChoice = CharacterBuilder._characterHasLevelChoice
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 
 --- Build a feature panel with selections
 --- @return Panel|nil
@@ -53,7 +53,7 @@ function CBFeatureSelector.FeaturePanel(feature)
     end
 
     local targets = {}
-    local numChoices = feature:NumChoices(creature)
+    local numChoices = feature:NumChoices(character)
     for i = 1, numChoices do
         targets[#targets+1] = gui.Panel{
             classes = {"builder-base", "panel-base", "feature-target", "empty"},
@@ -79,9 +79,9 @@ function CBFeatureSelector.FeaturePanel(feature)
                 element.data.selectedItem = nil
                 local newText = "Empty Slot"
                 local newDesc = ""
-                local creature = _getCreature(state)
-                if creature then
-                    local levelChoices = creature:GetLevelChoices()
+                local hero = _getHero(state)
+                if hero then
+                    local levelChoices = hero:GetLevelChoices()
                     if levelChoices then
                         local selectedItems = levelChoices[element.data.featureGuid]
                         if selectedItems and #selectedItems >= element.data.itemIndex then
@@ -150,9 +150,9 @@ function CBFeatureSelector.FeaturePanel(feature)
                 end
             end,
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    element:SetClass("collapsed", _characterHasLevelChoice(creature, element.data.id, element.data.item.guid))
+                local hero = _getHero(state)
+                if hero then
+                    element:SetClass("collapsed", _characterHasLevelChoice(hero, element.data.id, element.data.item.guid))
                 end
             end,
             refreshSelection = function(element, selectedId)
@@ -182,7 +182,7 @@ function CBFeatureSelector.LanguagePanel(feature)
 
     -- Selection targets
     local targets = {}
-    local numChoices = feature:NumChoices(creature)
+    local numChoices = feature:NumChoices(character)
     for i = 1, numChoices do
         targets[#targets+1] = gui.Panel{
             classes = {"builder-base", "panel-base", "feature-target", "empty"},
@@ -205,9 +205,9 @@ function CBFeatureSelector.LanguagePanel(feature)
             refreshBuilderState = function(element, state)
                 element.data.selectedItem = nil
                 local newText = "Empty Slot"
-                local creature = _getCreature(state)
-                if creature then
-                    local levelChoices = creature:GetLevelChoices()
+                local hero = _getHero(state)
+                if hero then
+                    local levelChoices = hero:GetLevelChoices()
                     if levelChoices then
                         local selectedItems = levelChoices[element.data.featureGuid]
                         if selectedItems and #selectedItems >= element.data.itemIndex then
@@ -252,9 +252,9 @@ function CBFeatureSelector.LanguagePanel(feature)
                 end
             end,
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    local langsKnown = creature:LanguagesKnown()
+                local hero = _getHero(state)
+                if hero then
+                    local langsKnown = hero:LanguagesKnown()
                     if langsKnown then
                         element:SetClass("collapsed", langsKnown[element.data.id])
                     end
@@ -294,11 +294,10 @@ function CBFeatureSelector.PerkPanel(feature)
         end
     end
     table.sort(candidateItems, function(a,b) return a.item.name < b.item.name end)
-    print("THC:: PERKITEMS::", json(candidateItems))
 
     -- Selection targets
     local targets = {}
-    local numChoices = feature:NumChoices(creature)
+    local numChoices = feature:NumChoices(character)
     for i = 1, numChoices do
         targets[#targets+1] = gui.Panel{
             classes = {"builder-base", "panel-base", "feature-target", "empty"},
@@ -321,9 +320,9 @@ function CBFeatureSelector.PerkPanel(feature)
             refreshBuilderState = function(element, state)
                 element.data.selectedItem = nil
                 local newText = "Empty Slot"
-                local creature = _getCreature(state)
-                if creature then
-                    local levelChoices = creature:GetLevelChoices()
+                local hero = _getHero(state)
+                if hero then
+                    local levelChoices = hero:GetLevelChoices()
                     if levelChoices then
                         local selectedItems = levelChoices[element.data.featureGuid]
                         if selectedItems and #selectedItems >= element.data.itemIndex then
@@ -368,12 +367,9 @@ function CBFeatureSelector.PerkPanel(feature)
                 end
             end,
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    -- TODO: There is currently no way to easily get the list of
-                    -- perks / feats selected for a character. We need to add
-                    -- one to the character object, then we can exclude already
-                    -- selected items from this list.
+                local cachedPerks = state:Get("cachedPerks")
+                if cachedPerks then
+                    element:SetClass("collapsed", cachedPerks[element.data.id])
                 end
             end,
             refreshSelection = function(element, selectedId)
@@ -411,7 +407,7 @@ function CBFeatureSelector.SkillPanel(feature)
 
     -- Selection targets
     local targets = {}
-    local numChoices = feature:NumChoices(creature)
+    local numChoices = feature:NumChoices(character)
     for i = 1, numChoices do
         targets[#targets+1] = gui.Panel{
             classes = {"builder-base", "panel-base", "feature-target", "empty"},
@@ -434,9 +430,9 @@ function CBFeatureSelector.SkillPanel(feature)
             refreshBuilderState = function(element, state)
                 element.data.selectedItem = nil
                 local newText = "Empty Slot"
-                local creature = _getCreature(state)
-                if creature then
-                    local levelChoices = creature:GetLevelChoices()
+                local hero = _getHero(state)
+                if hero then
+                    local levelChoices = hero:GetLevelChoices()
                     if levelChoices then
                         local selectedItems = levelChoices[element.data.featureGuid]
                         if selectedItems and #selectedItems >= element.data.itemIndex then
@@ -481,9 +477,9 @@ function CBFeatureSelector.SkillPanel(feature)
                 end
             end,
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    element:SetClass("collapsed", creature:ProficientInSkill(element.data.item))
+                local hero = _getHero(state)
+                if hero then
+                    element:SetClass("collapsed", hero:ProficientInSkill(element.data.item))
                 end
             end,
             refreshSelection = function(element, selectedId)

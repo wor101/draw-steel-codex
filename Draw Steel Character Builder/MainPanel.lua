@@ -1,7 +1,7 @@
 --[[
     Main panel of the Character Builder
 ]]
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 local _getToken = CharacterBuilder._getToken
 
 --- Minimal implementation for the center panel. Non-reactive.
@@ -69,9 +69,9 @@ function CharacterBuilder.CreatePanel()
         applyCurrentAncestry = function(element)
             local ancestryId = element.data.state:Get("ancestry.selectedId")
             if ancestryId then
-                local creature = _getCreature(element.data.state)
-                if creature then
-                    creature.raceid = ancestryId
+                local hero = _getHero(element.data.state)
+                if hero then
+                    hero.raceid = ancestryId
                     element:FireEvent("tokenDataChanged")
                 end
             end
@@ -80,9 +80,9 @@ function CharacterBuilder.CreatePanel()
         applyCurrentCareer = function(element)
             local careerId = element.data.state:Get("career.selectedId")
             if careerId then
-                local creature = _getCreature(element.data.state)
-                if creature then
-                    creature.backgroundid = careerId
+                local hero = _getHero(element.data.state)
+                if hero then
+                    hero.backgroundid = careerId
                     element:FireEvent("tokenDataChanged")
                 end
             end
@@ -90,13 +90,13 @@ function CharacterBuilder.CreatePanel()
 
         applyLevelChoice = function(element, info)
             local feature = info.feature
-            local creature = _getCreature(element.data.state)
-            if creature then
-                local levelChoices = creature:GetLevelChoices()
+            local hero = _getHero(element.data.state)
+            if hero then
+                local levelChoices = hero:GetLevelChoices()
                 if levelChoices then
                     local choiceId = feature.guid
                     local selectedId = info.selectedId
-                    local numChoices = feature:NumChoices(creature)
+                    local numChoices = feature:NumChoices(hero)
                     if numChoices == nil or numChoices < 1 then numChoices = 1 end
                     if (levelChoices[choiceId] == nil or numChoices == 1) and levelChoices[choiceId] ~= selectedId then
                         levelChoices[choiceId] = { selectedId }
@@ -138,16 +138,59 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        cachePerks = function(element)
+            local perks = {}
+
+            local state = element.data.state
+            local hero = _getHero(state)
+            if hero then
+                local levelChoices = hero:GetLevelChoices()
+                if levelChoices then
+                    local features = hero:GetClassFeaturesAndChoicesWithDetails()
+                    if features then
+                        for _,f in ipairs(features) do
+                            if f.feature and f.feature.typeName == "CharacterFeatChoice" then
+                                if levelChoices[f.feature.guid] then
+                                    for _,guid in ipairs(levelChoices[f.feature.guid]) do
+                                        perks[guid] = true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            state:Set({ key = "cachedPerks", value = perks})
+        end,
+
         create = function(element)
             if element.data._cacheToken(element) ~= nil then
                 element:FireEventTree("refreshToken")
             end
         end,
 
+        removeAncestry = function(element)
+            local hero = _getHero(element.data.state)
+            if hero and (hero:try_get("raceid") or hero:try_get("subraceid")) then
+                hero.raceid = nil
+                hero.subraceid = nil
+                element:FireEvent("tokenDataChanged")
+            end
+        end,
+
+        removeCareer = function(element)
+            local hero = _getHero(element.data.state)
+            if hero then
+                hero.backgroundid = nil
+                element:FireEvent("tokenDataChanged")
+            end
+        end,
+
         removeLevelChoice = function(element, info)
-            local creature = _getCreature(element.data.state)
-            if creature then
-                local levelChoices = creature:GetLevelChoices()
+            local hero = _getHero(element.data.state)
+            if hero then
+                local levelChoices = hero:GetLevelChoices()
                 if levelChoices then
                     local levelChoice = levelChoices[info.levelChoiceGuid]
                     if levelChoice then
@@ -190,6 +233,10 @@ function CharacterBuilder.CreatePanel()
                     if careerItem and careerItem.id ~= element.data.state:Get("career.selectedId") then
                         element:FireEvent("selectCareer", careerItem.id, true)
                     end
+
+                    -- TODO: Remaining data stored into state
+
+                    element:FireEvent("cachePerks")
 
                     element:FireEventTree("refreshBuilderState", element.data.state)
                 end

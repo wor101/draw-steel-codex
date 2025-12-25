@@ -538,16 +538,16 @@ end
 --- Generate character panel tab styles
 --- @return table[] Array of style definitions
 local function _characterPanelTabStyles()
-    return {
+    return _applyRootSelectors("charpanel", {
         {
-            selectors = {"charpanel", "tab-button"},
+            selectors = {"tab-button"},
             bgimage = true,
             border = 0,
             pad = 4,
             borderColor = CBStyles.COLORS.CREAM03,
         },
         {
-            selectors = {"charpanel", "tab-border"},
+            selectors = {"tab-border"},
             width = "100%",
             height = "100%",
             border = 0,
@@ -556,23 +556,23 @@ local function _characterPanelTabStyles()
             bgcolor = "clear",
         },
         {
-            selectors = {"charpanel", "tab-border", "parent:selected"},
+            selectors = {"tab-border", "parent:selected"},
             border = {y1 = 0, y2 = 2, x1 = 2, x2 = 2},
         },
         {
-            selectors = {"charpanel", "tab-icon"},
+            selectors = {"tab-icon"},
             width = 24,
             height = 24,
             bgcolor = CBStyles.COLORS.GOLD,
         },
         {
-            selectors = {"charpanel", "tab-label"},
+            selectors = {"tab-label"},
         },
         {
-            selectors = {"charpanel", "tab-icon", "selected"},
+            selectors = {"tab-icon", "selected"},
             bgcolor = CBStyles.COLORS.CREAM03,
         },
-    }
+    })
 end
 
 --- Return the styling for the character builder

@@ -7,7 +7,7 @@ local mod = dmhub.GetModLoading()
 
 local SELECTOR = "character"
 
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 
 --- Build the character description editor panel
@@ -53,9 +53,9 @@ function CBDescriptionDetail._editPane()
         inputConfig.editlag = 0.5
 
         inputConfig.refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then
                     element.text = getter(desc)
                 end
@@ -63,9 +63,9 @@ function CBDescriptionDetail._editPane()
         end
 
         inputConfig.change = function(element)
-            local character = _getCreature(element)
-            if character then
-                local desc = character:Description()
+            local hero = _getHero(element)
+            if hero then
+                local desc = hero:Description()
                 if desc then
                     if element.text ~= getter(desc) then
                         setter(desc, element.text)
@@ -133,11 +133,11 @@ function CBDescriptionDetail._editPane()
         },
 
         refreshBuilderState = function(element, state)
-            local creature = _getCreature(state)
-            if creature then
-                local level = creature:CharacterLevel()
+            local hero = _getHero(state)
+            if hero then
+                local level = hero:CharacterLevel()
                 if level == 1 then
-                    local extra = creature:ExtraLevelInfo()
+                    local extra = hero:ExtraLevelInfo()
                     if type(extra.encounter) == "number" then
                         local mapping = {"first", "second", "third", "fourth"}
                         element.idChosen = mapping[extra.encounter] or 1
@@ -145,17 +145,17 @@ function CBDescriptionDetail._editPane()
                         element.idChosen = 1
                     end
                 else
-                    element.idChosen = creature:CharacterLevel()
+                    element.idChosen = hero:CharacterLevel()
                 end
             end
         end,
 
         change = function(element)
-            local creature = _getCreature(element)
-            if creature then
-                local extra = creature:ExtraLevelInfo()
+            local hero = _getHero(element)
+            if hero then
+                local extra = hero:ExtraLevelInfo()
                 if type(element.idChosen) == "string" then
-                    creature.levelOverride = 1
+                    hero.levelOverride = 1
                     if element.idChosen == "first" then
                         extra.encounter = 1
                     elseif element.idChosen == "second" then
@@ -167,12 +167,12 @@ function CBDescriptionDetail._editPane()
                     end
                 else
                     extra.encounter = nil
-                    creature.levelOverride = element.idChosen
+                    hero.levelOverride = element.idChosen
                 end
-                creature.extraLevelInfo = extra
+                hero.extraLevelInfo = extra
 
-                for _,classInfo in ipairs(creature:try_get("classes", {})) do
-                    classInfo.level = creature.levelOverride
+                for _,classInfo in ipairs(hero:try_get("classes", {})) do
+                    classInfo.level = hero.levelOverride
                 end
 
                 _fireControllerEvent(element, "tokenDataChanged")
@@ -268,12 +268,6 @@ function CBDescriptionDetail.CreatePanel()
     return gui.Panel{
         id = "descriptionPanel",
         classes = {"builder-base", "panel-base", "detail-panel", "descriptionPanel"},
-        -- width = "100%",
-        -- height = "100%",
-        -- flow = "horizontal",
-        -- valign = "center",
-        -- halign = "center",
-        -- borderColor = "yellow",
         data = {
             selector = SELECTOR,
         },

@@ -10,7 +10,7 @@ local INITIAL_CATEGORY = "overview"
 local AVAILABLE_WITHOUT_CAREER = {overview = true}
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 local _makeDetailNavButton = CharacterBuilder._makeDetailNavButton
 
 --- Build the overview panel
@@ -148,16 +148,12 @@ function CBCareerDetail._navPanel()
         text = string.format("Change %s", GameSystem.BackgroundName),
         data = { category = "change" },
         click = function(element)
-            local creature = _getCreature(element)
-            if creature then
-                creature.backgroundid = nil
-                _fireControllerEvent(element, "tokenDataChanged")
-            end
+            _fireControllerEvent(element, "removeCareer")
         end,
         refreshBuilderState = function(element, state)
-            local creature = _getCreature(state)
-            if creature then
-                element:FireEvent("setAvailable", creature:try_get("backgroundid") ~= nil)
+            local hero = _getHero(state)
+            if hero then
+                element:FireEvent("setAvailable", hero:try_get("backgroundid") ~= nil)
             end
         end,
     })
@@ -193,9 +189,9 @@ function CBCareerDetail._selectButton()
             _fireControllerEvent(element, "applyCurrentCareer")
         end,
         refreshBuilderState = function(element, state)
-            local creature = _getCreature(state)
-            if creature then
-                local canSelect = creature:try_get("backgroundid") == nil and state:Get(SELECTOR .. ".selectedId") ~= nil
+            local hero = _getHero(state)
+            if hero then
+                local canSelect = hero:try_get("backgroundid") == nil and state:Get(SELECTOR .. ".selectedId") ~= nil
                 element:SetClass("collapsed", not canSelect)
             end
         end,
@@ -236,16 +232,16 @@ function CBCareerDetail.CreatePanel()
             local visible = state:Get("activeSelector") == element.data.selector
             element:SetClass("collapsed", not visible)
             if visible then
-                local creature = _getCreature(state)
-                if creature then
-                    local creatureCareer = creature:try_get("backgroundid")
-                    if creatureCareer ~= nil then
+                local hero = _getHero(state)
+                if hero then
+                    local heroCareer = hero:try_get("backgroundid")
+                    if heroCareer ~= nil then
                         local featureDetails = state:Get(SELECTOR .. ".featureDetails")
                         for _,f in pairs(featureDetails) do
                             local featureId = f.feature:try_get("guid")
                             if featureId and element.data.features[featureId] == nil then
-                                local featureRegistry = CharacterBuilder._makeFeatureRegistry(f.feature, SELECTOR, creatureCareer, function(creature)
-                                    return creature:try_get("backgroundid")
+                                local featureRegistry = CharacterBuilder._makeFeatureRegistry(f.feature, SELECTOR, heroCareer, function(hero)
+                                    return hero:try_get("backgroundid")
                                 end)
                                 if featureRegistry then
                                     element.data.features[featureId] = true
@@ -255,7 +251,7 @@ function CBCareerDetail.CreatePanel()
                             end
                         end
                     else
-                        -- No career selected on creature
+                        -- No career selected on hero
                         local categoryKey = SELECTOR .. ".category.selectedId"
                         local currentCategory = state:Get(categoryKey)
                         if currentCategory and not AVAILABLE_WITHOUT_CAREER[currentCategory] then

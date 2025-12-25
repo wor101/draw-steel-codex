@@ -4,7 +4,7 @@
 
 local _blankToDashes = CharacterBuilder._blankToDashes
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
 local _ucFirst = CharacterBuilder._ucFirst
@@ -209,15 +209,15 @@ function CBCharPanel._statusItem(selector, getSelected)
                     selectedDetail = {},
                 },
             }
-            local character = _getCreature(state)
+            local hero = _getHero(state)
             local featureDetails = state:Get(selector .. ".featureDetails")
-            if character and featureDetails then
-                local selectedItem = getSelected(character)
+            if hero and featureDetails then
+                local selectedItem = getSelected(hero)
                 if selectedItem then
                     featureTypes[element.data.heading].selected = 1
                     featureTypes[element.data.heading].selectedDetail = { selectedItem.name }
 
-                    local levelChoices = character:GetLevelChoices()
+                    local levelChoices = hero:GetLevelChoices()
                     if levelChoices then
                         for _,f in ipairs(featureDetails) do
                             local guid = f.feature:try_get("guid")
@@ -384,72 +384,72 @@ function CBCharPanel._descriptorsPanel()
 
     local weight = makeDescriptionLabel("Weight", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetWeight()) end
             end
         end,
     })
     local height = makeDescriptionLabel("Height", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetHeight()) end
             end
         end,
     })
     local hair = makeDescriptionLabel("Hair", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetHair()) end
             end
         end,
     })
     local eyes = makeDescriptionLabel("Eyes", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetEyes()) end
             end
         end,
     })
     local build = makeDescriptionLabel("Build", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetBuild()) end
             end
         end,
     })
     local skin = makeDescriptionLabel("Skin", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetSkinTone()) end
             end
         end,
     })
     local gender = makeDescriptionLabel("Gender", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetGenderPresentation()) end
             end
         end,
     })
     local pronouns = makeDescriptionLabel("Pronouns", {
         refreshBuilderState = function(element, state)
-            local character = _getCreature(state)
-            if character and character:IsHero() then
-                local desc = character:Description()
+            local hero = _getHero(state)
+            if hero then
+                local desc = hero:Description()
                 if desc then element.text = _blankToDashes(desc:GetPronouns()) end
             end
         end,
@@ -532,9 +532,9 @@ function CBCharPanel._descriptionPanel(tabId)
             border = 1,
             borderColor = "purple",
             refreshBuilderState = function(element, state)
-                local character = _getCreature(state)
-                if character and character:IsHero() then
-                    local desc = character:Description()
+                local hero = _getHero(state)
+                if hero then
+                    local desc = hero:Description()
                     if desc then element.text = _blankToDashes(desc:GetPhysicalFeatures()) end
                 end
             end,
@@ -591,9 +591,9 @@ function CBCharPanel._explorationPanel(tabId)
             text = "calculating...",
 
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    local catSkills = creature:GetCategorizedSkills()
+                local hero = _getHero(state)
+                if hero then
+                    local catSkills = hero:GetCategorizedSkills()
                     if catSkills then
                         local allSkills = ""
                         for _,cat in ipairs(catSkills) do
@@ -647,10 +647,10 @@ function CBCharPanel._explorationPanel(tabId)
             text = "calculating...",
 
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
+                local hero = _getHero(state)
+                if hero then
                     local knownLangs = {}
-                    local langs = creature:LanguagesKnown()
+                    local langs = hero:LanguagesKnown()
                     local langTable = dmhub.GetTableVisible(Language.tableName)
                     for k,_ in pairs(langs) do
                         local lang = langTable[k]
@@ -675,15 +675,12 @@ function CBCharPanel._explorationPanel(tabId)
         data = {
             id = tabId,
         },
-
         create = function(element)
             element:FireEventTree("refreshBuilderState", _getState(element))
         end,
-
         _refreshTabs = function(element, tabId)
             element:SetClass("collapsed", tabId ~= element.data.id)
         end,
-
         skillsPane,
         languagesPane,
     }
@@ -706,23 +703,25 @@ function CBCharPanel._tacticalPanel(tabId)
         end,
 
         refreshBuilderState = function(element, state)
-            local t = state:Get("token")
-            if #element.children == 0 then
-                element:AddChild(CharacterPanel.CreateCharacterDetailsPanel(t))
-                element:AddChild(gui.Label{
-                    width = "auto",
-                    height= "auto",
-                    fontSize = 60,
-                    floating = true,
-                    valign = "center",
-                    halign = "center",
-                    rotate = 35,
-                    color = "red",
-                    textAlignment = "center",
-                    text = "PLACEHOLDER",
-                })
-            else
-                element:FireEventTree("refreshToken", t)
+            local token = state:Get("token")
+            if token then
+                if #element.children == 0 then
+                    element:AddChild(CharacterPanel.CreateCharacterDetailsPanel(token))
+                    element:AddChild(gui.Label{
+                        width = "auto",
+                        height= "auto",
+                        fontSize = 60,
+                        floating = true,
+                        valign = "center",
+                        halign = "center",
+                        rotate = 35,
+                        color = "red",
+                        textAlignment = "center",
+                        text = "PLACEHOLDER",
+                    })
+                else
+                    element:FireEventTree("refreshToken", token)
+                end
             end
         end
     }
@@ -767,7 +766,9 @@ function CBCharPanel._detailPanel()
             hmargin = 8,
             bgimage = tabInfo.icon,
             -- interactable = false,
-            data = { id = tabId, },
+            data = {
+                id = tabId,
+            },
             _refreshTabs = function(element, activeTabId)
                 element:SetClass("selected", activeTabId == element.data.id)
             end,
@@ -780,7 +781,9 @@ function CBCharPanel._detailPanel()
             color = CBStyles.COLORS.CREAM03,
             -- fontSize = 18,
             text = tabInfo.text,
-            data = { id = tabId, },
+            data = {
+                id = tabId,
+            },
             _refreshTabs = function(element, activeTabId)
                 element:SetClass("collapsed", activeTabId ~= element.data.id)
             end,
@@ -820,7 +823,6 @@ function CBCharPanel._detailPanel()
         bgimage = true,
         borderColor = CBStyles.COLORS.GOLD03,
         border = { y2 = 0, y1 = 1, x2 = 0, x1 = 0 },
-
         children = tabButtons,
     }
 
@@ -830,11 +832,9 @@ function CBCharPanel._detailPanel()
         halign = "center",
         valign = "top",
         vscroll = true,
-
         data = {
             madeContent = {},
         },
-
         _refreshTabs = function(element, tabId)
             if element.data.madeContent[tabId] == nil then
                 element:AddChild(tabs[tabId].content(tabId))
@@ -843,23 +843,20 @@ function CBCharPanel._detailPanel()
         end
     }
 
-    detailPanel = gui.Panel{
+    detailPanel =  gui.Panel{
         width = "100%",
         height = "100%-" .. CBStyles.SIZES.CHARACTER_PANEL_HEADER_HEIGHT,
         flow = "vertical",
-
         create = function(element)
             element:FireEvent("tabClick", INITIAL_TAB)
         end,
-
         tabClick = function(element, tabId)
             element:FireEventTree("_refreshTabs", tabId)
         end,
-
         tabPanel,
         contentPanel,
     }
-
+    
     return detailPanel
 end
 
@@ -951,20 +948,22 @@ function CBCharPanel._headerPanel()
         data = {
             text = "",
         },
-        refreshBuilderState = function(element, state)
-            local t = state:Get("token")
-            element.data.text = (t and t.name and #t.name > 0) and t.name or "Unnamed Character"
-            element.text = string.upper(element.data.text)
-        end,
         change = function(element)
             if element.data.text ~= element.text then
                 element.data.text = element.text
-                local t = _getToken(element)
-                if t then
-                    t.name = element.data.text
-                    _fireControllerEvent(element, "tokenDataChanged")
+                local token = _getToken(element)
+                if token then
+                    if token.name ~= element.data.text then
+                        token.name = element.data.text
+                        _fireControllerEvent(element, "tokenDataChanged")
+                    end
                 end
             end
+        end,
+        refreshBuilderState = function(element, state)
+            local token = state:Get("token")
+            element.data.text = (token and token.name and #token.name > 0) and token.name or "Unnamed Character"
+            element.text = string.upper(element.data.text)
         end,
     }
 
@@ -973,10 +972,10 @@ function CBCharPanel._headerPanel()
         text = "(class & level)",
         tmargin = 4,
         refreshBuilderState = function(element, state)
-            local c = _getCreature(state)
-            if c and c:IsHero() then
-                local class = c:GetClass()
-                local level = c:CharacterLevel()
+            local hero = _getHero(state)
+            if hero then
+                local class = hero:GetClass()
+                local level = hero:CharacterLevel()
                 if class or level then
                     element.text = string.format("Level %d %s", level, class and class.name or ""):upper()
                 end

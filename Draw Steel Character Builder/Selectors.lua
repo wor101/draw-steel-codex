@@ -4,12 +4,12 @@
 CBSelectors = RegisterGameType("CBSelectors")
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
-local _getCreature = CharacterBuilder._getCreature
+local _getHero = CharacterBuilder._getHero
 local _getState = CharacterBuilder._getState
 
 --- Creates a panel of selectable item buttons that expands when its selector is active.
 --- Items must have `id` and `name` fields.
---- @param config {items: table[], selectorName: string, getSelected: fun(creature): table|nil, getItem: fun(id): table|nil}
+--- @param config {items: table[], selectorName: string, getSelected: fun(character): table|nil, getItem: fun(id): table|nil}
 --- @return Panel
 function CBSelectors._makeItemsPanel(config)
     local selectorPanel
@@ -39,9 +39,9 @@ function CBSelectors._makeItemsPanel(config)
             end,
 
             refreshBuilderState = function(element, state)
-                local creature = _getCreature(state)
-                if creature then
-                    local tokenSelected = config.getSelected(creature)
+                local hero = _getHero(state)
+                if hero then
+                    local tokenSelected = config.getSelected(hero)
                     element:SetClass("collapsed", tokenSelected and tokenSelected ~= element.data.id)
                     element:FireEvent("setAvailable", not tokenSelected or tokenSelected == element.data.id)
                     if tokenSelected and tokenSelected == element.data.id and tokenSelected ~= state:Get(config.selectorName .. ".selectedId") then
@@ -75,8 +75,8 @@ function CBSelectors._ancestryItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Race.tableName)), "name"),
         selectorName = "ancestry",
-        getSelected = function(creature)
-            return creature:try_get("raceid")
+        getSelected = function(hero)
+            return hero:try_get("raceid")
         end,
         getItem = function(id)
             return dmhub.GetTableVisible(Race.tableName)[id]
@@ -89,8 +89,8 @@ function CBSelectors._careerItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Background.tableName)), "name"),
         selectorName = "career",
-        getSelected = function(creature)
-            return creature:try_get("backgroundid")
+        getSelected = function(hero)
+            return hero:try_get("backgroundid")
         end,
         getItem = function(id)
             return dmhub.GetTableVisible(Background.tableName)[id]
@@ -103,8 +103,8 @@ function CBSelectors._classItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Class.tableName)), "name"),
         selectorName = "class",
-        getSelected = function(creature)
-            local c = creature:GetClass()
+        getSelected = function(hero)
+            local c = hero:GetClass()
             return c and c.id or nil
         end,
         getItem = function(id)
@@ -122,7 +122,7 @@ function CBSelectors._cultureItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(cultureCats, "name"),
         selectorName = "culture",
-        getSelected = function(creature) return nil end,
+        getSelected = function(hero) return nil end,
     }
 end
 
@@ -294,8 +294,8 @@ function CBSelectors._kit()
         text = "Kit",
         data = { selector = "kit" },
         refreshBuilderState = function(element, state)
-            local c = _getCreature(state)
-            element:SetClass("collapsed", not c or not c:IsHero() or not c:CanHaveKits() )
+            local hero = _getHero(state)
+            element:SetClass("collapsed", not hero or not hero:CanHaveKits() )
         end,
     }
 end
