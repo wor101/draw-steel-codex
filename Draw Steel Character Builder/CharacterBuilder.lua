@@ -96,6 +96,12 @@ Being a hero isn't a job. It's a calling. But before you answered that call, you
 CharacterBuilder.STRINGS.CAREER.OVERVIEW = [[
 Your career describes what your life was before you became a hero. When you select a career, you gain a number of benefits, the details of which are specified in the career's description.]]
 
+CharacterBuilder.STRINGS.CLASS = {}
+CharacterBuilder.STRINGS.CLASS.INTRO = [[
+Choose your hero's class. This choice has the biggest impact on how your hero interacts with the rules of the game, particularly the rules for combat.]]
+CharacterBuilder.STRINGS.CLASS.OVERVIEW = [[
+While all your character creation decisions bear narrative weight, none influences the way you play the game like your choice of class. Your class determines how your hero battles the threats of the timescape and overcomes other obstacles. Do you bend elemental forces to your will through the practiced casting of magic spells? Do you channel the ferocity of the Primordial Chaos as you tear across the battlefield, felling foes left and right? Or do you belt out heroic ballads that give your allies a second wind and inspire them to ever-greater achievements?]]
+
 --[[
     Register selectors - controls down the left side of the window
 ]]

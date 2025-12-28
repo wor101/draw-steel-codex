@@ -108,7 +108,7 @@ end
 
 --- Create a panel to display an element of builder status
 --- @param selector string The primary selector for querying state
---- @param getSelected function(character) Return the selected item on the character
+--- @param getSelected function(hero) Return the selected item on the hero
 --- @return Panel
 function CBCharPanel._statusItem(selector, getSelected)
 
@@ -327,12 +327,16 @@ end
 
 function CBCharPanel._builderPanel(tabId)
 
-    local ancestryStatusItem = CBCharPanel._statusItem("ancestry", function(character)
-        return character:Race()
+    local ancestryStatusItem = CBCharPanel._statusItem("ancestry", function(hero)
+        return hero:Race()
     end)
 
-    local careerStatusItem = CBCharPanel._statusItem("career", function(character)
-        return character:Background()
+    local careerStatusItem = CBCharPanel._statusItem("career", function(hero)
+        return hero:Background()
+    end)
+
+    local classStatusItem = CBCharPanel._statusItem("class", function(hero)
+        return hero:GetClass()
     end)
 
     return gui.Panel {
@@ -351,6 +355,7 @@ function CBCharPanel._builderPanel(tabId)
 
         ancestryStatusItem,
         careerStatusItem,
+        classStatusItem,
     }
 end
 

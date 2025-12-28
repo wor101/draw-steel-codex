@@ -88,6 +88,21 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        applyCurrentClass = function(element)
+            local classId = element.data.state:Get("class.selectedId")
+            if classId then
+                local hero = _getHero(element.data.state)
+                if hero then
+                    local classes = hero:get_or_add("classes", {})
+                    classes[1] = {
+                        classid = classId,
+                        level = hero:CharacterLevel(),
+                    }
+                    element:FireEvent("tokenDataChanged")
+                end
+            end
+        end,
+
         applyLevelChoice = function(element, info)
             local feature = info.feature
             local hero = _getHero(element.data.state)
@@ -203,6 +218,14 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        removeClass = function(element)
+            local hero = _getHero(element.data.state)
+            if hero then
+                hero.classes = {}
+                element:FireEvent("tokenDataChanged")
+            end
+        end,
+
         removeLevelChoice = function(element, info)
             local hero = _getHero(element.data.state)
             if hero then
@@ -250,6 +273,11 @@ function CharacterBuilder.CreatePanel()
                         element:FireEvent("selectCareer", careerItem.id, true)
                     end
 
+                    local classItem = creature:GetClass()
+                    if classItem then
+                        element:FireEvent("selectClass", classItem.id, true)
+                    end
+
                     -- TODO: Remaining data stored into state
 
                     element:FireEvent("cachePerks")
@@ -277,9 +305,7 @@ function CharacterBuilder.CreatePanel()
             local ancestryChanged = ancestryId ~= cachedAncestryId or inheritedAncestryId ~= cachedInheritedAncestryId
             local levelChoicesChanged = not dmhub.DeepEqual(cachedLevelChoices, levelChoices)
 
-            if not (ancestryChanged or levelChoicesChanged) then
-                return
-            end
+            if not (ancestryChanged or levelChoicesChanged) then return end
 
             local newState = {
                 { key = "ancestry.selectedId", value = ancestryId },
@@ -348,11 +374,40 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        selectClass = function(element, classId, noFire)
+            local state = element.data.state
+            local cachedClassId = state:Get("class.selectedId")
+            local cachedLevelChoices = state:Get("levelChoices")
+            local hero = _getHero(state)
+            local levelChoices = hero and hero:GetLevelChoices() or {}
+
+            local classChanged = classId ~= cachedClassId
+            local levelChoicesChanged = not dmhub.DeepEqual(cachedLevelChoices, levelChoices)
+            if not (classChanged or levelChoicesChanged) then return end
+
+            local newState = {
+                { key = "class.selectedId", value = classId }
+            }
+            local classItem = dmhub.GetTableVisible(Class.tableName)[classId]
+            if classItem then
+                local featureDetails = {}
+                -- TODO: Deal with leveled choices
+                newState[#newState+1] = { key = "class.selectedItem", value = classItem }
+                newState[#newState+1] = { key = "class.featureDetails", value = featureDetails }
+            end
+            state:Set(newState)
+            if not noFire then
+                element:FireEventTree("refreshBuilderState", state)
+            end
+        end,
+
         selectItem = function(element, info)
             if info.selector == "ancestry" then
                 element:FireEvent("selectAncestry", info.id)
             elseif info.selector == "career" then
                 element:FireEvent("selectCareer", info.id)
+            elseif info.selector == "class" then
+                element:FireEvent("selectClass", info.id)
             end
         end,
 
