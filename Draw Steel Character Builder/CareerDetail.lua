@@ -218,10 +218,6 @@ function CBCareerDetail.CreatePanel()
     local overviewPanel = CBCareerDetail._overviewPanel()
     local selectButton = CBCareerDetail._selectButton()
 
-    local function getHeroCareer(hero)
-        return hero:try_get("backgroundid")
-    end
-
     local detailPanel = gui.Panel{
         id = "careerDetailPanel",
         classes = {"builder-base", "panel-base", "inner-detail-panel", "wide", "careerDetailpanel"},
@@ -280,7 +276,9 @@ function CBCareerDetail.CreatePanel()
                                     feature = f.feature,
                                     selectorId = SELECTOR,
                                     selectedId = heroCareer,
-                                    getSelected = getHeroCareer,
+                                    getSelected = function(hero)
+                                        return hero:try_get("backgroundid")
+                                    end,
                                 }
                                 if featureRegistry then
                                     element.data.features[featureId] = true
@@ -290,42 +288,6 @@ function CBCareerDetail.CreatePanel()
                             else
                                 element.data.features[featureId] = true
                             end
-                        end
-                    end
-
-                    -- Special case - inciting incidents are in the career item
-                    local careerItem = state:Get(SELECTOR .. ".selectedItem")
-                    if careerItem and careerItem:try_get("characteristics") then
-                        for _,c in ipairs(careerItem.characteristics) do
-                            local featureId = c:try_get("tableid")
-                            if featureId then
-
-                                -- Temporarily make it look like a feature
-                                c.guid = c.tableid
-                                c.name = c:Name()
-                                c.guid = c.tableid
-                                if c:try_get("GetDescription") == nil then
-                                    c.GetDescription = function(self) return "" end
-                                end
-
-                                if element.data.features[featureId] == nil then
-                                    local featureRegistry = CharacterBuilder._makeFeatureRegistry{
-                                        feature = c,
-                                        selectorId = SELECTOR,
-                                        selectedId = heroCareer,
-                                        checkAvailable = CharacterBuilder._careerCharacteristicAvailable,
-                                        getSelected = getHeroCareer,
-                                    }
-                                    if featureRegistry then
-                                        element.data.features[featureId] = true
-                                        navPanel:FireEvent("registerFeatureButton", featureRegistry.button)
-                                        detailPanel:FireEvent("registerFeaturePanel", featureRegistry.panel)
-                                    end
-                                else
-                                    element.data.features[featureId] = true
-                                end
-                            end
-                            print("THC:: INCITING::", featureId, element.data.features[featureId])
                         end
                     end
 

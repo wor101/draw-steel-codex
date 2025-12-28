@@ -319,6 +319,18 @@ function CharacterBuilder.CreatePanel()
             if careerItem then
                 local featureDetails = {}
                 careerItem:FillFeatureDetails(levelChoices, featureDetails)
+
+                -- Special case: Make inciting incidents look like features
+                for _,item in ipairs(careerItem:try_get("characteristics", {})) do
+                    local feature = CharacterIncidentChoice:new(item)
+                    if feature then
+                        featureDetails[#featureDetails+1] = {
+                            feature = feature,
+                            background = careerItem,
+                        }
+                    end
+                end
+
                 newState[#newState+1] = { key = "career.selectedItem", value = careerItem }
                 newState[#newState+1] = { key = "career.featureDetails", value = featureDetails }
             end

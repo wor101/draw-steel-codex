@@ -34,7 +34,7 @@ function CBCharPanel._getFeatureChoices(feature)
         tableToItems(dmhub.GetTableVisible(Deity.tableName))
     elseif feature.typeName == "CharacterFeatChoice" then
         tableToItems(dmhub.GetTableVisible(CharacterFeat.tableName))
-    elseif feature.typeName == "CharacterFeatureChoice" then
+    elseif feature.typeName == "CharacterFeatureChoice" or feature.typeName == "CharacterIncidentChoice" then
         for _,item in ipairs(feature.options) do
             local newItem = {
                 id = item.guid,
@@ -122,6 +122,7 @@ function CBCharPanel._statusItem(selector, getSelected)
         return typeName == "CharacterDeityChoice"
             or typeName == "CharacterFeatChoice"
             or typeName == "CharacterFeatureChoice"
+            or typeName == "CharacterIncidentChoice"
             or typeName == "CharacterLanguageChoice"
             or typeName == "CharacterSkillChoice"
             or typeName == "CharacterSubclassChoice"
@@ -129,7 +130,7 @@ function CBCharPanel._statusItem(selector, getSelected)
 
     local function typeNameOrder(typeName)
         -- The input is translated
-        local typeOrders = { Subclass = 1, Feature = 2, Skill = 3, Language = 4, Perk = 5, Deity = 6, }
+        local typeOrders = { Subclass = 1, Feature = 2, Skill = 3, Language = 4, Perk = 5, Deity = 6, Incident = 7, }
         return string.format("%d-%s", typeOrders[typeName] or 9, typeName)
     end
 
@@ -333,6 +334,7 @@ function CBCharPanel._builderPanel(tabId)
     local careerStatusItem = CBCharPanel._statusItem("career", function(character)
         return character:Background()
     end)
+
     return gui.Panel {
         classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
         data = {

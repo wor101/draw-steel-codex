@@ -27,8 +27,8 @@ function CBFeatureSelector.Panel(feature)
         return CBFeatureSelector.SkillPanel(feature)
     elseif typeName == "CharacterSubclassChoice" then
 
-    elseif typeName == "BackgroundCharacteristic" then
-        return CBFeatureSelector.RollTablePanel(feature)
+    elseif typeName == "CharacterIncidentChoice" then
+        return CBFeatureSelector.IncidentPanel(feature)
     elseif typeName == "CharacterAncestryInheritanceChoice" then
         return CBFeatureSelector.AncestryInheritancePanel(feature)
     end
@@ -110,7 +110,11 @@ function CBFeatureSelector.AncestryInheritancePanel(feature)
         end,
     }
 
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
+    }
 end
 
 --- Render a feature choice panel
@@ -194,7 +198,128 @@ function CBFeatureSelector.FeaturePanel(feature)
         end,
     }
 
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
+    }
+end
+
+--- Render a roll table panel
+--- @param feature CharacterIncidentChoice
+--- @return Panel
+function CBFeatureSelector.IncidentPanel(feature)
+
+    -- Special case - these aren't stored in levelChoices.
+    local function applyCurrentItem(element)
+        -- Runs in the context of the main feature container
+        local hero = _getHero(element)
+        if hero then
+            local data = element.data
+            hero:RemoveNotesForTable(data.feature.guid)
+            local noteItem = hero:GetOrAddNoteForTableRow(data.feature.guid, data.selectedId)
+            if noteItem then
+                noteItem.title = data.feature.name
+                for _,o in ipairs(data.feature.options) do
+                    if o.guid == data.selectedId then
+                        noteItem.text = o.row.value:ToString()
+                        break
+                    end
+                end
+            end
+        end
+    end
+    local function selectedItem(element, hero)
+        -- Runs in the context of a target panel
+        local notes = hero:GetNotesForTable(element.data.featureGuid)
+        if notes and #notes > 0 then
+            local itemCache = element.parent.data.itemCache or {}
+            return itemCache[notes[1].rowid]
+        end
+        return nil
+    end
+    local function unselectItem(element)
+        -- Runs in the context of a target panel
+        local hero = _getHero(element)
+        if hero then
+            local data = element.data
+            hero:RemoveNoteForTableRow(data.featureGuid, data.item.guid)
+        end
+    end
+
+    local targetsContainer = gui.Panel{
+        classes = {"builder-base", "panel-base", "container"},
+        flow = "vertical",
+        data = {
+            numChoices = 1,
+            itemCache = {},
+        },
+        refreshBuilderState = function(element, state)
+            local hero = _getHero(state)
+            if not hero then return end
+
+            local numChoices = feature:NumChoices(hero)
+            element.data.numChoices = numChoices
+
+            local levelChoices = hero:GetLevelChoices()
+            local currentOptions = feature:GetOptions(levelChoices)
+            element.data.itemCache = {}
+            for _, option in ipairs(currentOptions) do
+                element.data.itemCache[option.guid] = option
+            end
+
+            for i = #element.children + 1, numChoices do
+                element:AddChild(CBFeatureSelector._targetPanel{
+                    feature = feature,
+                    itemIndex = i,
+                    useDesc = true,
+                    idFieldName = "guid",
+                    selectedItem = selectedItem,
+                    unselectItem = unselectItem,
+                })
+            end
+        end,
+    }
+
+    local optionsContainer = gui.Panel{
+        classes = {"builder-base", "panel-base", "container"},
+        refreshBuilderState = function(element, state)
+            local hero = _getHero(state)
+            if not hero then return end
+
+            local levelChoices = hero:GetLevelChoices()
+            local currentOptions = feature:GetOptions(levelChoices)
+
+            local numOptions = #currentOptions
+
+            for _ = #element.children + 1, numOptions do
+                element:AddChild(CBFeatureSelector._optionPanel{
+                    feature = feature,
+                    idFieldName = "guid",
+                    useDesc = true,
+                    itemIsSelected = function(state, featureGuid, item)
+                        local hero = _getHero(state)
+                        if hero then
+                            return hero:GetNoteForTableRow(featureGuid, item.guid) ~= nil
+                        end
+                    end,
+                })
+            end
+
+            table.sort(currentOptions, function(a, b) return a.name < b.name end)
+
+            for i, child in ipairs(element.children) do
+                child:FireEvent("assignItem", currentOptions[i])
+            end
+        end,
+    }
+
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
+        applyCurrentItem = applyCurrentItem,
+    }
 end
 
 --- Render a language choice panel
@@ -262,7 +387,11 @@ function CBFeatureSelector.LanguagePanel(feature)
         end,
     }
 
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
+    }
 end
 
 --- Render a perk choice panel
@@ -329,73 +458,11 @@ function CBFeatureSelector.PerkPanel(feature)
         end,
     }
 
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
-end
-
---- Render a roll table panel
---- @param feature BackgroundCharacteristic
---- @return Panel
-function CBFeatureSelector.RollTablePanel(feature)
-
-    local targetsContainer = gui.Panel{
-        classes = {"builder-base", "panel-base", "container"},
-        flow = "vertical",
-        data = {
-            numChoices = 1,
-            rollTableId = feature.tableid,
-            itemCache = {},
-        },
-        refreshBuilderState = function(element, state)
-            local hero = _getHero(state)
-            if not hero then return end
-
-            element.data.itemCache = {}
-            local rollTable = feature:GetRollTable()
-            local rollInfo = rollTable:CalculateRollInfo()
-            for i,row in ipairs(rollTable:try_get("rows", {})) do
-                element.data.itemCache[row.id] = {
-                    id = row.id,
-                    text = row.value:ToString(),
-                    range = rollInfo.rollRanges[i]
-                }
-            end
-
-        end,
-        CBFeatureSelector._targetPanel{
-            feature = feature,
-            itemIndex = 1
-        }
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
     }
-
-    local optionsContainer = gui.Panel{
-        classes = {"builder-base", "panel-base", "container"},
-        refreshBuilderState = function(element, state)
-            local hero = _getHero(state)
-            if not hero then return end
-
-            local rollTable = feature:GetRollTable()
-            local rollInfo = rollTable:CalculateRollInfo()
-
-            local numOptions = #rollTable.rows
-            for _ = #element.children + 1, numOptions do
-                element:AddChild(CBFeatureSelector._optionPanel{
-                    feature = feature,
-                    itemIsSelected = function(state, featureGuid, item)
-                        -- TODO: Calculate this
-                        return false
-                    end,
-                })
-            end
-
-            for i,child in ipairs(element.children) do
-                local row = rollTable.rows[i]
-                row.name = row.value:ToString()
-                child:FireEvent("assignItem", row)
-            end
-        end,
-    }
-
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
 end
 
 --- Render a skill choice panel
@@ -460,7 +527,11 @@ function CBFeatureSelector.SkillPanel(feature)
         end,
     }
 
-    return CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
+    return CBFeatureSelector._mainPanel{
+        feature = feature,
+        targetsContainer = targetsContainer,
+        optionsContainer = optionsContainer,
+    }
 end
 
 --- Build a consistent list of targets and children
@@ -508,11 +579,13 @@ function CBFeatureSelector._containerPanel(children)
 end
 
 --- Build a consistent main panel
---- @param feature table
---- @param targetsContainer Panel The container panel for targets
---- @param optionsContainer Panel The container panel for options
+--- @param options table Configuration: feature, targetsContainer, optionsContainer, applyCurrentItem
 --- @return Panel
-function CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContainer)
+function CBFeatureSelector._mainPanel(options)
+    local feature = options.feature
+    local targetsContainer = options.targetsContainer
+    local optionsContainer = options.optionsContainer
+    local onApplyCurrentItem = options.applyCurrentItem
 
     local children = CBFeatureSelector._buildChildren(feature, targetsContainer, optionsContainer)
 
@@ -544,6 +617,7 @@ function CBFeatureSelector._mainPanel(feature, targetsContainer, optionsContaine
 
         applyCurrentItem = function(element)
             if element.data.selectedId then
+                if onApplyCurrentItem then onApplyCurrentItem(element) end
                 _fireControllerEvent(element, "applyLevelChoice", {
                     feature = feature,
                     selectedId = element.data.selectedId
@@ -651,7 +725,7 @@ function CBFeatureSelector._scrollPanel(children)
 end
 
 --- Create a target panel for a feature
---- @param config table Configuration: feature, itemIndex, useDesc, idFieldName, formatName
+--- @param config table Configuration: feature, itemIndex, useDesc, idFieldName, formatName, unselectItem
 --- @return Panel
 function CBFeatureSelector._targetPanel(config)
     local feature = config.feature
@@ -660,6 +734,20 @@ function CBFeatureSelector._targetPanel(config)
     local costsPoints = feature:try_get("costsPoints", false)
     local idFieldName = config.idFieldName or "id"
     local formatName = config.formatName or function(item) return item:try_get("name") end
+    local selectedItem = config.selectedItem or function(element, hero)
+        local levelChoices = hero:GetLevelChoices()
+        if levelChoices then
+            local selectedItems = levelChoices[element.data.featureGuid]
+            if selectedItems and #selectedItems >= element.data.itemIndex then
+                local selectedId = selectedItems[element.data.itemIndex]
+                if selectedId then
+                    local itemCache = element.parent.data.itemCache or {}
+                    return itemCache[selectedId]
+                end
+            end
+        end
+    end
+    local onUnselectItem = config.unselectItem
 
     return gui.Panel{
         classes = {"builder-base", "panel-base", "feature-target", "empty"},
@@ -672,6 +760,7 @@ function CBFeatureSelector._targetPanel(config)
         },
         click = function(element)
             if not element.data.item then return end
+            if onUnselectItem then onUnselectItem(element) end
             _fireControllerEvent(element, "removeLevelChoice", {
                 levelChoiceGuid = element.data.featureGuid,
                 selectedId = element.data.item[idFieldName],
@@ -692,19 +781,7 @@ function CBFeatureSelector._targetPanel(config)
 
             local item = nil
             local hero = _getHero(state)
-            if hero then
-                local levelChoices = hero:GetLevelChoices()
-                if levelChoices then
-                    local selectedItems = levelChoices[element.data.featureGuid]
-                    if selectedItems and #selectedItems >= element.data.itemIndex then
-                        local selectedId = selectedItems[element.data.itemIndex]
-                        if selectedId then
-                            local itemCache = element.parent.data.itemCache or {}
-                            item = itemCache[selectedId]
-                        end
-                    end
-                end
-            end
+            if hero then item = selectedItem(element, hero) end
 
             element.data.item = item
             local newText = item and formatName(item) or "Empty Slot"
