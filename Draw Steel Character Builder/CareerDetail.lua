@@ -176,6 +176,7 @@ function CBCareerDetail._navPanel()
             element:AddChild(button)
             local changeButton = element:FindChildRecursive(function(element) return element:HasClass("changeCareer") end)
             if changeButton then changeButton:SetAsLastSibling() end
+            element.children = CharacterBuilder._sortButtons(element.children)
         end,
 
         destroyFeature = function(element, featureId)
@@ -268,12 +269,12 @@ function CBCareerDetail.CreatePanel()
                         element.data.features[id] = false
                     end
 
-                    for _,f in pairs(state:Get(SELECTOR .. ".featureDetails")) do
+                    for _,f in pairs(state:Get(SELECTOR .. ".filteredFeatures")) do
                         local featureId = f.feature:try_get("guid")
                         if featureId then
                             if element.data.features[featureId] == nil then
                                 local featureRegistry = CharacterBuilder._makeFeatureRegistry{
-                                    feature = f.feature,
+                                    feature = f,
                                     selectorId = SELECTOR,
                                     selectedId = heroCareer,
                                     getSelected = function(hero)

@@ -1,6 +1,7 @@
 --[[
     Main panel of the Character Builder
 ]]
+local _filterFeatures = CharacterBuilder._filterFeatures
 local _getHero = CharacterBuilder._getHero
 local _getToken = CharacterBuilder._getToken
 
@@ -314,9 +315,13 @@ function CharacterBuilder.CreatePanel()
             if ancestryItem then
                 local featureDetails = {}
                 ancestryItem:FillFeatureDetails(nil, levelChoices, featureDetails)
+                
+                local filteredFeatures = _filterFeatures(featureDetails)
+
                 newState[#newState+1] = { key = "ancestry.selectedItem", value = ancestryItem }
                 newState[#newState+1] = { key = "ancestry.inheritedId", value = inheritedAncestryId }
                 newState[#newState+1] = { key = "ancestry.featureDetails", value = featureDetails }
+                newState[#newState+1] = { key = "ancestry.filteredFeatures", value = filteredFeatures }
             end
             state:Set(newState)
             if not noFire then
@@ -364,9 +369,12 @@ function CharacterBuilder.CreatePanel()
                         levelChoices[feature.guid] = levelChoice
                     end
                 end
+                
+                local filteredFeatures = _filterFeatures(featureDetails)
 
                 newState[#newState+1] = { key = "career.selectedItem", value = careerItem }
                 newState[#newState+1] = { key = "career.featureDetails", value = featureDetails }
+                newState[#newState+1] = { key = "career.filteredFeatures", value = filteredFeatures }
             end
             state:Set(newState)
             if not noFire then
@@ -391,24 +399,13 @@ function CharacterBuilder.CreatePanel()
             local classItem = dmhub.GetTableVisible(Class.tableName)[classId]
             if classItem then
                 local featureDetails = {}
-                -- TODO: Deal with leveled choices
                 local classFill = {}
                 classItem:FillLevelsUpTo(hero:GetClassLevel(), false, "nonprimary", classFill)
-
-                for _,item in ipairs(classFill) do
-                    if item:try_get("features") and #item.features > 0 then
-                        for _,feature in ipairs(item.features ) do
-                            featureDetails[#featureDetails+1] = {
-                                feature = feature,
-                                class = classItem,
-                            }
-                        end
-                    end
-                end
-                print("THC:: CLASSFEATURES::", json(featureDetails))
+                local filteredFeatures = _filterFeatures(classFill, true)
 
                 newState[#newState+1] = { key = "class.selectedItem", value = classItem }
                 newState[#newState+1] = { key = "class.featureDetails", value = featureDetails }
+                newState[#newState+1] = { key = "class.filteredFeatures", value = filteredFeatures }
             end
             state:Set(newState)
             if not noFire then

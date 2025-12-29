@@ -180,7 +180,7 @@ end
 --- @param featureId string The guid of the feature we're looking for
 --- @return boolean
 function CharacterBuilder._featureAvailable(state, selectorId, featureId)
-    local featureDetails = state:Get(selectorId .. ".featureDetails")
+    local featureDetails = state:Get(selectorId .. ".filteredFeatures")
     if featureDetails then
         for _,f in ipairs(featureDetails) do
             if f.feature then
@@ -189,6 +189,34 @@ function CharacterBuilder._featureAvailable(state, selectorId, featureId)
         end
     end
     return false
+end
+
+--- Filters and categorizes a feature list
+--- @param featureDetails table list of character features
+--- @return table filteredFeatures
+function CharacterBuilder._filterFeatures(featureDetails)
+    local filtered = {}
+
+    local function processFeature(feature)
+        local opts = CBFeatureSelector.EvaluateFeature(feature)
+        if opts then
+            filtered[#filtered+1] = opts
+        end
+    end
+
+    for _,item in ipairs(featureDetails) do
+        if item.features ~= nil then
+            for _,feature in ipairs(item.features) do
+                processFeature(feature)
+            end
+        elseif item.feature ~= nil then
+            processFeature(item.feature)
+        end
+    end
+
+    table.sort(filtered, function(a,b) return a.order < b.order end)
+
+    return filtered
 end
 
 --- Fires an event on the main builder panel
@@ -357,20 +385,21 @@ function CharacterBuilder._makeDetailNavButton(selector, options)
 end
 
 --- Create a registry entry for a feature - a button and an editor panel
---- @parameter feature CharacterFeature|BackgroundCharacteristic
+--- @parameter feature table{category, catOrder, order, panelFn, feature}
 --- @parameter selectorId string The selector this is a category under
 --- @parameter selectedId string The unique identifier of the item associated with the feature
 --- @parameter checkAvailable function(state, selectorId, featureId)
 --- @parameter getSelected function(character)
 --- @return table{button,panel}|nil
 function CharacterBuilder._makeFeatureRegistry(options)
-    local feature = options.feature
+    local featureDef = options.feature
+    local feature = featureDef.feature
     local selectorId = options.selectorId
     local selectedId = options.selectedId
     local checkAvailable = options.checkAvailable or CharacterBuilder._featureAvailable
     local getSelected = options.getSelected
 
-    local featurePanel = CBFeatureSelector.Panel(feature)
+    local featurePanel = featureDef.panelFn(feature)
 
     if featurePanel then
         return {
@@ -379,6 +408,7 @@ function CharacterBuilder._makeFeatureRegistry(options)
                 data = {
                     featureId = feature:try_get("guid", feature:try_get("tableid")),
                     selectedId = selectedId,
+                    order = featureDef.order,
                 },
                 click = function(element)
                     CharacterBuilder._fireControllerEvent(element, "updateState", {
@@ -402,7 +432,6 @@ function CharacterBuilder._makeFeatureRegistry(options)
                 valign = "top",
                 halign = "center",
                 tmargin = 12,
-                -- vscroll = true,
                 data = {
                     featureId = feature.guid,
                 },
@@ -443,4 +472,34 @@ function CharacterBuilder._makeSelectButton(options)
     opts.borderColor = CBStyles.COLORS.CREAM03
 
     return gui.PrettyButton(opts)
+end
+
+--- Sort an array of child panels by .data.order, preserving unordered items at start/end
+--- @param children table array of panel children
+--- @return table sorted children array
+function CharacterBuilder._sortButtons(children)
+    local prefix = {}
+    local ordered = {}
+    local suffix = {}
+
+    for _, child in ipairs(children) do
+        if child.data and child.data.order then
+            ordered[#ordered+1] = child
+        elseif #ordered > 0 then
+            suffix[#suffix+1] = child
+        else
+            prefix[#prefix+1] = child
+        end
+    end
+
+    table.sort(ordered, function(a, b)
+        return a.data.order < b.data.order
+    end)
+
+    local result = {}
+    table.move(prefix, 1, #prefix, 1, result)
+    table.move(ordered, 1, #ordered, #result + 1, result)
+    table.move(suffix, 1, #suffix, #result + 1, result)
+
+    return result
 end

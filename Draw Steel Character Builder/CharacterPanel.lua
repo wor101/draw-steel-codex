@@ -205,14 +205,14 @@ function CBCharPanel._statusItem(selector, getSelected)
             featureTypes = {
                 [headingText] = {
                     id = headingText,
-                    order = "0-".. headingText,
+                    order = "000-".. headingText,
                     available = 1,
                     selected = 0,
                     selectedDetail = {},
                 },
             }
             local hero = _getHero(state)
-            local featureDetails = state:Get(selector .. ".featureDetails")
+            local featureDetails = state:Get(selector .. ".filteredFeatures")
             if hero and featureDetails then
                 local selectedItem = getSelected(hero)
                 if selectedItem then
@@ -223,22 +223,23 @@ function CBCharPanel._statusItem(selector, getSelected)
                     if levelChoices then
                         for _,f in ipairs(featureDetails) do
                             local guid = f.feature:try_get("guid")
-                            if guid and typeNameIsChoice(f.feature.typeName) then
-                                local typeName = translateTypeName(f.feature.typeName)                                
+                            if guid then
+                                local typeName = f.category
                                 if featureTypes[typeName] == nil then
                                     featureTypes[typeName] = {
                                         id = typeName,
-                                        order = typeNameOrder(typeName),
+                                        order = string.format("%03d-%s", f.catOrder, typeName),
                                         available = 0,
                                         selected = 0,
                                         selectedDetail = {},
                                     }
                                 end
 
-                                local numChoices = f.feature:NumChoices() or 1
-                                if numChoices < 1 then numChoices = 1 end
+                                local numChoices = math.max(1, f.feature:NumChoices(hero) or 1)
                                 featureTypes[typeName].available = featureTypes[typeName].available + numChoices
 
+                                -- TODO: We can probably make this smarter & faster by including a pointer
+                                -- to a function to calculate the selected value(s) on the filteredFeatures.
                                 if levelChoices[guid] then
                                     local numSelected = #levelChoices[guid]
 
@@ -252,7 +253,7 @@ function CBCharPanel._statusItem(selector, getSelected)
                                         end
                                     end
                                     featureTypes[typeName].selected = featureTypes[typeName].selected + numSelected
-                                    if #detail then
+                                    if #detail > 0 then
                                         table.move(detail, 1, #detail, #featureTypes[typeName].selectedDetail + 1, featureTypes[typeName].selectedDetail)
                                     end
                                 end
@@ -284,6 +285,10 @@ function CBCharPanel._statusItem(selector, getSelected)
                     children[i].data = nil
                 end
 
+                -- TODO: This sorts each time - printing the results after the sort
+                -- shows the order expected. HOWEVER, the display tells a different
+                -- story. The display at first is not sorted, only sorting after we
+                -- click a selector like Ancestry or Career or whatever.
                 table.sort(children, function(a,b)
                     local aOrd = a.data and a.data.order or "999"
                     local bOrd = b.data and b.data.order or "999"

@@ -7,6 +7,70 @@ local _characterHasLevelChoice = CharacterBuilder._characterHasLevelChoice
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getHero = CharacterBuilder._getHero
 
+--- Determine if the builder cares about the feature and, if so,
+--- return a structure defining how to interact with it.
+--- @param feature CharacterFeature
+--- @return table|nil
+function CBFeatureSelector.EvaluateFeature(feature)
+    local typeName = feature.typeName or ""
+    if #typeName == 0 then return nil end
+
+    local configs = {
+        CharacterAncestryInheritanceChoice = {
+            category = "Inherited Ancestry",
+            catOrder = 1,
+            order = "01-" .. feature.name,
+            panelFn = CBFeatureSelector.AncestryInheritancePanel,
+        },
+        -- CharacterDeityChoice = {
+        --     category = "Deity",
+        --     catOrder = 3,
+        --     order = "03-" .. feature.name,
+        --     panelFn = nil,
+        -- },
+        CharacterFeatChoice = {
+            category = "Perk",
+            catOrder = 7,
+            order = "07-" .. feature.name,
+            panelFn = CBFeatureSelector.PerkPanel,
+        },
+        CharacterFeatureChoice = {
+            category = "Feature",
+            catOrder = 4,
+            order = "04-" .. feature.name,
+            panelFn = CBFeatureSelector.FeaturePanel,
+        },
+        CharacterIncidentChoice = {
+            category = "Incident",
+            catOrder = 8,
+            order = "08-" .. feature.name,
+            panelFn = CBFeatureSelector.IncidentPanel,
+        },
+        CharacterLanguageChoice = {
+            category = "Language",
+            catOrder = 6,
+            order = "06-" .. feature.name,
+            panelFn = CBFeatureSelector.LanguagePanel,
+        },
+        CharacterSkillChoice = {
+            category = "Skill",
+            catOrder = 5,
+            order = "05-" .. feature.name,
+            panelFn = CBFeatureSelector.SkillPanel,
+        },
+        -- CharacterSubclassChoice = {
+        --     category = "Subclass",
+        --     catOrder = 2,
+        --     order = "02-" .. feature.name,
+        --     panelFn = nil,
+        -- },
+    }
+
+    local item = configs[typeName]
+    if item then item.feature = feature end
+    return item
+end
+
 --- Build a feature panel with selections
 --- @param feature CharacterFeature|BackgroundCharacteristic
 --- @return Panel|nil
@@ -510,7 +574,6 @@ end
 --- @param feature CharacterSkillChoice
 --- @return Panel
 function CBFeatureSelector.SkillPanel(feature)
-    print("THC:: SKILLPANEL::", feature.source)
 
     local targetsContainer = gui.Panel{
         classes = {"builder-base", "panel-base", "container"},
