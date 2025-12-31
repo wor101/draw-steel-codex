@@ -3590,6 +3590,80 @@ function creature:PersistentAbilities()
     return result
 end
 
+function creature:MostRecentPersistentAbility()
+    local persistentAbilities = self:try_get("persistentAbilities", {})
+    if #persistentAbilities == 0 then
+        return nil
+    end
+
+	return persistentAbilities[#persistentAbilities]
+end
+
+function creature:MostRecentPersistentAbilityId()
+	local persistentAbility = self:MostRecentPersistentAbility()
+	if persistentAbility == nil then
+		return nil
+	end
+
+	return persistentAbility.guid
+end
+
+function creature:EndPersistentAbilityById(guid)
+    local token = dmhub.LookupToken(self)
+    if token == nil then
+        return false
+    end
+
+    local persistentAbilities = self:try_get("persistentAbilities", {})
+    local persistentIndex = nil
+    local targets = {}
+    for i,entry in ipairs(persistentAbilities) do
+        if entry.guid == guid then
+            persistentIndex = i
+            targets = entry.targets or {}
+            break
+        end
+    end
+
+    for _, targetid in ipairs(targets) do
+        local targetToken = dmhub.GetTokenById(targetid)
+        if targetToken ~= nil then
+            local target = targetToken.properties
+            local ongoingEffects = target:try_get("ongoingEffects", {})
+            for i, effect in ipairs(ongoingEffects) do
+                if effect and effect.casterInfo and effect.casterInfo.persistenceId == guid then
+                    targetToken:ModifyProperties{
+                        description = "End Persistent Ability Target",
+                        undoable = false,
+                        execute = function()
+                            target:RemoveOngoingEffect(ongoingEffects[i].ongoingEffectid)
+                        end,
+                    }
+                end
+            end
+        end
+    end
+
+    for _,objref in ipairs(persistentAbilities[persistentIndex]:try_get("objects") or {}) do
+        local obj = game.LookupObject(objref.floorid, objref.objid)
+        if obj ~= nil then
+            obj:Destroy()
+        end
+    end
+
+    token:ModifyProperties{
+        description = "End Persistent Ability",
+        undoable = false,
+        execute = function()
+            if persistentIndex ~= nil then
+                table.remove(persistentAbilities, persistentIndex)
+            end
+        end,
+    }
+
+    return false
+end
+
 creature.RegisterSymbol {
     symbol = "keywords",
     lookup = function(c)
@@ -3852,15 +3926,11 @@ end
 
 function creature:EndCombat()
     local token = dmhub.LookupToken(self)
-    token:ModifyProperties{
-        description = "Remove Persistent Abilities",
-        execute = function()
-            local persistentAbilities = self:try_get("persistentAbilities", {})
-            if #persistentAbilities > 0 then
-                self.persistentAbilities = {}
-            end
-        end,
-    }
+
+    local persistentAbilities = self:try_get("persistentAbilities", {})
+    for i = #persistentAbilities, 1, -1 do
+        self:EndPersistentAbilityById(persistentAbilities[i].guid)
+    end
 
     self:RemoveMatchingOngoingEffects(function(ongoingEffect)
         return ongoingEffect.removeOnEoEOrDying or ongoingEffect.removeOnEoE

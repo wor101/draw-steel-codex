@@ -1050,6 +1050,7 @@ function ActivatedAbilityAuraBehavior:CastOnArea(ability, casterToken, targets, 
             end
         end
 
+        ability:CommitToPaying(casterToken, options)
         casterToken:ModifyProperties {
             description = "Add Aura",
             execute = function()
@@ -1062,11 +1063,19 @@ function ActivatedAbilityAuraBehavior:CastOnArea(ability, casterToken, targets, 
                     }
                 end
 
+                local persistence = ability:Persistence()
+                if persistence ~= nil and persistence.enabled and obj ~= nil then
+                    local persistenceInfo = casterToken.properties:MostRecentPersistentAbility()
+                    local objects = persistenceInfo:get_or_add("objects", {})
+                    objects[#objects + 1] = {
+                        floorid = obj.floorid,
+                        objid = obj.objid,
+                    }
+                end
+
                 casterToken.properties:AddAura(auraInstance)
             end,
         }
-
-        ability:CommitToPaying(casterToken, options)
     end
 end
 

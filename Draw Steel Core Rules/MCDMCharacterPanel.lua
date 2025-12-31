@@ -543,18 +543,7 @@ local function PersistencePanel(m_token)
                                 element:PulseClass("pulse")
                             end, ]]
                             click = function(element)
-                                m_token:ModifyProperties{
-                                    description = "Remove Persistent Ability",
-                                    execute = function()
-                                        local persistentAbilities = m_token.properties:try_get("persistentAbilities", {})
-                                        for i=1,#persistentAbilities do
-                                            if persistentAbilities[i].guid == guid then
-                                                table.remove(persistentAbilities, i)
-                                                break
-                                            end
-                                        end
-                                    end,
-                                }
+                                m_token.properties:EndPersistentAbilityById(guid)
                             end,
                         },
                     }

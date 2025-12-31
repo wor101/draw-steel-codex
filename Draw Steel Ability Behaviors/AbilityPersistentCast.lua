@@ -1,5 +1,7 @@
 local mod = dmhub.GetModLoading()
 
+RegisterGameType("Persistence")
+
 --- @class ActivatedAbilityPersistenceControlBehavior:ActivatedAbilityBehavior
 RegisterGameType("ActivatedAbilityPersistenceControlBehavior", "ActivatedAbilityBehavior")
 
@@ -206,20 +208,7 @@ function ActivatedAbilityPersistenceControlBehavior:Cast(ability, casterToken, t
                 width = 160,
                 click = function(element)
                     for guid, _ in pairs(stopPresistence) do
-                        casterToken:ModifyProperties{
-                            description = "Remove Persistent Ability",
-                            execute = function()
-                                local persistentAbilities = caster:try_get("persistentAbilities", {})
-                                for i=1,#persistentAbilities do
-                                    if persistentAbilities[i].guid == guid then
-                                        local msg = string.format("%s stops the persistence of %s.", creature.GetTokenDescription(casterToken), persistentAbilities[i].abilityName or "an ability")
-                                        --dmhub.ChatMessage(msg)
-                                        table.remove(persistentAbilities, i)
-                                        break
-                                    end
-                                end
-                            end,
-                        }
+                        casterToken.properties:EndPersistentAbilityById(guid)
                     end
 
                     local selectedCost = 0
@@ -240,6 +229,7 @@ function ActivatedAbilityPersistenceControlBehavior:Cast(ability, casterToken, t
                             break
                         end
                     end
+
                     finished = true
                     gui.CloseModal()
                 end,

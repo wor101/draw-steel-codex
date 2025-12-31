@@ -1362,7 +1362,7 @@ function ActivatedAbility:FireUseAbility(casterToken, options)
 				end
 			end
 
-			local newEntry = {
+			local newEntry = Persistence.new{
 				guid = dmhub.GenerateGuid(),
 				combatid = q.guid,
 				abilityName = self.name,
@@ -3649,7 +3649,6 @@ function ActivatedAbilityApplyOngoingEffectBehavior:Cast(ability, casterToken, t
 				casterInfo.concentrationid = casterToken.properties:MostRecentConcentrationId()
 			end
 
-
 			local temporary_hitpoints = nil
 			if self.hasTemporaryHitpoints then
 				temporary_hitpoints = 0
@@ -3791,6 +3790,11 @@ function ActivatedAbilityApplyOngoingEffectBehavior:Cast(ability, casterToken, t
                 else
                     ability.RecordTokenMessage(target.token, options, string.format("Apply %s", ongoingEffectInfo.name))
                 end
+
+				local persistence = ability:Persistence()
+				if persistence ~= nil and persistence.enabled then
+					casterInfo.persistenceId = casterToken.properties:MostRecentPersistentAbilityId()
+				end
 
 				targetCreature = target.token.properties
 				target.token:ModifyProperties{
