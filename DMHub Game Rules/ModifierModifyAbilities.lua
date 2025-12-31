@@ -130,14 +130,20 @@ CharacterModifier.RegisterAbilityModifier
 		text = "Range",
 		operations = { "Add", "Multiply", "Set" },
 		set = function(modifier, creature, ability, operation, value)
+            print("MODIFYABILITY:: MODIFY RANGE FOR", ability.name, "WITH OPERATION", operation, "VALUE", value)
 			local val = nil
 			if operation == "Set" then
 				val = tonumber(value)
 			elseif operation == "Multiply" then
 				val = tonum(ability.range) * tonum(value)
-				printf("VAL:: (%s -> %s) * (%s -> %s) = %s", json(ability.range), json(tonum(ability.range)), json(value), json(tonum(value)), json(val))
 			else
-				val = tonum(ability.range) + tonum(value)
+                if type(ability.range) == "string" and tonumber(ability.range) == nil then
+                    val = string.format("(%s) + (%s)", ability.range, value)
+                    print("MODIFYABILITY:: RANGE FOR", ability.name, "IS STRING", val)
+                else
+				    val = tonum(ability.range) + tonum(value)
+                    print("MODIFYABILITY:: RANGE FOR", ability.name, "IS NUM", val)
+                end
 			end
 
 			if val ~= nil then
