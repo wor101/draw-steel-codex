@@ -14,6 +14,7 @@ CharacterIncidentChoice.name = "Incident"
 CharacterIncidentChoice.description = "Inciting Incident"
 CharacterIncidentChoice.numChoices = 1
 CharacterIncidentChoice.costsPoints = false
+CharacterIncidentChoice.hasRoll = true
 
 --- Contruct from a background characteristic
 --- @param c BackgroundCharacteristic
@@ -89,6 +90,7 @@ function CharacterIncidentOption:new(row, rollRange)
     instance.description = description
     instance.row = row
     instance.rollRange = rollRange
+    instance.unique = true
 
     return instance
 end
@@ -98,6 +100,7 @@ function CharacterIncidentChoice:CanRepeat()
 end
 
 function CharacterIncidentChoice:Choices(numOption, existingChoices, creature)
+    return self.options
 end
 
 function CharacterIncidentChoice:FillChoices(choices, result)

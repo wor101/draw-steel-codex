@@ -5,7 +5,7 @@ CBClassDetail = RegisterGameType("CBClassDetail")
 
 local mod = dmhub.GetModLoading()
 
-local SELECTOR = "class"
+local SELECTOR = CharacterBuilder.SELECTOR.CLASS
 local INITIAL_CATEGORY = "overview"
 local AVAILABLE_WITHOUT_CLASS = {overview = true}
 
@@ -135,10 +135,10 @@ function CBClassDetail._overviewPanel()
             local text = CharacterBuilder.STRINGS.CLASS.OVERVIEW
             local classId = state:Get(SELECTOR .. ".selectedId")
             if classId then
-                -- local class = state:Get(SELECTOR .. ".selectedItem")
                 local textItems = {}
 
-                local featureDetails = state:Get(SELECTOR .. ".featureDetails")
+                local featureCache = state:Get(SELECTOR .. ".featureCache")
+                local featureDetails = featureCache:GetFlattenedFeatures()
                 for _,item in ipairs(featureDetails) do
                     local s = item.feature:GetSummaryText()
                     if s ~= nil and #s > 0 then
@@ -146,7 +146,7 @@ function CBClassDetail._overviewPanel()
                     end
                 end
 
-                text = CharacterBuilder._trimToLength(table.concat(textItems, "\n\n"), 2000, false)
+                text = CharacterBuilder._trimToLength(table.concat(textItems, "\n\n"), 1800, false)
             end
             element.text = text
         end
@@ -274,13 +274,16 @@ function CBClassDetail.CreatePanel()
                         element.data.features[id] = false
                     end
 
-                    for _,f in pairs(state:Get(SELECTOR .. ".filteredFeatures")) do
-                        local featureId = f.feature:try_get("guid")
-                        if featureId then
+                    local featureCache = state:Get(SELECTOR .. ".featureCache")
+                    local features = featureCache:GetSortedFeatures()
+                    for _,f in ipairs(features) do
+                        local featureId = f.guid
+                        local feature = featureCache:GetFeature(featureId)
+                        if feature then
                             if element.data.features[featureId] == nil then
                                 local featureRegistry = CharacterBuilder._makeFeatureRegistry{
-                                    feature = f,
-                                    selectorId = SELECTOR,
+                                    feature = feature,
+                                    selector = SELECTOR,
                                     selectedId = heroClass.id,
                                     getSelected = function(hero)
                                         local class = hero:GetClass()

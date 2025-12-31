@@ -6,6 +6,7 @@ CBSelectors = RegisterGameType("CBSelectors")
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _getHero = CharacterBuilder._getHero
 local _getState = CharacterBuilder._getState
+local SEL = CharacterBuilder.SELECTOR
 
 --- Creates a panel of selectable item buttons that expands when its selector is active.
 --- Items must have `id` and `name` fields.
@@ -74,7 +75,7 @@ end
 function CBSelectors._ancestryItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Race.tableName)), "name"),
-        selectorName = "ancestry",
+        selectorName = SEL.ANCESTRY,
         getSelected = function(hero)
             return hero:try_get("raceid")
         end,
@@ -88,7 +89,7 @@ end
 function CBSelectors._careerItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Background.tableName)), "name"),
-        selectorName = "career",
+        selectorName = SEL.CAREER,
         getSelected = function(hero)
             return hero:try_get("backgroundid")
         end,
@@ -102,7 +103,7 @@ end
 function CBSelectors._classItems()
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(CharacterBuilder._toArray(dmhub.GetTableVisible(Class.tableName)), "name"),
-        selectorName = "class",
+        selectorName = SEL.CLASS,
         getSelected = function(hero)
             local c = hero:GetClass()
             return c and c.id or nil
@@ -121,7 +122,7 @@ function CBSelectors._cultureItems()
     end
     return CBSelectors._makeItemsPanel{
         items = CharacterBuilder._sortArrayByProperty(cultureCats, "name"),
-        selectorName = "culture",
+        selectorName = SEL.CULTURE,
         getSelected = function(hero) return nil end,
     }
 end
@@ -234,7 +235,7 @@ end
 function CBSelectors._back()
     return CBSelectors._makeButton{
         text = "BACK",
-        data = { selector = "back" },
+        data = { selector = SEL.BACK },
         create = function(element)
             element:SetClass("collapsed", CharacterBuilder._inCharSheet(element))
         end,
@@ -248,7 +249,7 @@ end
 function CBSelectors._character()
     return CBSelectors._makeButton{
         text = "Character",
-        data = { selector = "character" },
+        data = { selector = SEL.CHARACTER },
     }
 end
 
@@ -256,7 +257,7 @@ end
 function CBSelectors._ancestry()
     return CBSelectors._makeDetailed{
         text = "Ancestry",
-        selectorName = "ancestry",
+        selectorName = SEL.ANCESTRY,
         createChoicesPane = CBSelectors._ancestryItems,
     }
 end
@@ -265,7 +266,7 @@ end
 function CBSelectors._culture()
     return CBSelectors._makeDetailed{
         text = "Culture",
-        selectorName = "culture",
+        selectorName = SEL.CULTURE,
         createChoicesPane = CBSelectors._cultureItems,
     }
 end
@@ -274,7 +275,7 @@ end
 function CBSelectors._career()
     return CBSelectors._makeDetailed{
         text = "Career",
-        selectorName = "career",
+        selectorName = SEL.CAREER,
         createChoicesPane = CBSelectors._careerItems,
     }
 end
@@ -283,7 +284,7 @@ end
 function CBSelectors._class()
     return CBSelectors._makeDetailed{
         text = "Class",
-        selectorName = "class",
+        selectorName = SEL.CLASS,
         createChoicesPane = CBSelectors._classItems,
     }
 end
@@ -292,7 +293,7 @@ end
 function CBSelectors._kit()
     return CBSelectors._makeButton{
         text = "Kit",
-        data = { selector = "kit" },
+        data = { selector = SEL.KIT },
         refreshBuilderState = function(element, state)
             local hero = _getHero(state)
             element:SetClass("collapsed", not hero or not hero:CanHaveKits() )
@@ -304,58 +305,159 @@ end
 function CBSelectors._complication()
     return CBSelectors._makeButton{
         text = "Complication",
-        data = { selector = "complication" },
+        data = { selector = SEL.COMPLICATION },
     }
 end
 
 CharacterBuilder.RegisterSelector{
-    id = "back",
+    id = SEL.BACK,
     ord = 1,
     selector = CBSelectors._back
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "character",
+    id = SEL.CHARACTER,
     ord = 2,
     selector = CBSelectors._character,
     detail = CBDescriptionDetail.CreatePanel,
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "ancestry",
+    id = SEL.ANCESTRY,
     ord = 3,
     selector = CBSelectors._ancestry,
     detail = CBAncestryDetail.CreatePanel,
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "culture",
+    id = SEL.CULTURE,
     ord = 4,
     selector = CBSelectors._culture
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "career",
+    id = SEL.CAREER,
     ord = 5,
     selector = CBSelectors._career,
     detail = CBCareerDetail.CreatePanel
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "class",
+    id = SEL.CLASS,
     ord = 6,
     selector = CBSelectors._class,
     detail = CBClassDetail.CreatePanel,
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "kit",
+    id = SEL.KIT,
     ord = 7,
     selector = CBSelectors._kit
 }
 
 CharacterBuilder.RegisterSelector{
-    id = "complication",
+    id = SEL.COMPLICATION,
     ord = 8,
     selector = CBSelectors._complication
+}
+
+--[[
+    Sharing information about testing status
+    TODO: Remove before release
+]]
+local TEST_DETAIL = [[
+# Testing the New Builder
+
+***Thank you** so much for testing this work in progress. We appreciate your effort. Your feedback will help us prepare this feature for release.*
+
+# Feedback Needed
+
+*We're looking for feedback in the following areas:*
+
+- For What's Working (below), stuff that doesn't work! *(Probably first echelon only until you hear we've released more, then that, too.)*
+- How it looks / renders on your UI. If it's bad, please include a screen shot with your bug submission.
+- How it preforms on your machine. If it seems slow, please let us know your processor, RAM, video card, and operating system.
+- Your experience using the builder - what's good, what's not so good, how might you improve it?
+
+*You're welcome to test with custom configured elements like ancestries, careers, classes, etc. Please validate that any issues aren't configuration before logging them.*
+
+# What *(we think)* Is Working
+
+*Our objective is to function at par with the existing builder. That means that you should be able to see and edit everything that the other builder tab does, just with a different user experience.*
+
+**Character Section**
+- Everything
+
+**Ancestry Section**
+- Everything
+
+**Career Section**
+- Everything
+
+**Class Section**
+- Everything
+
+**Character Panel**
+- Description Tab: Everything
+- Builder Tab: Everything
+- Exploration Tab: Everything
+
+# Known Issues
+
+- Descriptions are displayed inconsistently on choices.
+- Extra info like ability cards aren't displayed yet.
+
+# Reporing Issues
+
+- Please use the bug forum on the Codex Discord.
+- Where applicable, please verify the old builder tab works as expected while new builder fails. If both tabs behave the same, please log as a configuration issue.
+- Detailed reproduction steps, especially each thing you chose along your path, is super helpful.
+]]
+local function _testDetail()
+    return gui.Panel{
+        id = "testPanel",
+        classes = {"builder-base", "panel-base", "detail-panel", "testPanel"},
+        data = {
+            selector = "test",
+            features = {},
+        },
+
+        refreshBuilderState = function(element, state)
+            local visible = state:Get("activeSelector") == element.data.selector
+            element:SetClass("collapsed", not visible)
+            if not visible then
+                element:HaltEventPropagation()
+                return
+            end
+        end,
+
+        gui.Panel{
+            classes = {"builder-base", "panel-base"},
+            width = "98%",
+            height = "98%",
+            vscroll = true,
+            gui.Label{
+                classes = {"builder-base", "label"},
+                width = "98%",
+                height = "auto",
+                valign = "top",
+                fontSize = 16,
+                textAlignment = "topleft",
+                markdown = true,
+                text = TEST_DETAIL,
+            }
+        }
+    }
+end
+function CBSelectors._test()
+    return CBSelectors._makeButton{
+        text = "Testing Info",
+        data = { selector = "test" },
+    }
+end
+CharacterBuilder.RegisterSelector{
+    id = "test",
+    ord = 9,
+    selector = CBSelectors._test,
+    detail = _testDetail,
 }

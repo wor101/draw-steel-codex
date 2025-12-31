@@ -1,15 +1,14 @@
 --[[
     Main panel of the Character Builder
 ]]
-local _filterFeatures = CharacterBuilder._filterFeatures
 local _getHero = CharacterBuilder._getHero
 local _getToken = CharacterBuilder._getToken
+local SEL = CharacterBuilder.SELECTOR
 
 --- Minimal implementation for the center panel. Non-reactive.
+--- @return Panel
 function CharacterBuilder._detailPanel()
-    local detailPanel
-
-    detailPanel = gui.Panel{
+    return gui.Panel{
         id = "detailPanel",
         classes = {"detailPanel", "panel-base", "builder-base"},
         width = CBStyles.SIZES.CENTER_PANEL_WIDTH,
@@ -17,8 +16,6 @@ function CharacterBuilder._detailPanel()
         valign = "center",
         borderColor = "blue",
     }
-
-    return detailPanel
 end
 
 --- Create the main panel for the builder.
@@ -59,7 +56,7 @@ function CharacterBuilder.CreatePanel()
                     element.data.cachedCharSheetInstance = true
                 end
                 if element.data.charSheetInstance and element.data.charSheetInstance.data and element.data.charSheetInstance.data.info then
-                    element.data.state:Set{key = "token", value = element.data.charSheetInstance.data.info.token}
+                    element.data.state:Set{ key = "token", value = element.data.charSheetInstance.data.info.token }
                 else
                     -- TODO: Can we create a token without attaching it to the game immediately?
                 end
@@ -68,7 +65,7 @@ function CharacterBuilder.CreatePanel()
         },
 
         applyCurrentAncestry = function(element)
-            local ancestryId = element.data.state:Get("ancestry.selectedId")
+            local ancestryId = element.data.state:Get(SEL.ANCESTRY .. ".selectedId")
             if ancestryId then
                 local hero = _getHero(element.data.state)
                 if hero then
@@ -79,7 +76,7 @@ function CharacterBuilder.CreatePanel()
         end,
 
         applyCurrentCareer = function(element)
-            local careerId = element.data.state:Get("career.selectedId")
+            local careerId = element.data.state:Get(SEL.CAREER .. ".selectedId")
             if careerId then
                 local hero = _getHero(element.data.state)
                 if hero then
@@ -90,7 +87,7 @@ function CharacterBuilder.CreatePanel()
         end,
 
         applyCurrentClass = function(element)
-            local classId = element.data.state:Get("class.selectedId")
+            local classId = element.data.state:Get(SEL.CLASS .. ".selectedId")
             if classId then
                 local hero = _getHero(element.data.state)
                 if hero then
@@ -110,9 +107,9 @@ function CharacterBuilder.CreatePanel()
             if hero then
                 local levelChoices = hero:GetLevelChoices()
                 if levelChoices then
-                    local choiceId = feature.guid
+                    local choiceId = feature:GetGuid()
                     local selectedId = info.selectedId
-                    local numChoices = feature:NumChoices(hero)
+                    local numChoices = feature:GetNumChoices()
                     if numChoices == nil or numChoices < 1 then numChoices = 1 end
                     if (levelChoices[choiceId] == nil or numChoices == 1) and levelChoices[choiceId] ~= selectedId then
                         levelChoices[choiceId] = { selectedId }
@@ -126,21 +123,11 @@ function CharacterBuilder.CreatePanel()
                             end
                         end
                         if not alreadySelected then
-                            local numSelected = #levelChoices[choiceId]
-                            local selectedCost = 1
-                            if #levelChoices[choiceId] > 0 and feature:try_get("costsPoints") then
-                                for _,option in ipairs(feature.options) do
-                                    local pointsCost = math.max(1, option:try_get("pointsCost", 1))
-                                    if option.guid == info.selectedId then selectedCost = pointsCost end
-                                    for _,guid in ipairs(levelChoices[choiceId]) do
-                                        if info.selectedId == guid then
-                                            numSelected = numSelected + (pointsCost - 1)
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                            if numChoices >= numSelected + selectedCost then
+                            local option = feature:GetOption(selectedId)
+                            local numChoices = feature:GetNumChoices()
+                            local valueSelected = feature:GetSelectedValue()
+                            local selectedCost = option:GetPointsCost()
+                            if numChoices >= valueSelected + selectedCost then
                                 if numChoices > 1 then
                                     levelChoices[choiceId][#levelChoices[choiceId]+1] = selectedId
                                 else
@@ -198,7 +185,7 @@ function CharacterBuilder.CreatePanel()
 
         create = function(element)
             if element.data._cacheToken(element) ~= nil then
-                element:FireEventTree("refreshToken")
+                element:FireEvent("refreshToken")
             end
         end,
 
@@ -281,21 +268,24 @@ function CharacterBuilder.CreatePanel()
 
                     -- TODO: Remaining data stored into state
 
+                    -- Always cache levelChoices last. Other actions depend
+                    -- on determining the difference between cache and current.
                     element:FireEvent("cachePerks")
                     element:FireEvent("cacheLevelChoices")
 
                     element:FireEventTree("refreshBuilderState", element.data.state)
                 end
             end
-            -- This should never be processed by children. Use refreshBuilderState instead.
+            -- This event should never be processed by children.
+            -- Use refreshBuilderState instead.
             element:HaltEventPropagation()
         end,
 
         selectAncestry = function(element, ancestryId, noFire)
             local state = element.data.state
 
-            local cachedAncestryId = state:Get("ancestry.selectedId")
-            local cachedInheritedAncestryId = state:Get("ancestry.inheritedId")
+            local cachedAncestryId = state:Get(SEL.ANCESTRY .. ".selectedId")
+            local cachedInheritedAncestryId = state:Get(SEL.ANCESTRY .. ".inheritedId")
             local cachedLevelChoices = state:Get("levelChoices")
 
             local hero = _getHero(state)
@@ -309,19 +299,18 @@ function CharacterBuilder.CreatePanel()
             if not (ancestryChanged or levelChoicesChanged) then return end
 
             local newState = {
-                { key = "ancestry.selectedId", value = ancestryId },
+                { key = SEL.ANCESTRY .. ".selectedId", value = ancestryId },
             }
             local ancestryItem = dmhub.GetTableVisible(Race.tableName)[ancestryId]
             if ancestryItem then
                 local featureDetails = {}
                 ancestryItem:FillFeatureDetails(nil, levelChoices, featureDetails)
-                
-                local filteredFeatures = _filterFeatures(featureDetails)
 
-                newState[#newState+1] = { key = "ancestry.selectedItem", value = ancestryItem }
-                newState[#newState+1] = { key = "ancestry.inheritedId", value = inheritedAncestryId }
-                newState[#newState+1] = { key = "ancestry.featureDetails", value = featureDetails }
-                newState[#newState+1] = { key = "ancestry.filteredFeatures", value = filteredFeatures }
+                local featureCache = CBFeatureCache:new(hero, ancestryId, ancestryItem.name, featureDetails)
+
+                newState[#newState+1] = { key = SEL.ANCESTRY .. ".selectedItem", value = ancestryItem }
+                newState[#newState+1] = { key = SEL.ANCESTRY .. ".inheritedId", value = inheritedAncestryId }
+                newState[#newState+1] = { key = SEL.ANCESTRY .. ".featureCache", value = featureCache }
             end
             state:Set(newState)
             if not noFire then
@@ -331,7 +320,7 @@ function CharacterBuilder.CreatePanel()
 
         selectCareer = function(element, careerId, noFire)
             local state = element.data.state
-            local cachedCareerId = state:Get("career.selectedId")
+            local cachedCareerId = state:Get(SEL.CAREER .. ".selectedId")
             local cachedLevelChoices = state:Get("levelChoices")
             local hero = _getHero(state)
             local levelChoices = hero and hero:GetLevelChoices() or {}
@@ -344,14 +333,14 @@ function CharacterBuilder.CreatePanel()
             end
 
             local newState = {
-                { key = "career.selectedId", value = careerId },
+                { key = SEL.CAREER .. ".selectedId", value = careerId },
             }
             local careerItem = dmhub.GetTableVisible(Background.tableName)[careerId]
             if careerItem then
                 local featureDetails = {}
                 careerItem:FillFeatureDetails(levelChoices, featureDetails)
 
-                -- Special case: Make inciting incidents look like features
+                -- Special case: Adapt inciting incidents to behave like features
                 for _,item in ipairs(careerItem:try_get("characteristics", {})) do
                     local feature = CharacterIncidentChoice:new(item)
                     if feature then
@@ -370,11 +359,10 @@ function CharacterBuilder.CreatePanel()
                     end
                 end
 
-                local filteredFeatures = _filterFeatures(featureDetails)
+                local featureCache = CBFeatureCache:new(hero, careerId, careerItem.name, featureDetails)
 
-                newState[#newState+1] = { key = "career.selectedItem", value = careerItem }
-                newState[#newState+1] = { key = "career.featureDetails", value = featureDetails }
-                newState[#newState+1] = { key = "career.filteredFeatures", value = filteredFeatures }
+                newState[#newState+1] = { key = SEL.CAREER .. ".selectedItem", value = careerItem }
+                newState[#newState+1] = { key = SEL.CAREER .. ".featureCache", value = featureCache }
             end
             state:Set(newState)
             if not noFire then
@@ -385,9 +373,9 @@ function CharacterBuilder.CreatePanel()
         selectClass = function(element, classId, noFire)
             -- Read our cache
             local state = element.data.state
-            local cachedClassId = state:Get("class.selectedId")
-            local cachedLevel = state:Get("class.level")
-            local cachedSubclasses = state:Get("class.selectedSubclasses")
+            local cachedClassId = state:Get(SEL.CLASS .. ".selectedId")
+            local cachedLevel = state:Get(SEL.CLASS .. ".level")
+            local cachedSubclasses = state:Get(SEL.CLASS .. ".selectedSubclasses")
             local cachedLevelChoices = state:Get("levelChoices")
 
             -- Read current state / selections
@@ -407,29 +395,28 @@ function CharacterBuilder.CreatePanel()
 
             -- Something changed so we need to process it
             local newState = {
-                { key = "class.selectedId", value = classId },
-                { key = "class.level", value = level },
+                { key = SEL.CLASS .. ".selectedId", value = classId },
+                { key = SEL.CLASS .. ".level", value = level },
             }
             local classItem = dmhub.GetTableVisible(Class.tableName)[classId]
             if classItem then
                 local classFill = {}
-                for _,entry in ipairs(classAndSubClasses) do
-                    entry.class:FillFeatureDetailsForLevel(levelChoices, entry.level, false, "nonprimary", classFill)
+                if #classAndSubClasses > 0 then
+                    for _,entry in ipairs(classAndSubClasses) do
+                        entry.class:FillFeatureDetailsForLevel(levelChoices, entry.level, false, "nonprimary", classFill)
+                    end
+                else
+                    classItem:FillFeatureDetailsForLevel(levelChoices, 1, false, "nonprimary", classFill)
                 end
-                local filteredFeatures, featureDetails = _filterFeatures(classFill)
-                -- print("THC:: CLASSFILL::", json(classFill))
-                -- print("THC:: FILTERED::", json(filteredFeatures))
-                -- print("THC:: FLATTENED::", json(featureDetails))
+                local featureCache = CBFeatureCache:new(hero, classId, classItem.name, classFill)
 
-                newState[#newState+1] = { key = "class.selectedItem", value = classItem }
-                newState[#newState+1] = { key = "class.selectedSubclasses", value = classAndSubClasses }
-                newState[#newState+1] = { key = "class.featureDetails", value = featureDetails }
-                newState[#newState+1] = { key = "class.filteredFeatures", value = filteredFeatures }
+                newState[#newState+1] = { key = SEL.CLASS .. ".selectedItem", value = classItem }
+                newState[#newState+1] = { key = SEL.CLASS .. ".selectedSubclasses", value = classAndSubClasses }
+                newState[#newState+1] = { key = SEL.CLASS .. ".featureCache", value = featureCache }
             else
-                newState[#newState+1] = { key = "class.selectedItem", nil }
-                newState[#newState+1] = { key = "class.selectedSubclasses", nil }
-                newState[#newState+1] = { key = "class.featureDetails", nil }
-                newState[#newState+1] = { key = "class.filteredFeatures", nil }
+                newState[#newState+1] = { key = SEL.CLASS .. ".selectedItem", value = nil }
+                newState[#newState+1] = { key = SEL.CLASS .. ".selectedSubclasses", value = nil }
+                newState[#newState+1] = { key = SEL.CLASS .. ".featureCache", value = nil }
             end
             state:Set(newState)
             if not noFire then
@@ -438,12 +425,14 @@ function CharacterBuilder.CreatePanel()
         end,
 
         selectItem = function(element, info)
-            if info.selector == "ancestry" then
-                element:FireEvent("selectAncestry", info.id)
-            elseif info.selector == "career" then
-                element:FireEvent("selectCareer", info.id)
-            elseif info.selector == "class" then
-                element:FireEvent("selectClass", info.id)
+            local events = {
+                [SEL.ANCESTRY] = "selectAncestry",
+                [SEL.CAREER]   = "selectCareer",
+                [SEL.CLASS]    = "selectClass",
+            }
+            local eventName = events[info.selector]
+            if eventName then
+                element:FireEvent(eventName, info.id)
             end
         end,
 
@@ -463,6 +452,8 @@ function CharacterBuilder.CreatePanel()
 
         tokenDataChanged = function(element)
             if element.data.charSheetInstance then
+                -- The character sheet fires refreshToken which in turn
+                -- fires refreshBuilderState
                 element.data.charSheetInstance:FireEvent("refreshAll")
             else
                 element:FireEventTree("refreshBuilderState", element.data.state)
@@ -480,18 +471,23 @@ function CharacterBuilder.CreatePanel()
     }
 end
 
--- TODO: Remove the gate on dev mode
-if devmode() then
+-- TODO: Remove the gate on the setting
+setting{
+    id = "testwipbuilder",
+    description = "Test WIP Builder",
+    editor = "check",
+    default = false,
+    storage = "Game",
+    section = "game",
+}
 
 --- Our tab in the character sheet
 CharSheet.RegisterTab {
     id = "builder2",
     text = "Builder (WIP)",
 	visible = function(c)
-		return c ~= nil and c:IsHero()
+		return c ~= nil and c:IsHero() and dmhub.GetSettingValue("testwipbuilder") == true
 	end,
     panel = CharacterBuilder.CreatePanel
 }
 dmhub.RefreshCharacterSheet()
-
-end

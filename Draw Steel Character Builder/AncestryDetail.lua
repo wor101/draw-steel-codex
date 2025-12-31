@@ -5,7 +5,7 @@ CBAncestryDetail = RegisterGameType("CBAncestryDetail")
 
 local mod = dmhub.GetModLoading()
 
-local SELECTOR = "ancestry"
+local SELECTOR = CharacterBuilder.SELECTOR.ANCESTRY
 local INITIAL_CATEGORY = "overview"
 local AVAILABLE_WITHOUT_ANCESTRY = {overview = true, lore = true}
 
@@ -149,7 +149,8 @@ function CBAncestryDetail._overviewPanel()
                         MeasurementSystem.NativeToDisplayStringWithUnits(race.moveSpeeds.walk)),
                 }
 
-                local featureDetails = state:Get(SELECTOR .. ".featureDetails")
+                local featureCache = state:Get(SELECTOR .. ".featureCache")
+                local featureDetails = featureCache:GetFlattenedFeatures()
                 for _,item in ipairs(featureDetails) do
                     local s = item.feature:GetSummaryText()
                     if s ~= nil and #s > 0 then
@@ -334,13 +335,16 @@ function CBAncestryDetail.CreatePanel()
                         element.data.features[id] = false
                     end
 
-                    for _,f in pairs(state:Get(SELECTOR .. ".filteredFeatures")) do
-                        local featureId = f.feature:try_get("guid")
-                        if featureId then
+                    local featureCache = state:Get(SELECTOR .. ".featureCache")
+                    local features = featureCache:GetSortedFeatures()
+                    for _,f in ipairs(features) do
+                        local featureId = f.guid
+                        local feature = featureCache:GetFeature(featureId)
+                        if feature then
                             if element.data.features[featureId] == nil then
                                 local featureRegistry = CharacterBuilder._makeFeatureRegistry{
-                                    feature = f,
-                                    selectorId = SELECTOR,
+                                    feature = feature,
+                                    selector = SELECTOR,
                                     selectedId = heroAncestry,
                                     getSelected = function(hero)
                                         return hero:try_get("raceid")
@@ -357,7 +361,7 @@ function CBAncestryDetail.CreatePanel()
                         end
                     end
 
-                    for id, active in pairs(element.data.features) do
+                    for id,active in pairs(element.data.features) do
                         if active == false then
                             navPanel:FireEvent("destroyFeature", id)
                             detailPanel:FireEvent("destroyFeature", id)

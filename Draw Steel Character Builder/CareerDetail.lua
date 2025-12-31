@@ -5,7 +5,7 @@ CBCareerDetail = RegisterGameType("CBCareerDetail")
 
 local mod = dmhub.GetModLoading()
 
-local SELECTOR = "career"
+local SELECTOR = CharacterBuilder.SELECTOR.CAREER
 local INITIAL_CATEGORY = "overview"
 local AVAILABLE_WITHOUT_CAREER = {overview = true}
 
@@ -78,7 +78,8 @@ function CBCareerDetail._overviewPanel()
             if careerId then
                 local careerItem = state:Get(SELECTOR .. ".selectedItem")
                 if careerItem then
-                    local featureDetails = state:Get(SELECTOR .. ".featureDetails")
+                    local featureCache = state:Get(SELECTOR .. ".featureCache")
+                    local featureDetails = featureCache:GetFlattenedFeatures()
                     if featureDetails then
                         local textItems = {}
                         for _,item in ipairs(featureDetails) do
@@ -269,13 +270,16 @@ function CBCareerDetail.CreatePanel()
                         element.data.features[id] = false
                     end
 
-                    for _,f in pairs(state:Get(SELECTOR .. ".filteredFeatures")) do
-                        local featureId = f.feature:try_get("guid")
-                        if featureId then
+                    local featureCache = state:Get(SELECTOR .. ".featureCache")
+                    local features = featureCache:GetSortedFeatures()
+                    for _,f in ipairs(features) do
+                        local featureId = f.guid
+                        local feature = featureCache:GetFeature(featureId)
+                        if feature then
                             if element.data.features[featureId] == nil then
                                 local featureRegistry = CharacterBuilder._makeFeatureRegistry{
-                                    feature = f,
-                                    selectorId = SELECTOR,
+                                    feature = feature,
+                                    selector = SELECTOR,
                                     selectedId = heroCareer,
                                     getSelected = function(hero)
                                         return hero:try_get("backgroundid")

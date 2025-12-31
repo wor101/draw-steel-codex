@@ -195,7 +195,7 @@ function Class:FillLevelsUpTo(levelNum, extraLevelInfo, secondaryClass, result)
 
     local encounter = extraLevelInfo and extraLevelInfo.encounter or nil
     if levelNum > 1 then
-        encounter = 4
+        encounter = nil
     end
 
     for i=1,(encounter or 4) do
@@ -393,6 +393,10 @@ function CharacterChoice:GetDescription()
 end
 
 function CharacterChoice:Choices(numOption, existingChoices, creature)
+	return nil
+end
+
+function CharacterChoice:GetOptions(choices)
 	return nil
 end
 
@@ -821,6 +825,19 @@ function CharacterSubclassChoice:Choices(numOption, existingChoices, creature)
 	end
 
 	return result
+end
+
+function CharacterSubclassChoice:GetOptions(choices, creature)
+	local options = {}
+	local choices = self:Choices(nil, choices, creature)
+	for _,item in ipairs(choices) do
+		options[#options+1] = {
+			guid = item.id,
+			name = item.text,
+			unique = true,
+		}
+	end
+	return options
 end
 
 function CharacterSubclassChoice:NumChoices(creature)
