@@ -4,8 +4,8 @@
     derived from CharacterChoice.
 
     Anything derived from CharacterChoice should plug in
-    to this automagically, if you ensure you follow the
-    guidelines:
+    to SelectionPanel() automagically, if you ensure you
+    follow the guidelines:
       - Implement :GetDescription()
       - Implement :GetOptions()
       - Implement :Choices()
@@ -69,10 +69,19 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
             gui.Label{
                 classes = {"builder-base", "label", "feature-header", "name"},
                 text = header.name,
+                markdown = true,
+                updateHeaderName = function(element, text)
+                    element.text = text
+                end,
             },
             gui.Label{
                 classes = {"builder-base", "label", "feature-header", "desc"},
                 text = header.description,
+                markdown = true,
+                updateHeaderDesc = function(element, text)
+                    element.text = text
+                    element:SetClass("collapsed", element.text == nil or #element.text == 0)
+                end,
             },
             targetsContainer,
             gui.MCDMDivider{

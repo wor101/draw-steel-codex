@@ -140,6 +140,14 @@ end
     Utilities
 ]]
 
+--- Find a proper attribute name given an ID
+--- @param attrId string
+--- @return string
+function CharacterBuilder._attrNameFromId(attrId)
+    local info = creature.attributesInfo[attrId]
+    return info and info.description or "Unknown"
+end
+
 --- If the string passed is nil or empty returns '--'
 --- @param s? string The string to evaluate
 --- @return string
@@ -155,6 +163,121 @@ end
 function CharacterBuilder._fireControllerEvent(element, eventName, ...)
     local controller = CharacterBuilder._getController(element)
     if controller then controller:FireEvent(eventName, ...) end
+end
+
+--- Format an order string for sorting
+--- @param n number|nil The numeric order value
+--- @param s string|nil The text portion
+--- @return string
+function CharacterBuilder._formatOrder(n, s)
+    return string.format("%03d-%s", n or 999, (s and #s > 0) and s or "zzzunknown-item")
+end
+
+--- Generates all unique attribute combinations from static values and distributable array.
+--- @param sourceTable table Table with static attribute values and arrays subtable
+--- @param arrayIndex number Index into sourceTable.arrays to use for distributable values
+--- @return table Array of keyed attribute tables, sorted by weighted priority (descending)
+function CharacterBuilder._generateAttributeCombinations(sourceTable, arrayIndex)
+    -- Helper: generate unique permutations (handles duplicate values)
+    local function generateUniquePermutations(arr)
+        local results = {}
+        local n = #arr
+        if n == 0 then return results end
+
+        -- Sort array to group duplicates together
+        local sorted = {}
+        for i = 1, n do sorted[i] = arr[i] end
+        table.sort(sorted)
+
+        -- Heap's algorithm with duplicate detection
+        local function permute(current, remaining)
+            if #remaining == 0 then
+                local copy = {}
+                for i = 1, #current do copy[i] = current[i] end
+                results[#results + 1] = copy
+                return
+            end
+
+            local used = {}
+            for i = 1, #remaining do
+                local val = remaining[i]
+                if not used[val] then
+                    used[val] = true
+                    local newCurrent = {}
+                    for j = 1, #current do newCurrent[j] = current[j] end
+                    newCurrent[#newCurrent + 1] = val
+
+                    local newRemaining = {}
+                    for j = 1, #remaining do
+                        if j ~= i then newRemaining[#newRemaining + 1] = remaining[j] end
+                    end
+
+                    permute(newCurrent, newRemaining)
+                end
+            end
+        end
+
+        permute({}, sorted)
+        return results
+    end
+
+    -- Extract values array from sourceTable.arrays[arrayIndex]
+    local valuesArray = {}
+    local srcArray = sourceTable.arrays[arrayIndex]
+    for i = 1, #srcArray do
+        valuesArray[i] = srcArray[i]
+    end
+
+    -- Get all attribute keys and identify static vs remaining
+    local staticAttrs = {}
+    local remainingKeys = {}
+    for key, info in pairs(character.attributesInfo) do
+        if type(sourceTable[key]) == "number" then
+            staticAttrs[key] = sourceTable[key]
+        else
+            remainingKeys[#remainingKeys + 1] = { key = key, order = info.order }
+        end
+    end
+
+    -- Sort remaining keys by attribute order for consistent assignment
+    table.sort(remainingKeys, function(a, b) return a.order < b.order end)
+
+    -- Generate all unique permutations of values array
+    local permutations = generateUniquePermutations(valuesArray)
+
+    -- Build result tables with weighted scores
+    local results = {}
+    for _, perm in ipairs(permutations) do
+        local combo = {}
+        local weight = 0
+
+        -- Add static attributes
+        for key, val in pairs(staticAttrs) do
+            combo[key] = val
+            local attrWeight = 6 - character.attributesInfo[key].order
+            weight = weight + val * attrWeight
+        end
+
+        -- Assign permutation values to remaining attributes
+        for i, keyInfo in ipairs(remainingKeys) do
+            combo[keyInfo.key] = perm[i]
+            local attrWeight = 6 - keyInfo.order
+            weight = weight + perm[i] * attrWeight
+        end
+
+        results[#results + 1] = { combo = combo, weight = weight }
+    end
+
+    -- Sort by weight descending
+    table.sort(results, function(a, b) return a.weight > b.weight end)
+
+    -- Extract just the combo tables
+    local output = {}
+    for i, r in ipairs(results) do
+        output[i] = r.combo
+    end
+
+    return output
 end
 
 --- Returns the character sheet instance if we're operating inside it
@@ -230,6 +353,47 @@ function CharacterBuilder._mergeKeyedTables(defaults, custom)
     for k, v in pairs(defaults) do result[k] = v end
     for k, v in pairs(custom) do result[k] = v end
     return result
+end
+
+--- Parse starting characteristics into a description string
+--- @param baseChars table Keyed table of attribute ids to values
+--- @return string
+function CharacterBuilder._parseStartingCharacteristics(baseChars)
+
+    local vowels = {a=true, e=true, i=true, o=true, u=true}
+
+    local attrInfo = character.attributesInfo
+
+    local items = {}
+    for k,def in pairs(attrInfo) do
+        local item = baseChars[k]
+        if item then
+            local firstChar = def.description:sub(1,1):lower()
+            local article = vowels[firstChar] and "n" or ""
+            items[#items+1] = {
+                text = string.format("a%s **%s** of %d", article, def.description, item),
+                order = def.order,
+            }
+        end
+    end
+    table.sort(items, function(a,b) return a.order < b.order end)
+
+    local str = "Could not find starting characteristics."
+    local numItems = #items
+    if numItems > 0 then
+        str = string.format("You start with %s", items[1].text)
+        if numItems == 2 then
+            str = string.format("%s and %s", str, items[2].text)  -- Fixed: added %s for items[2].text
+        elseif numItems > 1 then
+            for i = 2, numItems - 1 do
+                str = string.format("%s, %s", str, items[i].text)
+            end
+            str = string.format("%s, and %s", str, items[numItems].text)
+        end
+        str = string.format("%s, and you can choose one of the following arrays for your other characteristic scores:", str)  -- Fixed: added str
+    end
+
+    return str
 end
 
 --- Safely get a named property from an item, defaulting to nil
@@ -358,6 +522,23 @@ function CharacterBuilder._makeDetailNavButton(selector, options)
     return CharacterBuilder._makeCategoryButton(options)
 end
 
+--- Build a feature panel container with consistent structure
+--- @param options table Additional options to merge (data, events, children)
+--- @return Panel
+function CharacterBuilder._makeFeaturePanelContainer(options)
+    options = options or {}
+    local panelDef = CharacterBuilder._mergeKeyedTables({
+        classes = {"featurePanel", "builder-base", "panel-base", "collapsed"},
+        width = "100%",
+        height = "98%",
+        flow = "vertical",
+        valign = "top",
+        halign = "center",
+        tmargin = 12,
+    }, options)
+    return gui.Panel(panelDef)
+end
+
 --- @class CBFeatureRegistryOptions
 --- @field feature CBFeatureWrapper
 --- @field selector string The selector we're running under
@@ -402,14 +583,7 @@ function CharacterBuilder._makeFeatureRegistry(options)
                     element:SetClass("collapsed", not visible)
                 end,
             },
-            panel = gui.Panel{
-                classes = {"featurePanel", "builder-base", "panel-base", "collapsed"},
-                width = "100%",
-                height = "98%",
-                flow = "vertical",
-                valign = "top",
-                halign = "center",
-                tmargin = 12,
+            panel = CharacterBuilder._makeFeaturePanelContainer{
                 data = {
                     featureId = feature:GetGuid(),
                 },
@@ -420,7 +594,7 @@ function CharacterBuilder._makeFeatureRegistry(options)
                         element:HaltEventPropagation()
                     end
                 end,
-                featurePanel,
+                children = { featurePanel },
             },
         }
     end

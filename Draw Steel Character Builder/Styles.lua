@@ -98,6 +98,25 @@ end
 --- Generate panel styles with panel-base root selector
 --- @return table[] Array of style definitions
 local function _panelStyles()
+    
+    local starburstGradient = gui.Gradient{
+        type = "radial",
+        point_a = {x = 0.5, y = 0.5},
+        point_b = {x = 0.5, y = 1.0},
+        stops = {
+            {position = -0.01, color = "#1c1c1c"},
+            {position = 0.00, color = "#1c1c1c"},
+            {position = 0.12, color = "#191919"},
+            {position = 0.25, color = "#161616"},
+            {position = 0.37, color = "#131413"},
+            {position = 0.50, color = "#101110"},
+            {position = 0.62, color = "#0d0f0d"},
+            {position = 0.75, color = "#0b0d0b"},
+            {position = 0.87, color = "#090c0a"},
+            {position = 1.00, color = "#080b09"},
+        },
+    }
+
     return _applyRootSelectors("panel-base", {
         {
             selectors = {},
@@ -207,6 +226,62 @@ local function _panelStyles()
             borderColor = CBStyles.COLORS.GOLD03,
         },
 
+        -- Characteristic selection
+        {
+            selectors = {"chararray"},
+            width = "99%",
+            height = "auto",
+            valign = "top",
+            flow = "vertical",
+        },
+        {
+            selectors = {"chararray", "container"},
+            halign = "center",
+            valign = "top",
+            bgimage = true,
+            borderColor = CBStyles.COLORS.CREAM,
+            border = { x1 = 1, x2 = 1, y1 = 0, y2 = 1 },
+        },
+        {
+            selectors = {"chararray", "header"},
+            width = "99%",
+            height = "auto",
+            flow = "horizontal",
+            tmargin = 0,
+            vpad = 8,
+            bgcolor = "#ffffff",
+            bgimage = true,
+            gradient = starburstGradient,
+            cornerRadius = 5,
+            borderWidth = 1,
+            borderColor = CBStyles.COLORS.CREAM,
+        },
+        {
+            selectors = {"chararray", "header", "selected"},
+            brightness = 2.0,
+        },
+        {
+            selectors = {"chararray", "detail"},
+            width = "90%",
+            halign = "center",
+            flow = "horizontal",
+            bgimage = true,
+            cornerRadius = 5,
+            border = 1,
+            borderColor = CBStyles.COLORS.GRAY02,
+            gradient = starburstGradient,
+        },
+        {
+            selectors = {"chararray", "detail", "selected"},
+            borderColor = CBStyles.COLORS.CREAM03,
+            brightness = 1.5,
+        },
+        {
+            selectors = {"chararray", "item"},
+            width = "18%",
+            flow = "vertical",
+        },
+
         -- Right-side character panel
         {
             selectors = {"charpanel", "builder-content"},
@@ -253,23 +328,7 @@ local function _panelStyles()
             selectors = {CharacterBuilder.CONTROLLER_CLASS},
             bgcolor = "#ffffff",
             bgimage = true,
-            gradient = gui.Gradient{
-                type = "radial",
-                point_a = {x = 0.5, y = 0.5},
-                point_b = {x = 0.5, y = 1.0},
-                stops = {
-                    {position = -0.01, color = "#1c1c1c"},
-                    {position = 0.00, color = "#1c1c1c"},
-                    {position = 0.12, color = "#191919"},
-                    {position = 0.25, color = "#161616"},
-                    {position = 0.37, color = "#131413"},
-                    {position = 0.50, color = "#101110"},
-                    {position = 0.62, color = "#0d0f0d"},
-                    {position = 0.75, color = "#0b0d0b"},
-                    {position = 0.87, color = "#090c0a"},
-                    {position = 1.00, color = "#080b09"},
-                },
-            },
+            gradient = starburstGradient,
         },
     })
 end
@@ -382,6 +441,30 @@ local function _labelStyles()
             fontSize = 14,
             bold = false,
             italics = true,
+        },
+
+        -- Characteristic selection
+        {
+            selectors = {"chararray", "header"},
+            halign = "center",
+            valign = "center",
+            width = "auto",
+            fontSize = 22,
+            bold = false,
+        },
+        {
+            selectors = {"chararray", "item-name"},
+            width = "98%",
+            halign = "center",
+            textAlignment = "center",
+            fontSize = 14,
+        },
+        {
+            selectors = {"chararray", "item-value"},
+            width = "98%",
+            halign = "center",
+            textAlignment = "center",
+            fontSize = 22,
         },
 
         -- For the right-side character panel / builder tab

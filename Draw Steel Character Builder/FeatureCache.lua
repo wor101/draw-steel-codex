@@ -2,6 +2,7 @@
     A cache and wrappers for our features
     to support the builder
 ]]
+local _formatOrder = CharacterBuilder._formatOrder
 local _hasFn = CharacterBuilder._hasFn
 local _safeGet = CharacterBuilder._safeGet
 
@@ -186,7 +187,7 @@ function CBFeatureWrapper:GetCategory()
 end
 
 function CBFeatureWrapper:GetCategoryOrder()
-    return self:try_get("categoryOrder", "99-zzz")
+    return self:try_get("categoryOrder", _formatOrder(999, "zzz"))
 end
 
 --- @return CBOptionWrapper|nil
@@ -268,7 +269,7 @@ end
 
 --- @return string
 function CBFeatureWrapper:GetOrder()
-    return self:try_get("order", "99-zzz")
+    return self:try_get("order", _formatOrder(999, "zzz"))
 end
 
 --- @return RollTableReference
@@ -445,9 +446,9 @@ function CBFeatureWrapper:_deriveOrder(feature)
         CharacterIncidentChoice             = 9,
     }
 
-    local orderNum = typeOrder[feature.typeName] or 99
-    local nameOrder = string.format("%02d-%s", orderNum, self:GetName())
-    local catOrder = string.format("%02d-%s", orderNum, self:GetCategory())
+    local orderNum = typeOrder[feature.typeName] or 999
+    local nameOrder = _formatOrder(orderNum, self:GetName())
+    local catOrder = _formatOrder(orderNum, self:GetCategory())
 
     return nameOrder, catOrder
 end

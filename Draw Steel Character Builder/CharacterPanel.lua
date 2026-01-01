@@ -3,6 +3,7 @@
 ]]
 local _blankToDashes = CharacterBuilder._blankToDashes
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
+local _formatOrder = CharacterBuilder._formatOrder
 local _getHero = CharacterBuilder._getHero
 local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
@@ -186,7 +187,7 @@ function CBCharPanel._statusItem(selector, getSelected)
             local statusEntries = {
                 [headingText] = {
                     id = headingText,
-                    order = "000-".. headingText,
+                    order = _formatOrder(0, headingText),
                     available = 1,
                     selected = 0,
                     selectedDetail = {},
