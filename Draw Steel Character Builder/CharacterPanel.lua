@@ -845,18 +845,16 @@ function CBCharPanel._headerPanel()
         end,
 
         refreshAppearance = function(element, info)
-            print("APPEARANCE:: Set avatar", info.token.portrait)
-            element.SetValue(element, info.token.portrait, false)
+            local token = _getToken(element)
+            element.SetValue(element, token.portrait, false)
             element:FireEvent("imageLoaded")
-            element:FireEvent("updatePopout", info.token.popoutPortrait)
+            element:FireEvent("updatePopout", token.popoutPortrait)
         end,
 
         change = function(element)
-            -- local info = CharacterSheet.instance.data.info
-            -- info.token.portrait = element.value
-            -- info.token:UploadAppearance()
-            -- CharacterSheet.instance:FireEvent("refreshAll")
-            -- element:FireEvent("imageLoaded")
+            local token = _getToken(element)
+            token.portrait = element.value
+            token:UploadAppearance()
         end,
     }
 
