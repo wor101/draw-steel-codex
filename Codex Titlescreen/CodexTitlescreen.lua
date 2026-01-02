@@ -1043,6 +1043,11 @@ local function MakeGamePanel(gameIndex)
 
         press = function(element)
             element.root:FireEventTree("titlescreenCreateGame")
+            audio.FireSoundEvent("Mouse.Click")
+        end,
+
+        hover = function ()
+            audio.FireSoundEvent("Mouse.Hover")
         end,
 
         gui.Panel {
@@ -1063,6 +1068,7 @@ local function MakeGamePanel(gameIndex)
                     transitionTime = 0.1,
                 }
             }
+
         }
     }
 
@@ -1141,9 +1147,16 @@ local function MakeGamePanel(gameIndex)
 
                 bmargin = 3,
 
+                hover = function ()
+                    
+                    audio.FireSoundEvent("Mouse.Hover")
+
+                end,
+
                 press = function(element)
                     element.root:FireEventTree("overrideLoadingScreenArt", m_game.coverart)
                     lobby:EnterGame(m_game.gameid)
+                    audio.FireSoundEvent("Mouse.Click")
                 end,
 
                 gui.Label {
@@ -1739,7 +1752,16 @@ local function MakeHeroPanel(heroIndex)
                 brightness = 1,
                 transitionTime = 0.1,
             }
-        }
+        },
+
+        hover = function ()
+            audio.FireSoundEvent("Mouse.Hover")
+        end,
+
+        press = function ()
+            audio.FireSoundEvent("Mouse.Click")
+        end,
+
     }
 
 
@@ -1786,6 +1808,11 @@ local function MakeHeroPanel(heroIndex)
 
             press = function(element)
                 EditHero(element, m_character)
+                audio.FireSoundEvent("Mouse.Click")
+            end,
+
+            hover = function ()
+                audio.FireSoundEvent("Mouse.Hover")
             end,
 
             gui.Label {
@@ -2907,12 +2934,19 @@ function CreateTitlescreen(dialog, options)
                         }
                     },
 
+                    hover = function ()
+                    
+                        audio.FireSoundEvent("Mouse.Hover")
+
+                    end,
+
                     click = function(element)
                         g_gamePageSetting = g_directorGamePageSetting
                         SetTitlescreenState("games-screen")
                         titlescreen:SetClassTree("titlescreenDirector", true)
                         titlescreen:SetClassTree("titlescreenPlayer", false)
                         titlescreen:FireEventTree("refreshLobby")
+                        audio.FireSoundEvent("Mouse.Click")
                     end,
 
                     gui.Panel {
@@ -2943,6 +2977,8 @@ function CreateTitlescreen(dialog, options)
                             valign = "bottom",
 
                             bmargin = 3,
+
+                            
 
 
                             gui.Label {
@@ -2983,12 +3019,17 @@ function CreateTitlescreen(dialog, options)
                     borderColor = "white",
                     cornerRadius = 2,
 
+                    hover = function ()
+                        audio.FireSoundEvent("Mouse.Hover")
+                    end,
+
                     click = function(element)
                         g_gamePageSetting = g_playerGamePageSetting
                         SetTitlescreenState("games-screen")
                         titlescreen:SetClassTree("titlescreenDirector", false)
                         titlescreen:SetClassTree("titlescreenPlayer", true)
                         titlescreen:FireEventTree("refreshLobby")
+                        audio.FireSoundEvent("Mouse.Click")
                     end,
 
                     flow = "vertical",
@@ -3612,6 +3653,7 @@ function CreateTitlescreen(dialog, options)
                 opacity = 0,
                 uiscale = 2,
             },
+
         },
         floating = true,
         width = 128,
@@ -3644,7 +3686,12 @@ function CreateTitlescreen(dialog, options)
                 element:SetClassTree("fade", true)
                 element:ScheduleEvent("destroySelf", 0.2)
                 element.thinkTime = nil
+                audio.FireSoundEvent("Mouse.Click")
             end
+        end,
+
+        hover = function ()
+            audio.FireSoundEvent("Mouse.Hover")
         end,
 
         destroySelf = function(element)
