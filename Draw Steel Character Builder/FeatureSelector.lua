@@ -62,44 +62,64 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
     }, overrides.selectButton)
     local selectButton = overrides.selectButton and CharacterBuilder._makeSelectButton(selectButtonDef)
 
+    local headerPanel = gui.Panel{
+        classes = {"builder-base", "panel-base"},
+        width = "100%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        flow = "vertical",
+        gui.Label{
+            classes = {"builder-base", "label", "feature-header", "name"},
+            text = header.name,
+            markdown = true,
+            updateHeaderName = function(element, text)
+                element.text = text
+            end,
+        },
+        gui.Label{
+            classes = {"builder-base", "label", "feature-header", "desc"},
+            text = header.description,
+            markdown = true,
+            updateHeaderDesc = function(element, text)
+                element.text = text
+                element:SetClass("collapsed", element.text == nil or #element.text == 0)
+            end,
+        },
+        _functionOrValue(injections.afterHeader),
+    }
+
+    local targetsPanel = gui.Panel{
+        classes = {"builder-base", "panel-base"},
+        width = "100%",
+        height = "100% available",
+        halign = "left",
+        valign = "top",
+        flow = "vertical",
+        targetsContainer,
+        _functionOrValue(injections.afterTargets),
+        gui.MCDMDivider{
+            classes = {"builder-divider"},
+            layout = "v",
+            width = "96%",
+            vpad = 4,
+            bgcolor = CBStyles.COLORS.GOLD,
+        },
+    }
+
     local scrollPanel = gui.Panel{
         classes = {"builder-base", "panel-base"},
         width = "100%",
-        height = "100%-60",
+        height = "80%",
         halign = "left",
         valign = "top",
         flow = "vertical",
         vscroll = true,
         gui.Panel{
             classes = {"builder-base", "panel-base", "container"},
+            width = "98%",
+            halign = "left",
             flow = "vertical",
-            gui.Label{
-                classes = {"builder-base", "label", "feature-header", "name"},
-                text = header.name,
-                markdown = true,
-                updateHeaderName = function(element, text)
-                    element.text = text
-                end,
-            },
-            gui.Label{
-                classes = {"builder-base", "label", "feature-header", "desc"},
-                text = header.description,
-                markdown = true,
-                updateHeaderDesc = function(element, text)
-                    element.text = text
-                    element:SetClass("collapsed", element.text == nil or #element.text == 0)
-                end,
-            },
-            _functionOrValue(injections.afterHeader),
-            targetsContainer,
-            _functionOrValue(injections.afterTargets),
-            gui.MCDMDivider{
-                classes = {"builder-divider"},
-                layout = "v",
-                width = "96%",
-                vpad = 4,
-                bgcolor = CBStyles.COLORS.GOLD,
-            },
             _functionOrValue(injections.beforeOptions),
             optionsContainer,
             _functionOrValue(injections.afterOptions),
@@ -115,7 +135,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
     }
 
     -- Build children array
-    local children = { scrollPanel, bottomDivider, selectButton }
+    local children = { headerPanel, targetsPanel, scrollPanel, bottomDivider, selectButton }
     table.move(extraChildren, 1, #extraChildren, #children + 1, children)
 
     -- Build mainPanel - merge but protect children
