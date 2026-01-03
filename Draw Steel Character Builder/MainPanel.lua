@@ -236,7 +236,12 @@ function CharacterBuilder.CreatePanel()
             local hero = _getHero(element.data.state)
             if hero then
                 hero.classes = {}
+                for _,attr in pairs(hero:try_get("attributes" or {})) do
+                    attr.baseValue = 0
+                end
                 hero.attributeBuild = {}
+                hero.kitid = nil
+                hero.kitid2 = nil
                 element:FireEvent("tokenDataChanged")
             end
         end,
@@ -366,16 +371,27 @@ function CharacterBuilder.CreatePanel()
                 else
                     classItem:FillFeatureDetailsForLevel(levelChoices, 1, extraLevelInfo, "nonprimary", classFill)
                 end
-
                 local featureCache = CBFeatureCache:new(hero, classId, classItem.name, classFill)
 
                 newState[#newState+1] = { key = SEL.CLASS .. ".selectedItem", value = classItem }
                 newState[#newState+1] = { key = SEL.CLASS .. ".selectedSubclasses", value = classAndSubClasses }
                 newState[#newState+1] = { key = SEL.CLASS .. ".featureCache", value = featureCache }
+
+                local kitFeature = CharacterKitChoice:new(hero)
+                if kitFeature then
+                    local features = {
+                        { feature = kitFeature }
+                    }
+                    local kitFeatureCache = CBFeatureCache:new(hero, classItem.id, classItem.name, features)
+                    newState[#newState+1] = { key = SEL.KIT .. ".featureCache", value = kitFeatureCache }
+                else
+                    newState[#newState+1] = { key = SEL.KIT .. ".featureCache", value = nil }
+                end                    
             else
                 newState[#newState+1] = { key = SEL.CLASS .. ".selectedItem", value = nil }
                 newState[#newState+1] = { key = SEL.CLASS .. ".selectedSubclasses", value = nil }
                 newState[#newState+1] = { key = SEL.CLASS .. ".featureCache", value = nil }
+                newState[#newState+1] = { key = SEL.KIT .. ".featureCache", value = nil }
             end
             state:Set(newState)
             if not noFire then
@@ -385,9 +401,10 @@ function CharacterBuilder.CreatePanel()
 
         selectItem = function(element, info)
             local events = {
-                [SEL.ANCESTRY] = "selectAncestry",
-                [SEL.CAREER]   = "selectCareer",
-                [SEL.CLASS]    = "selectClass",
+                [SEL.ANCESTRY]  = "selectAncestry",
+                [SEL.CAREER]    = "selectCareer",
+                [SEL.CLASS]     = "selectClass",
+                [SEL.KIT]       = "selectKit",
             }
             local eventName = events[info.selector]
             if eventName then

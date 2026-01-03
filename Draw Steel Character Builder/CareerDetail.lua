@@ -253,7 +253,7 @@ function CBCareerDetail.CreatePanel()
 
         refreshBuilderState = function(element, state)
             local visible = state:Get("activeSelector") == element.data.selector
-            element:SetClass("collapsed", not visible)
+            element:SetClass("collapsed-anim", not visible)
             if not visible then
                 element:HaltEventPropagation()
                 return

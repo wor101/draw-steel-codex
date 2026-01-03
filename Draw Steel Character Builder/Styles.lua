@@ -88,17 +88,13 @@ local function _baseStyles()
             color = Styles.textColor,
             bold = false,
         },
-        {
-            selectors = {"font-black"},
-            color = "#000000",
-        },
     }
 end
 
 --- Generate panel styles with panel-base root selector
 --- @return table[] Array of style definitions
 local function _panelStyles()
-    
+
     local starburstGradient = gui.Gradient{
         type = "radial",
         point_a = {x = 0.5, y = 0.5},
@@ -122,18 +118,18 @@ local function _panelStyles()
             selectors = {},
             height = "auto",
             width = "auto",
-            pad = 2,
-            margin = 2,
+            valign = "top",
+            halign = "center",
+            pad = 0,
+            margin = 0,
             bgimage = DEBUG_PANEL_BG and "panels/square.png",
-            borderWidth = 1,
             border = DEBUG_PANEL_BG and 1 or 0
         },
         {
             selectors = {"container"},
-            width = "99%",
+            width = "100%",
             height = "auto",
             halign = "left",
-            valign = "top",
             flow = "vertical",
         },
         {
@@ -149,23 +145,19 @@ local function _panelStyles()
             width = "100%",
             height = "100%",
             flow = "horizontal",
-            valign = "center",
-            halign = "center",
             borderColor = "yellow",
         },
         {
             selectors = {"detail-nav-panel"},
+            height = "100%",
             width = CBStyles.SIZES.BUTTON_PANEL_WIDTH + 20,
-            height = "90%",
-            valign = "top",
-            vpad = CBStyles.SIZES.ACTION_BUTTON_HEIGHT,
             flow = "vertical",
             borderColor = "teal",
         },
         {
             selectors = {"inner-detail-panel"},
             width = 440,
-            height = "99%",
+            height = "100%",
             valign = "center",
             halign = "center",
             borderColor = "teal",
@@ -176,8 +168,8 @@ local function _panelStyles()
         },
         {
             selectors = {"detail-overview-panel"},
-            width = "96%",
-            height = "99%",
+            width = "100%",
+            height = "100%",
             valign = "center",
             halign = "center",
             bgcolor = "white",
@@ -186,7 +178,7 @@ local function _panelStyles()
         -- Feature selectors
         {
             selectors = {"feature-target"},
-            width = "99%",
+            width = "100%",
             height = "auto",
             flow = "vertical",
             tmargin = 10,
@@ -207,13 +199,19 @@ local function _panelStyles()
             brightness = 1.8,
         },
         {
+            selectors = {"feature-choice-container"},
+            width = "100%-14",
+            halign = "left",
+            flow = "vertical",
+        },
+        {
             selectors = {"feature-choice"},
-            width = "99%",
+            width = "100%",
             height = "auto",
-            valign = "top",
+            halign = "left",
             flow = "vertical",
             tmargin = 10,
-            vpad = 12,
+            vpad = 8,
             bgimage = true,
             bgcolor = "clear",
             cornerRadius = 5,
@@ -258,14 +256,19 @@ local function _panelStyles()
 
         -- Right-side character panel
         {
-            selectors = {"charpanel", "builder-content"},
-            width = "96%",
-            height = "80%",
+            selectors = {"charpanel", "tab-content"},
+            width = "100%-20",
+            height = "100% available",
+            hpad = 8,
             halign = "center",
             valign = "top",
             flow = "vertical",
-            borderColor = "yellow",
-            border = 1,
+        },
+        {
+            selectors = {"builder-content-entry"},
+            width = "100%-20",
+            halign = "left",
+            hmargin = 12,
         },
         {
             selectors = {"charpanel", "builder-header"},
@@ -273,6 +276,7 @@ local function _panelStyles()
             height = "auto",
             valign = "top",
             halign = "left",
+            tmargin = 8,
         },
         {
             selectors = {"charpanel", "builder-check"},
@@ -295,6 +299,7 @@ local function _panelStyles()
             valign = "top",
             halign = "left",
             flow = "horizontal",
+            tmargin = 4,
         },
 
         -- Contains all the tab content
@@ -360,7 +365,7 @@ local function _labelStyles()
         },
         {
             selectors = {"feature-header", "desc"},
-            width = "80%",
+            width = "94%",
             height = "auto",
             halign = "center",
             valign = "top",
@@ -372,7 +377,7 @@ local function _labelStyles()
         -- Selector target for skill selection etc.
         {
             selectors = {"feature-target"},
-            width = "100%",
+            width = "98%",
             height = "auto",
             halign = "center",
         },
@@ -402,16 +407,17 @@ local function _labelStyles()
         -- Options for skill selection etc.
         {
             selectors = {"feature-choice"},
-            width = "96%",
+            width = "100%",
             height = "auto",
             halign = "left",
-            hmargin = 20,
+            hmargin = 8,
             textAlignment = "left",
             fontSize = 22,
             bold = true,
         },
         {
             selectors = {"feature-choice", "desc"},
+            width = "100%-16",
             fontSize = 14,
             bold = false,
             italics = true,

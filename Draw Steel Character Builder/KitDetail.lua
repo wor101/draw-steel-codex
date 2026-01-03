@@ -15,21 +15,30 @@ function CBKitDetail._navPanel()
         classes = {"categoryNavPanel", "builder-base", "panel-base", "detail-nav-panel"},
         vscroll = true,
 
-        refreshBuilderState = function(element, state)
-        end,
+        data = {
+            classId = nil,
+        },
 
-        gui.Label{
-            width = "auto",
-            height= "auto",
-            fontSize = 60,
-            floating = true,
-            valign = "center",
-            halign = "center",
-            rotate = 90,
-            color = "red",
-            textAlignment = "center",
-            text = "NAV PANEL",
-        }
+        refreshBuilderState = function(element, state)
+            local classId = state:Get(CharacterBuilder.SELECTOR.CLASS .. ".selectedId")
+            if classId ~= element.data.classId then
+                for i = #element.children, 1, -1 do
+                    element.children[i]:DestroySelf()
+                end
+            end
+
+            if #element.children == 0 then
+                if classId ~= nil then
+                    local featureCache = state:Get(SELECTOR .. ".featureCache")
+                    if featureCache ~= nil then
+                        local feature = featureCache:GetFeature(classId)
+                        if feature ~= nil then
+                            element:AddChild(CBFeatureSelector.SelectionPanel(SELECTOR, feature))
+                        end
+                    end
+                end
+            end
+        end,
     }
 end
 
@@ -110,24 +119,11 @@ function CBKitDetail._overviewPanel()
     }
 end
 
---- @return PrettyButton|Panel
-function CBKitDetail._selectButton()
-    return CharacterBuilder._makeSelectButton{
-        classes = {"selectButton"},
-        press = function(element)
-        end,
-        refreshBuilderState = function(element, state)
-        end,
-    }
-end
-
 --- The right side panel for the kit editor
 --- @return Panel
 function CBKitDetail._detailPanel()
 
     local overviewPanel = CBKitDetail._overviewPanel()
-
-    local selectButton = CBKitDetail._selectButton()
 
     return gui.Panel{
         id = "classDetailPanel",
@@ -137,7 +133,6 @@ function CBKitDetail._detailPanel()
         end,
 
         overviewPanel,
-        selectButton,
     }
 end
 
@@ -158,6 +153,12 @@ function CBKitDetail.CreatePanel()
         },
 
         refreshBuilderState = function(element, state)
+            local visible = state:Get("activeSelector") == element.data.selector
+            element:SetClass("collapsed-anim", not visible)
+            if not visible then
+                element:HaltEventPropagation()
+                return
+            end
         end,
 
         navPanel,

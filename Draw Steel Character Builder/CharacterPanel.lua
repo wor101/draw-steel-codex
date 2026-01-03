@@ -97,9 +97,6 @@ function CBCharPanel._statusItem(selector, getSelected)
 
     local detailPanel = gui.Panel{
         classes = {"builder-base", "panel-base"},
-        width = "100%",
-        height = "auto",
-        valign = "top",
         flow = "vertical",
         data = {
             heading = headingText,
@@ -210,11 +207,9 @@ function CBCharPanel._statusItem(selector, getSelected)
     }
 
     return gui.Panel{
-        classes = {"builder-base", "panel-base", "panelStatusController"},
-        width = "96%",
-        height = "auto",
-        halign = "left",
-        valign = "top",
+        classes = {"builder-base", "panel-base", "builder-content-entry", "panelStatusController"},
+        -- width = "100%",
+        -- halign = "center",
         flow = "vertical",
         data = {
             expanded = nil,
@@ -247,7 +242,7 @@ function CBCharPanel._builderPanel(tabId)
     end)
 
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
+        classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
         height = "100% available",
         vscroll = true,
         data = {
@@ -459,7 +454,7 @@ function CBCharPanel._descriptionPanel(tabId)
     }
 
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
+        classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
         data = {
             id = tabId,
         },
@@ -588,7 +583,7 @@ function CBCharPanel._explorationPanel(tabId)
     }
 
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
+        classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
         data = {
             id = tabId,
         },
@@ -605,7 +600,7 @@ end
 
 function CBCharPanel._tacticalPanel(tabId)
     return gui.Panel {
-        classes = {"builder-base", "panel-base", "charpanel", "builder-content"},
+        classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
         vscroll = true,
         data = {
             id = tabId,

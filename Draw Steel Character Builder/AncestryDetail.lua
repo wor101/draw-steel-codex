@@ -178,18 +178,20 @@ function CBAncestryDetail._overviewPanel()
 
             local visible = ancestryId == nil or state:Get(SELECTOR .. ".category.selectedId") == element.data.category
             element:SetClass("collapsed", not visible)
-
-            if visible then
-                if ancestryId == nil then
-                    element.bgimage = mod.images.ancestryHome
-                    return
-                end
-                local race = state:Get(SELECTOR .. ".selectedItem")
-                if not race then
-                    race = dmhub.GetTable(Race.tableName)[ancestryId]
-                end
-                if race then element.bgimage = race.portraitid end
+            if not visible then
+                element:HaltEventPropagation()
+                return
             end
+
+            if ancestryId == nil then
+                element.bgimage = mod.images.ancestryHome
+                return
+            end
+            local race = state:Get(SELECTOR .. ".selectedItem")
+            if not race then
+                race = dmhub.GetTable(Race.tableName)[ancestryId]
+            end
+            if race then element.bgimage = race.portraitid end
         end,
 
         gui.Panel{

@@ -300,7 +300,10 @@ function CBSelectors._kit()
         data = { selector = SEL.KIT },
         refreshBuilderState = function(element, state)
             local hero = _getHero(state)
-            element:SetClass("collapsed", not hero or not hero:CanHaveKits() )
+            local visible = hero and hero:CanHaveKits()
+            element:SetClass("collapsed", not visible)
+            if not visible then return end
+            element:FireEvent("setSelected", state:Get("activeSelector") == element.data.selector)
         end,
     }
 end

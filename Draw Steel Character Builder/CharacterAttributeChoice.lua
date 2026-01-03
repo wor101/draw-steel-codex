@@ -7,10 +7,7 @@
 CharacterCharacteristicChoice = RegisterGameType("CharacterCharacteristicChoice", "CharacterChoice")
 CharacterCharacteristicChoice.__index = CharacterCharacteristicChoice
 
--- It's not configurable; there's always only one for the hero
-CharacterCharacteristicChoice.guid = "7f3c8a2e-5b14-4d9a-9e61-3c7f2a8b5d4e"
-
---- Construct from a hero
+--- Construct from a class
 --- @param classItem Class
 --- @return CharacterCharacteristicChoice
 function CharacterCharacteristicChoice:new(classItem)
@@ -108,12 +105,6 @@ function CharacterCharacteristicChoice:VisitRecursive(fn)
     end
 end
 
-function CharacterCharacteristicChoice._getBaseCharacteristics(classItem)
-    local baseChars = classItem.baseCharacteristics
-    local description = baseChars and CharacterBuilder._parseStartingCharacteristics(baseChars) or CharacterCharacteristicChoice.description
-    return baseChars, description
-end
-
 --- Save the selected option to the hero, setting the attributeBuild
 --- property and the base values for each attribute.
 --- @param hero character
@@ -194,4 +185,10 @@ function CharacterCharacteristicChoice:GetSelected(hero)
     end
 
     return selected
+end
+
+function CharacterCharacteristicChoice._getBaseCharacteristics(classItem)
+    local baseChars = classItem.baseCharacteristics
+    local description = baseChars and CharacterBuilder._parseStartingCharacteristics(baseChars) or CharacterCharacteristicChoice.description
+    return baseChars, description
 end

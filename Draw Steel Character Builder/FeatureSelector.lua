@@ -90,7 +90,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
 
     local targetsPanel = gui.Panel{
         classes = {"builder-base", "panel-base"},
-        width = "98%",
+        width = "100%",
         height = "auto",
         halign = "left",
         valign = "top",
@@ -100,7 +100,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
         gui.MCDMDivider{
             classes = {"builder-divider"},
             layout = "v",
-            width = "96%",
+            width = "100%",
             vpad = 4,
             bgcolor = CBStyles.COLORS.GOLD,
         },
@@ -115,10 +115,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
         flow = "vertical",
         vscroll = true,
         gui.Panel{
-            classes = {"builder-base", "panel-base", "container"},
-            width = "98%",
-            halign = "left",
-            flow = "vertical",
+            classes = {"builder-base", "panel-base", "feature-choice-container"},
             optionsContainer,
         },
     }
@@ -154,7 +151,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
     -- Build mainPanel - merge but protect children
     local mainPanelDef = _mergeKeyedTables({
         classes = {controllerClass, "builder-base", "panel-base"},
-        width = "100%",
+        width = "98%",
         height = "100%",
         halign = "left",
         flow = "vertical",
