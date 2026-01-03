@@ -20,8 +20,9 @@ CBStyles.COLORS = {
     FILLED_ITEM_BG = "#E9B86F0F",
     FILLED_ITEM_BORDER = "#E9B86F",
 
-    DELETE_WARN_BG = "#660000",
-    DELETE_WARN_BORDER = "#CC3333",
+    DESTRUCTIVE_BG = "#2A1414",
+    DESTRUCTIVE_BORDER = "#B94A30",
+    DESTRUCTIVE_TEXT = "#D97166",
 }
 
 CBStyles.SIZES = {
@@ -569,16 +570,6 @@ local function _buttonStyles()
             borderColor = CBStyles.COLORS.GRAY02,
             color = CBStyles.COLORS.GRAY02,
         },
-        -- {
-        --     selectors = {"available"},
-        --     borderColor = CBStyles.COLORS.CREAM,
-        --     color = CBStyles.COLORS.GOLD,
-        -- },
-        -- {
-        --     selectors = {"unavailable"},
-        --     borderColor = CBStyles.COLORS.GRAY02,
-        --     color = CBStyles.COLORS.GRAY02,
-        -- }
     })
 end
 
@@ -692,5 +683,20 @@ function CBStyles.GetStyles()
     mergeStyles(_dropdownStyles())
     mergeStyles(_characterPanelTabStyles())
 
+    return styles
+end
+
+function CBStyles.SelectorButtonOverrides()
+    local styles = {
+        {
+            selectors = {"destructive"},
+            borderColor = CBStyles.COLORS.DESTRUCTIVE_BORDER,
+            bgcolor = CBStyles.COLORS.DESTRUCTIVE_BG,
+        },
+        {
+            selectors = {"destructive"},
+            color = CBStyles.COLORS.DESTRUCTIVE_TEXT,
+        },
+    }
     return styles
 end

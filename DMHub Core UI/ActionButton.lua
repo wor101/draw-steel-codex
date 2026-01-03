@@ -377,10 +377,13 @@ function gui.SelectorButton(options)
     opts.styles = styles
 
     local classes = {"selector-button"}
+    local buttonClasses = {"selector-button-base"}
+    local labelClasses = {"selector-button-label"}
     if opts.classes and #opts.classes > 0 then
         table.move(opts.classes, 1, #opts.classes, #classes + 1, classes)
+        table.move(opts.classes, 1, #opts.classes, #buttonClasses + 1, buttonClasses)
+        table.move(opts.classes, 1, #opts.classes, #labelClasses + 1, labelClasses)
     end
-    opts.classes = classes
 
     local data = {
         _available = opts.available or false,
@@ -452,7 +455,7 @@ function gui.SelectorButton(options)
     opts.children = {
 
         gui.Panel{ -- Button Base
-            classes = {"selector-button-base"},
+            classes = buttonClasses,
             width = "100%",
             height = "100%",
             valign = "center",
@@ -477,7 +480,7 @@ function gui.SelectorButton(options)
                 valign = "center",
                 interactable = false,
                 gui.Label{
-                    classes = {"selector-button-label"},
+                    classes = labelClasses,
                     width = "98%",
                     height = "98%",
                     halign = labelAlign,

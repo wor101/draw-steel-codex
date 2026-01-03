@@ -26,7 +26,8 @@ function CBAncestryDetail._navPanel()
         data = { category = "lore" },
     })
     local changeButton = _makeDetailNavButton(SELECTOR, {
-        classes = {"changeAncestry"},
+        styles = CBStyles.SelectorButtonOverrides(),
+        classes = {"changeAncestry", "destructive"},
         text = "Change Ancestry",
         data = { category = "change" },
         press = function(element)

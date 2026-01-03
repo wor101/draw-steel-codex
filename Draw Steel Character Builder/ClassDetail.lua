@@ -31,7 +31,7 @@ function CBClassDetail._navPanel()
         data = { category = INITIAL_CATEGORY },
     })
     local changeButton = _makeDetailNavButton(SELECTOR, {
-        classes = {"changeClass"},
+        classes = {"changeClass", "destructive"},
         text = "Change Class",
         data = { category = "change" },
         press = function(element)

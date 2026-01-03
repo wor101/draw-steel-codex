@@ -142,7 +142,7 @@ function CBCareerDetail._navPanel()
     })
 
     local changeButton = _makeDetailNavButton(SELECTOR, {
-        classes = {"changeCareer"},
+        classes = {"changeCareer", "destructive"},
         text = string.format("Change %s", GameSystem.BackgroundName),
         data = { category = "change" },
         press = function(element)
