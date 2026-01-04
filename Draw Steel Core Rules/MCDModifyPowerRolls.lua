@@ -76,10 +76,40 @@ local function BreakTextIntoTiers(text)
     return result
 end
 
-local function AppendTieredText(tieredText, text)
-    if trim(text) == "" then
+local AppendTieredText
+AppendTieredText = function(tieredText, text)
+    text = trim(text)
+    if text == "" then
         return tieredText
     end
+
+    local entries = string.split(text, ";")
+    if entries ~= nil and #entries > 1 then
+        for _,entry in ipairs(entries) do
+            tieredText = AppendTieredText(tieredText, trim(entry))
+        end
+
+        return tieredText
+    end
+
+    local damageMatch = regex.MatchGroups(text, "^(?<damage>\\+?-?\\d+)\\s+(?<damageType>[a-zA-Z]+\\s+)?damage$")
+    if damageMatch ~= nil then
+        if damageMatch.damageType ~= nil then
+            local damageType = trim(damageMatch.damageType)
+            local existingDamageMatch = regex.MatchGroups(tieredText, "(?<prefix>.*?)(?<damage>\\+?-?\\d+)\\s+" .. damageType .. "damage(?<suffix>.*)$")
+            if existingDamageMatch ~= nil then
+                local totalDamage = tonumber(existingDamageMatch.damage) + tonumber(damageMatch.damage)
+                return string.format("%s%d %s damage%s", existingDamageMatch.prefix, totalDamage, damageType, existingDamageMatch.suffix)
+            end
+        else
+            local existingDamageMatch = regex.MatchGroups(tieredText, "(?<prefix>.*?)(?<damage>\\+?-?\\d+)\\s+damage(?<suffix>.*)$")
+            if existingDamageMatch ~= nil then
+                local totalDamage = tonumber(existingDamageMatch.damage) + tonumber(damageMatch.damage)
+                return string.format("%s%d damage%s", existingDamageMatch.prefix, totalDamage, existingDamageMatch.suffix)
+            end
+        end
+    end
+
     return string.format("%s; %s", tieredText, text)
 end
 
@@ -733,7 +763,7 @@ CharacterModifier.TypeInfo.power = {
         end
 
         if self:has_key("addText") and trim(self.addText) ~= "" then
-            local tieredText = BreakTextIntoTiers(self.addText)
+            local tieredText = BreakTextIntoTiers(StringInterpolateGoblinScript(self.addText, lookupFunction))
             for i,tier in ipairs(rollProperties.tiers) do
                 rollProperties.tiers[i] = AppendTieredText(tier, tieredText[i])
             end
@@ -741,7 +771,7 @@ CharacterModifier.TypeInfo.power = {
 
         if self:has_key("replacePattern") and trim(self.replacePattern) ~= "" and
            self:has_key("replaceText") and trim(self.replaceText) ~= "" then
-            local tieredText = BreakTextIntoTiers(self.replaceText)
+            local tieredText = BreakTextIntoTiers(StringInterpolateGoblinScript(self.replaceText, lookupFunction))
             for i,tier in ipairs(rollProperties.tiers) do
                 rollProperties.tiers[i] = string.replace_insensitive(rollProperties.tiers[i], self.replacePattern, tieredText[i])
             end

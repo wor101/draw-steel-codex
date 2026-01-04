@@ -289,6 +289,9 @@ end
 --- Returns the builder controller
 --- @return Panel
 function CharacterBuilder._getController(element)
+    if element == nil or not element.valid then
+        return nil
+    end
     if element.data == nil then element.data = {} end
     if element.data.controller == nil then
         element.data.controller = element:FindParentWithClass(CharacterBuilder.CONTROLLER_CLASS)

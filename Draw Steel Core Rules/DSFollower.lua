@@ -11,10 +11,11 @@ function follower.CreateNew(followerType)
     local result = follower.new{
 		cr = 1,
 
+        role = "follower",
         followerType = followerType or "artisan",
         availableRolls = 0,
 
-		monster_type = 'Monster', --this is the specific type of monster. e.g. Adult Black Dragon
+		monster_type = 'Follower', --this is the specific type of monster. e.g. Adult Black Dragon
 		monster_category = 'Monster', --this is the "Type" of monster. e.g. Dragon
 
 

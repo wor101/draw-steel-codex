@@ -1845,13 +1845,39 @@ local CreateBestiaryFolder = function(nodeid)
             height = 24,
             hover = gui.Tooltip("Create a bestiary entry"),
             press = function(element)
-                local guid = assets:CreateBestiaryEntry()
+                local menuItems = {}
+                local parentElement = element
 
-                local newMonster = assets.monsters[guid]
-                newMonster.properties = monster.CreateNew()
+                menuItems[#menuItems + 1] = {
+                    text = 'Create Monster',
+                    click = function(element)
+                        local guid = assets:CreateBestiaryEntry()
 
-                newMonster:Upload()
+                        local newMonster = assets.monsters[guid]
+                        newMonster.properties = monster.CreateNew()
 
+                        newMonster:Upload()
+
+                        parentElement.popup = nil
+                    end,
+                }
+                menuItems[#menuItems + 1] = {
+                    text = "Create Follower",
+                    click = function(element)
+                        local guid = assets:CreateBestiaryEntry()
+
+                        local newFollower = assets.monsters[guid]
+                        newFollower.properties = follower.CreateNew()
+
+                        newFollower:Upload()
+
+                        parentElement.popup = nil
+                    end,
+                }
+
+                element.popup = gui.ContextMenu {
+                    entries = menuItems,
+                }
             end,
         }
 
