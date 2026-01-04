@@ -2571,8 +2571,9 @@ mod.shared.ShowPDFViewerDialog = function(doc, starting_page)
                 height = 16,
                 valign = "center",
                 escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
-                click = function(element)
+                press = function(element)
                     gui.CloseModal()
+                    
                 end,
             },
         },
