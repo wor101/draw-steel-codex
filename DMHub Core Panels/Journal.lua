@@ -989,6 +989,7 @@ local function MakeRecentDocumentPanel(documentnumber)
         halign = "center",
 
         click = function(element)
+            audio.FireSoundEvent("Mouse.Click")
             CustomDocument.OpenContent(documents[documentnumber])
             element.parent.tooltip = nil
         end,
@@ -1001,6 +1002,9 @@ local function MakeRecentDocumentPanel(documentnumber)
         end,
 
         hover = function(element)
+
+            audio.FireSoundEvent("Mouse.Hover")
+
             element.selfStyle.borderWidth = 2
             element.selfStyle.borderColor = "white"
 
