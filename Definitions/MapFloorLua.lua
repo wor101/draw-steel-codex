@@ -106,6 +106,13 @@ function MapFloorLua:SpawnObjectLocal(objectid, options)
 	-- dummy implementation for documentation purposes only
 end
 
+--- GetAltitudeAtLoc
+--- @param loc any
+--- @return number
+function MapFloorLua:GetAltitudeAtLoc(loc)
+	-- dummy implementation for documentation purposes only
+end
+
 --- ExecutePolygonOperation
 --- @param options any
 --- @return nil

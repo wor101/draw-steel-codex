@@ -62,6 +62,22 @@ function CharacterOngoingEffect.CreateEditor(condid, editorOptions)
 
 		local children = {}
 
+        if devmode() then
+            --the id of the ongoing effect.
+            children[#children+1] = gui.Panel{
+                classes = {'formPanel'},
+                gui.Label{
+                    text = 'ID:',
+                    valign = 'center',
+                    minWidth = 240,
+                },
+                gui.Input{
+                    text = ongoingEffect.id,
+                    editable = false,
+                },
+            }
+        end
+
 		--the name of the ongoingEffect.
 		children[#children+1] = gui.Panel{
 			classes = {'formPanel'},

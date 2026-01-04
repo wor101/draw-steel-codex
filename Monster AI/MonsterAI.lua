@@ -163,7 +163,7 @@ function MonsterAI:PlayTurnCoroutine(initiativeid)
 
                 for _,tok in ipairs(tokens) do
                     local tokenInitiativeId = InitiativeQueue.GetInitiativeId(tok)
-                    if tokenInitiativeId ~= nil and queue.entries[tokenInitiativeId] ~= nil then
+                    if tokenInitiativeId ~= nil and queue.entries[tokenInitiativeId] ~= nil and not tok.properties:IsDead() then
                         if not dmhub.TokensAreFriendly(token, tok) then
                             self.enemyTokens[#self.enemyTokens+1] = tok
 
