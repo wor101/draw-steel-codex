@@ -634,9 +634,9 @@ local function ActionBarDrawer(args)
 
             if args.type == "malice" then
                 local isMonster = g_creature:IsMonster()
-                local isRetainer = g_creature:IsRetainer()
-                resultPanel:SetClass("collapsed", not isMonster or isRetainer)
-                if not isMonster or isRetainer then
+                local isFollower = g_creature:IsFollower()
+                resultPanel:SetClass("collapsed", not isMonster or isFollower)
+                if not isMonster or isFollower then
                     return
                 end
             end
