@@ -408,15 +408,17 @@ function MonsterAI:ExecuteSquadStrike(ability)
                 print("AI:: CHARGE TO", bestOption.charge.x, bestOption.charge.y)
                 local path = squadMember.token:Move(bestOption.charge, {maxCost = 10000, ignoreFalling = false})
                 self.Sleep(1)
-                
             end
 
             local toka = squadMember.token
             local tokb = bestOption.token
-            dmhub.Schedule(0.8, function()
-                rays[#rays+1] = dmhub.MarkLineOfSight(toka, tokb)
-            end)
-            targetPairs[#targetPairs+1] = {a = squadMember.token.charid, b = bestOption.token.charid}
+
+            if toka ~= nil and toka.valid and (not toka.properties:IsDead()) and tokb ~= nil and tokb.valid then
+                dmhub.Schedule(0.8, function()
+                    rays[#rays+1] = dmhub.MarkLineOfSight(toka, tokb)
+                end)
+                targetPairs[#targetPairs+1] = {a = squadMember.token.charid, b = bestOption.token.charid}
+            end
         end
     end
 
