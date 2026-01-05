@@ -80,7 +80,7 @@ function CBKitDetail._overviewPanel()
                     local kit = element.data.kit
                     if hero == nil or kit == nil then return end
                     local levelChoices = hero:GetLevelChoices() or {}
-                    local bonusChoices = levelChoices[kitKey]
+                    local bonusChoices = levelChoices[kitKey] or {}
                     element:SetClass("selected", bonusChoices[element.data.bonusItemId] == kit.id)
                 end,
             }
