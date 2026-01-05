@@ -244,6 +244,11 @@ Commands.next = function()
     end
 
     table.sort(tokens, function(a, b)
+        local desca = creature.GetTokenDescription(a)
+        local descb = creature.GetTokenDescription(b)
+        if desca ~= descb then
+            return desca < descb
+        end
         return a.charid < b.charid
     end)
 

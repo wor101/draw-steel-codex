@@ -3307,6 +3307,10 @@ CreateCharacterPanel = function()
                 multiEditPanel:FireEvent("tokens", tokens)
             end
 
+            table.sort(tokens, function(a,b)
+                return creature.GetTokenDescription(a) < creature.GetTokenDescription(b)
+            end)
+
             for i, token in ipairs(tokens) do
                 local panel = tokenPanels[i]
                 if panel == nil then
