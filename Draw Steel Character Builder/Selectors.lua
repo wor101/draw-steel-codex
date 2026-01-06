@@ -373,6 +373,8 @@ local TEST_DETAIL = [[
 
 ***Thank you** so much for testing this work in progress. We appreciate your effort. Your feedback will help us prepare this feature for release.*
 
+*Seriously, it's well nigh impossible to test what you've built yourself because you know how it's supposed to work and you stick to the script. We need you!*
+
 # Feedback Needed
 
 *We're looking for feedback in the following areas:*
@@ -404,25 +406,23 @@ local TEST_DETAIL = [[
 - Everything
 
 **Character Panel**
-- Description Tab: Everything
-- Builder Tab: Everything
-- Exploration Tab: Everything
+- Description Tab: Everything *(This echoes the content under the Character button.)*
+- Builder Tab: Everything for implemented features *(This keeps track of your selections while building character mechanics.)*
+- Exploration Tab: Skills & Languages
 
 # Known Issues
 
 **User Experience**
-- The "Change X" buttons are unfortunately placed.
-- Long text for overview panels should scroll instead of being truncated.
+- The "Change X" buttons are in unfortunate positions.
 - Culture button opens inconsistently, sometimes requiring multiple clicks. (But its functionality isn't implemented yet.)
 
 **Functionality**
-- Some skill lists still show skills you already have selected.
+- Some skill lists still show skills you already have selected. (*If you find one of these, please let me know how you got to it via a bug report.*)
 - In the selection lists, we sometimes display redundant, empty, or meaningless extra info / description info.
+- Exploration tab should list Perks.
 
 **Styling / UI**
-- Alignment within selection areas looks sort of off unless you have enough items to scroll.
 - Some ability cards do not like to be constrained within parent panels.
-- Panels in overview frames should have clear background spacing in between them.
 - Second tier selection buttons, like after you've selected a class, are displayed in a long (albeit sorted) list instead of categorized.
 
 # Reporing Issues
@@ -469,7 +469,7 @@ local function _testDetail()
 end
 function CBSelectors._test()
     return CBSelectors._makeButton{
-        text = "Testing Info",
+        text = "Testing Info (README)",
         data = { selector = "test" },
     }
 end
