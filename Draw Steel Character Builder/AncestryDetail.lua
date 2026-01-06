@@ -105,7 +105,6 @@ function CBAncestryDetail._overviewPanel()
         gui.Label{
             classes = {"builder-base", "label", "info", "overview"},
             vpad = 6,
-            -- bmargin = 12,
             markdown = true,
             text = CharacterBuilder.STRINGS.ANCESTRY.INTRO,
 
@@ -129,7 +128,6 @@ function CBAncestryDetail._overviewPanel()
         gui.Label{
             classes = {"builder-base", "label", "info", "overview"},
             vpad = 6,
-            -- tmargin = 12,
             bold = false,
             text = CharacterBuilder.STRINGS.ANCESTRY.OVERVIEW,
 

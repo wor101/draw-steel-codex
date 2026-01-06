@@ -508,6 +508,7 @@ function CharacterBuilder._validateRollFaces(rollFaces)
     local validFaces = {2, 3, 6, 8, 10, 12, 20, 100}
     for _, faces in ipairs(validFaces) do
         if faces >= rollFaces then
+            if faces == 10 then return 20 end
             return faces
         end
     end
