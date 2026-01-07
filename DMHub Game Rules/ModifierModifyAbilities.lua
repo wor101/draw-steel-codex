@@ -81,8 +81,8 @@ CharacterModifier.RegisterAbilityModifier
 
 CharacterModifier.RegisterAbilityModifier
 {
-	id = "addkeywords",
-	text = "Add Keywords",
+	id = "modkeywords",
+	text = "Modify Keywords",
 	operations = { "Add", "Set", "Remove" },
 	set = function(modifier, creature, ability, attr)
 		if attr.operation == "Set" then
@@ -447,7 +447,7 @@ CharacterModifier.TypeInfo.modifyability = {
 		for i,attr in ipairs(modifier.attributes) do
 			local info = abilityModifierOptionsById[attr.id]
 			if info ~= nil then
-				if attr.id == "targettype" or attr.id == "addkeywords" then
+				if attr.id == "targettype" or attr.id == "modkeywords" then
 					info.set(modifier, creature, ability, attr)
 				else
 					info.set(modifier, creature, ability, attr.operation, attr.value, attr.condition)
@@ -806,7 +806,7 @@ CharacterModifier.TypeInfo.modifyability = {
 									documentation = info.documentation,
 								},
 							}
-						elseif attr.id == "addkeywords" then
+						elseif attr.id == "modkeywords" then
 							local keywords = attr and attr.keywords or {}
 
 							children[#children+1] = gui.KeywordSelector{
