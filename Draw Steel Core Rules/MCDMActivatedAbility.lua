@@ -1079,6 +1079,7 @@ function ActivatedAbility:Render(options, params)
 
                         },
 
+                        --Type of ability
                         gui.Label{
 
                             text = string.format("<b>%s</b>", self:AbilityTypeDescription()),
@@ -1089,6 +1090,34 @@ function ActivatedAbility:Render(options, params)
                             halign = "left",
                             markdown = true,
                         
+                        },
+
+                        --Implementation chip
+                        gui.Label{
+                            height = "auto",
+                            width = "auto",
+                            pad = 5,
+                            margin = 3,
+                            fontSize = 14,
+                            bgimage = "panels/square.png",
+                            borderColor = Styles.textColor,
+                            bold = true,
+                            border = 1,
+                            text = cond(self:try_get("implementation", 1) == 3, "Full", cond(self:try_get("implementation", 1) == 2, "Partial", "None")),
+                            cornerRadius = 2,
+                            bgcolor = cond(self:try_get("implementation", 1) == 3, "#81c07bff", cond(self:try_get("implementation", 1) == 2, "#ebe375ff", "#ca7272ff")),
+                            color = "black",
+                            hover = function(element)
+                                if self:try_get("implementationDetails") ~= nil and self:try_get("implementationDetails") ~= "" then
+                                    element.tooltip = gui.TooltipFrame(gui.Label{
+                                        text = self:try_get("implementationDetails"),
+                                        width = 300,
+                                        height = "auto",
+                                        wrap = true,
+                                        fontSize = 14,
+                                    }, {})
+                                end
+                            end,
                         },
                     
                     },
