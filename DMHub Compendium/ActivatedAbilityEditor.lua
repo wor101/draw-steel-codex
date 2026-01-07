@@ -854,11 +854,11 @@ function ActivatedAbility:GenerateEditor()
 					classes = "formInput",
 					placeholderText = "Enter Flavor Text...",
 					multiline = true,
-					width = "100%",
+					width = "80%",
 					height = "auto",
 					halign = "center",
 					margin = 8,
-					minHeight = 100,
+					minHeight = 20,
 					textAlignment = "topleft",
 					text = self.flavor,
 					change = function(element)
