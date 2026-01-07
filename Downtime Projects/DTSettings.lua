@@ -4,7 +4,6 @@
 --- @field mod table The Codex mod loading instance
 --- @field documentName string The name of the document used for settings storage
 DTSettings = RegisterGameType("DTSettings")
-DTSettings.__index = DTSettings
 
 -- Module-level document monitor for persistence (timing-critical)
 local mod = dmhub.GetModLoading()
@@ -12,11 +11,11 @@ local documentName = "DTSettings"
 
 --- Creates a new settings manager instance
 --- @return DTSettings instance The new settings manager instance
-function DTSettings:new()
-    local instance = setmetatable({}, self)
-    instance.mod = mod
-    instance.documentName = documentName
-    return instance
+function DTSettings.CreateNew()
+    return DTSettings.new{
+        mod = mod,
+        documentName = documentName,
+    }
 end
 
 --- Initializes the settings document with default structure
@@ -47,7 +46,7 @@ end
 --- Static method to touch the settings document without requiring callers to manage instances
 --- Triggers network refresh by updating the modifiedAt timestamp
 function DTSettings.Touch()
-    local instance = DTSettings:new()
+    local instance = DTSettings.CreateNew()
     instance:TouchDoc()
 end
 

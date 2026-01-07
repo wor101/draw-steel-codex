@@ -20,41 +20,45 @@
 --- @field progressAdjustments table Array of DTAdjustment objects - History of all adjustments made to project progress
 --- @field createdBy string GUID identifier of the user who created this project
 DTProject = RegisterGameType("DTProject")
-DTProject.__index = DTProject
+DTProject.sortOrder = 1
 
 local DEFAULT_LANG_PENALTY = DTConstants.LANGUAGE_PENALTY.NONE.key
 local DEFAULT_STATUS = DTConstants.STATUS.PAUSED.key
+
+DTProject.itemId = ""
+DTProject.title = ""
+DTProject.itemPrerequisite = ""
+DTProject.projectSource = ""
+DTProject.projectSourceLanguagePenalty = DEFAULT_LANG_PENALTY -- Unneeded now?
+DTProject.projectGoal = 1
+DTProject.status = DEFAULT_STATUS
+DTProject.statusReason = "New Project - Ask your Director to review"
+DTProject.milestoneThreshold = 0
+DTProject.createdBy = dmhub.userid
+
+DTProject._cachedProgress = nil        -- Stores the calculated progress value
+DTProject._progressDirty = true        -- Marks cache as needing recalculation
+
+
 
 --- Creates a new downtime project instance
 --- @param sortOrder number The sort order for this project
 --- @param ownerId string The unique identifier of the token that owns this project
 --- @return DTProject instance The new project instance
-function DTProject:new(sortOrder, ownerId)
-    local instance = setmetatable({}, self)
+function DTProject.CreateNew(sortOrder, ownerId)
 
-    instance.id = dmhub.GenerateGuid()
-    instance.ownerId = ownerId
-    instance.sortOrder = sortOrder or 1
-    instance.itemId = ""
-    instance.title = ""
-    instance.itemPrerequisite = ""
-    instance.projectSource = ""
-    instance.projectSourceLanguages = {}
-    instance.projectSourceLanguagePenalty = DEFAULT_LANG_PENALTY -- Unneeded now?
-    instance.testCharacteristics = {}
-    instance.projectGoal = 1
-    instance.status = DEFAULT_STATUS
-    instance.statusReason = "New Project - Ask your Director to review"
-    instance.milestoneThreshold = 0
-    instance.projectRolls = {}
-    instance.progressAdjustments = {}
-    instance.createdBy = dmhub.userid
+    local args = {
+        id = dmhub.GenerateGuid(),
+        ownerId = ownerId,
+        sortOrder = sortOrder or 1,
+        projectSourceLanguages = {},
+        testCharacteristics = {},
+        projectRolls = {},
+        progressAdjustments = {},
+        createdBy = dmhub.userid,
+    }
 
-    -- Progress caching to avoid expensive recalculation on every GetProgress() call
-    instance._cachedProgress = nil        -- Stores the calculated progress value
-    instance._progressDirty = true        -- Marks cache as needing recalculation
-
-    return instance
+    return DTProject.new(args)
 end
 
 --- Gets the identifier of this project

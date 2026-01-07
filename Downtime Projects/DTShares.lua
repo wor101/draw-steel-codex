@@ -4,7 +4,6 @@
 --- @field mod table The Codex mod loading instance
 --- @field documentName string The name of the document used for project shares storage
 DTShares = RegisterGameType("DTShares")
-DTShares.__index = DTShares
 
 -- Module-level document monitor for persistence (timing-critical)
 local mod = dmhub.GetModLoading()
@@ -12,11 +11,11 @@ local documentName = "DTShares"
 
 --- Creates a new project shares manager instance
 --- @return DTShares instance The new project shares manager instance
-function DTShares:new()
-    local instance = setmetatable({}, self)
-    instance.mod = mod
-    instance.documentName = documentName
-    return instance
+function DTShares.CreateNew()
+    return DTShares.new{
+        mod = mod,
+        documentName = documentName,
+    }
 end
 
 --- Gets the path for document monitoring in UI
@@ -236,7 +235,7 @@ end
 --- Static method to touch the settings document without requiring callers to manage instances
 --- Triggers network refresh by updating the modifiedAt timestamp
 function DTShares.Touch()
-    DTShares:new():TouchDoc()
+    DTShares.CreateNew():TouchDoc()
 end
 
 --- Touches the document to trigger network refresh
@@ -281,13 +280,13 @@ end
 
 if DTConstants.DEVMODE then
     Commands.thcdtshares = function(args)
-        local shares = DTShares:new()
+        local shares = DTShares.CreateNew()
         if shares then
             print("THC:: SHARES::", json(shares:GetShares()))
         end
     end
 
     Commands.thcdtclearshares = function(args)
-        DTShares:new():InitializeDocument()
+        DTShares.CreateNew():InitializeDocument()
     end
 end

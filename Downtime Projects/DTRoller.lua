@@ -8,44 +8,41 @@
 --- @field mentorId string|nil The id of the object's mentor if a follower
 --- @field _adjustRolls fun(self: DTRoller, amount: number) Adjusts available rolls (private)
 DTRoller = RegisterGameType("DTRoller")
-DTRoller.__index = DTRoller
 
 --- Creates a new downtime roller instance
 --- @param object character|follower|DTRoll The entity to abstract for the roll
 --- @param mentorId? string The id of the object's mentor
 --- @return DTRoller|nil instance The new downtime roller instance
-function DTRoller:new(object, mentorId)
-    local instance = setmetatable({}, self)
+function DTRoller.CreateNew(object, mentorId)
+    local instance = DTRoller.new{}
 
     local _object, foundMentorId = DTRoller._validateConstructor(object)
+    if not _object then return nil end
     if foundMentorId == nil then foundMentorId = mentorId end
-    if _object then
-        local languages = DTBusinessRules.GetGlobalLanguages()
 
-        local token = dmhub.LookupToken(_object)
-        instance.name = (token.name and #token.name > 0 and token.name) or "(unnamed character)"
-        instance.characteristics = DTRoller._charAttrsToList(_object)
-        instance.languages = DTHelpers.MergeFlagLists(languages, _object:LanguagesKnown(), true)
-        instance.skills = DTRoller._charSkillsToList(_object)
-        instance.object = _object
-        if DTRoller._isCharacterType(_object) then
-            instance._adjustRolls = function(self, amount)
-                local downtimeInfo = self.object:GetDowntimeInfo()
-                if downtimeInfo then
-                    downtimeInfo:SetAvailableRolls(downtimeInfo:GetAvailableRolls() + amount)
-                end
-            end
-        elseif DTRoller._isFollowerType(_object) then
-            instance.mentorId = foundMentorId
-            instance._adjustRolls = function(self, amount)
-                self.object:GrantRolls(amount)
+    local languages = DTBusinessRules.GetGlobalLanguages()
+
+    local token = dmhub.LookupToken(_object)
+    instance.name = (token.name and #token.name > 0 and token.name) or "(unnamed character)"
+    instance.characteristics = DTRoller._charAttrsToList(_object)
+    instance.languages = DTHelpers.MergeFlagLists(languages, _object:LanguagesKnown(), true)
+    instance.skills = DTRoller._charSkillsToList(_object)
+    instance.object = _object
+    if DTRoller._isCharacterType(_object) then
+        instance._adjustRolls = function(self, amount)
+            local downtimeInfo = self.object:GetDowntimeInfo()
+            if downtimeInfo then
+                downtimeInfo:SetAvailableRolls(downtimeInfo:GetAvailableRolls() + amount)
             end
         end
-
-        return instance
+    elseif DTRoller._isFollowerType(_object) then
+        instance.mentorId = foundMentorId
+        instance._adjustRolls = function(self, amount)
+            self.object:GrantRolls(amount)
+        end
     end
 
-    return nil
+    return instance
 end
 
 --- Return the roller's name

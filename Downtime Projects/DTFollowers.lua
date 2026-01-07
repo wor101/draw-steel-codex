@@ -2,15 +2,15 @@
 --- @class DTFollowers
 --- @field followers table List of followers as class objects
 DTFollowers = RegisterGameType("DTFollowers")
-DTFollowers.__index = DTFollowers
 
 --- Creates a new downtime followers instance
 --- @param followers table The followers on the creature
 --- @param token CharacterToken|nil The DMHub token that is the parent of the creature
 --- @return DTFollowers instance The new downtime followers instance
-function DTFollowers:new(followers, token)
-    local instance = setmetatable({}, self)
-    instance.followers = {}
+function DTFollowers.CreateNew(followers, token)
+    local instance = DTFollowers.new{
+        followers = {}
+    }
 
     if followers and type(followers) == "table" and next(followers) then
         for followerId,_ in pairs(followers) do
@@ -68,7 +68,7 @@ end
 creature.GetDowntimeFollowers = function(self)
     if self:IsHero() then
         local token = dmhub.LookupToken(self)
-        return DTFollowers:new(self:try_get(DTConstants.FOLLOWERS_STORAGE_KEY), token)
+        return DTFollowers.CreateNew(self:try_get(DTConstants.FOLLOWERS_STORAGE_KEY), token)
     end
     return nil
 end

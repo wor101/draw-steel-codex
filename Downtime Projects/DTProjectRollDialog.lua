@@ -153,7 +153,7 @@ function DTProjectRollDialog._createPanel(options)
                     if not isFirstRoll then
                         element:FireEventTree("updateTitle", "Rolling a Breakthrough!")
                     end
-                    local newRoll = DTRoll:new()
+                    local newRoll = DTRoll.CreateNew()
                     dmhub.Roll {
                         guid = dmhub.GenerateGuid(),
                         roll = rollString,

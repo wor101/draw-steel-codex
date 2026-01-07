@@ -17,7 +17,7 @@ local function _clearTokenData(t)
             }
         end
         -- Wipe shared projects
-        local shares = DTShares:new()
+        local shares = DTShares.CreateNew()
         if shares then shares:RevokeAll(t.id) end
     end
 end
@@ -40,14 +40,14 @@ local function _clearAllData()
     end
 
     chat.Send("Resetting Downtime settings.")
-    DTShares:new():InitializeDocument()
-    DTSettings:new():InitializeDocument()
+    DTShares.CreateNew():InitializeDocument()
+    DTSettings.CreateNew():InitializeDocument()
 end
 
 if dmhub.isDM then
     -- Register the downtime panel
-    local downtimeSettings = DTSettings:new()
-    local directorPanel = DTDirectorPanel:new(downtimeSettings)
+    local downtimeSettings = DTSettings.CreateNew()
+    local directorPanel = DTDirectorPanel.new{ downtimeSettings = downtimeSettings }
     if directorPanel then
         directorPanel:Register()
     end

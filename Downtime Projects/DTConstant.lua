@@ -5,19 +5,16 @@
 --- @field sortOrder number Display order for dropdown lists and UI sorting
 --- @field displayText string User-friendly display text for UI presentation
 DTConstant = RegisterGameType("DTConstant")
-DTConstant.__index = DTConstant
+DTConstant.key = ""
+DTConstant.sortOrder = 0
+DTConstant.displayText = ""
 
---- Creates a new DTConstant instance
---- @param key string The internal key value (e.g., "ACTIVE", "PAUSED")
---- @param sortOrder number Display order for sorting (lower numbers appear first)
---- @param displayText string User-friendly text for display (e.g., "Active", "Paused")
---- @return DTConstant instance The new DTConstant instance
-function DTConstant:new(key, sortOrder, displayText)
-    local instance = setmetatable({}, self)
-    instance.key = key
-    instance.sortOrder = sortOrder
-    instance.displayText = displayText
-    return instance
+function DTConstant.CreateNew(key, sortOrder, displayText)
+    return DTConstant.new{
+        key = key,
+        sortOrder = sortOrder,
+        displayText = displayText
+    }
 end
 
 --- Returns the key when the constant is converted to a string

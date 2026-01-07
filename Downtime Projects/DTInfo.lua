@@ -5,17 +5,14 @@
 --- @field availableRolls number Counter that the Director increments via Grant Rolls to All
 --- @field downtimeProjects DTProject[] The list of DTProject records for the character
 DTInfo = RegisterGameType("DTInfo")
-DTInfo.__index = DTInfo
+DTInfo.availableRolls = 0
 
 --- Creates a new downtime info instance
 --- @return DTInfo instance The new downtime info instance
-function DTInfo:new()
-    local instance = setmetatable({}, self)
-
-    instance.availableRolls = 0
-    instance.downtimeProjects = {}
-
-    return instance
+function DTInfo.CreateNew()
+    return DTInfo.new{
+        downtimeProjects = {}
+    }
 end
 
 --- Gets the number of available rolls
@@ -85,7 +82,7 @@ end
 --- @return DTProject project The newly created project
 function DTInfo:AddProject(ownerId)
     local nextOrder = self:_maxProjectOrder() + 1
-    local project = DTProject:new(nextOrder, ownerId)
+    local project = DTProject.CreateNew(nextOrder, ownerId)
     self:GetProjects()[project:GetID()] = project
     return project
 end
@@ -125,7 +122,7 @@ creature.GetDowntimeInfo = function(self)
     if downtimeInfo == nil then
         local token = dmhub.LookupToken(self)
         if token then
-            downtimeInfo = DTInfo:new()
+            downtimeInfo = DTInfo.CreateNew()
             token:ModifyProperties{
                 description = "Adding Downtime Info",
                 undoable = false,

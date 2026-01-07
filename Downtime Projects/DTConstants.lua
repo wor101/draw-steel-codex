@@ -16,32 +16,34 @@ DTConstants.BREAKTHROUGH_MIN = 19
 
 --- Valid language penalty values used in downtime projects and rolls
 DTConstants.LANGUAGE_PENALTY = {
-    DTConstant:new("NONE", 1, "None"),
-    DTConstant:new("RELATED", 2, "Related"),
-    DTConstant:new("UNKNOWN", 3, "Unknown")
+    DTConstant.CreateNew("NONE", 1, "None"),
+    DTConstant.CreateNew("RELATED", 2, "Related"),
+    DTConstant.CreateNew("UNKNOWN", 3, "Unknown")
 }
 
 --- Valid test characteristics used in downtime projects
 DTConstants.CHARACTERISTICS = {
-    DTConstant:new("mgt", 1, "Might"),
-    DTConstant:new("agl", 2, "Agility"),
-    DTConstant:new("rea", 3, "Reason"),
-    DTConstant:new("inu", 4, "Intuition"),
-    DTConstant:new("prs", 5, "Presence")
+    DTConstant.CreateNew("mgt", 1, "Might"),
+    DTConstant.CreateNew("agl", 2, "Agility"),
+    DTConstant.CreateNew("rea", 3, "Reason"),
+    DTConstant.CreateNew("inu", 4, "Intuition"),
+    DTConstant.CreateNew("prs", 5, "Presence")
 }
+
+print("TYPE:: CHARACTERISTICS = ", DTConstants.CHARACTERISTICS[1].typeName)
 
 --- Valid status values for downtime projects
 DTConstants.STATUS = {
-    DTConstant:new("ACTIVE", 1, "Active"),
-    DTConstant:new("PAUSED", 2, "Paused"),
-    DTConstant:new("MILESTONE", 3, "Milestone"),
-    DTConstant:new("COMPLETE", 4, "Complete")
+    DTConstant.CreateNew("ACTIVE", 1, "Active"),
+    DTConstant.CreateNew("PAUSED", 2, "Paused"),
+    DTConstant.CreateNew("MILESTONE", 3, "Milestone"),
+    DTConstant.CreateNew("COMPLETE", 4, "Complete")
 }
 
 --- Valid follower types
 DTConstants.FOLLOWER_TYPE = {
-    DTConstant:new("artisan", 1, "Artisan"),
-    DTConstant:new("sage", 2, "Sage")
+    DTConstant.CreateNew("artisan", 1, "Artisan"),
+    DTConstant.CreateNew("sage", 2, "Sage")
 }
 
 --- Convenience accessors for direct access to specific constants

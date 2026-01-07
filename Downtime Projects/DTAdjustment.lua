@@ -3,18 +3,12 @@
 --- @class DTAdjustment
 --- @field reason string Required. The reason for the adjustment
 DTAdjustment = RegisterGameType("DTAdjustment", "DTProgressItem")
-DTAdjustment.__index = DTAdjustment
+DTAdjustment.reason = ""
 
---- Creates a new progress adjustment instance
---- @param amount? number Progress points to add (negative to subtract)
---- @param reason? string The reason for the adjustment
---- @return DTAdjustment|DTProgressItem instance The new progress adjustment instance
-function DTAdjustment:new(amount, reason)
-    local instance = setmetatable(DTProgressItem:new(amount), self)
-
-    instance.reason = reason or ""
-
-    return instance
+function DTAdjustment.CreateNew(args)
+    args = args or {}
+    args.id = args.id or dmhub.GenerateGuid()
+    return DTAdjustment.new(args)
 end
 
 --- Sets the reason for the adjustment

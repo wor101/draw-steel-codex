@@ -1,6 +1,6 @@
 --- Project roll record for tracking dice rolls made on downtime projects
 --- Records all details of a roll including modifiers, results, and context
---- @class DTRoll
+--- @class DTRoll : DTProgressItem
 --- @field rollString string The text representation of the roll
 --- @field rolledBy string The name of the character or follower responsible for the roll
 --- @field rolledById string The unique identifier of the token responsible for the roll
@@ -10,25 +10,19 @@
 --- @field rollGuid string The VTT's GUID for the roll instance
 --- @field audit string Text representation of the roll setup
 DTRoll = RegisterGameType("DTRoll", "DTProgressItem")
-DTRoll.__index = DTRoll
+DTRoll.rollString = ""
+DTRoll.rolledBy = ""
+DTRoll.rolledById = ""
+DTRoll.rolledByFollowerId = nil
+DTRoll.naturalRoll = 0
+DTRoll.breakthrough = false
+DTRoll.rollGuid = ""
+DTRoll.audit = ""
 
---- Creates a new project roll instance
---- @param naturalRoll? number The unmodified die roll result
---- @param modifiedRoll? number The final roll result after applying all modifiers
---- @return DTRoll|DTProgressItem instance The new project roll instance
-function DTRoll:new(naturalRoll, modifiedRoll)
-    local instance = setmetatable(DTProgressItem:new(modifiedRoll), self)
-
-    instance.rollString = ""
-    instance.rolledBy = ""
-    instance.rolledById = ""
-    instance.rolledByFollowerId = nil
-    instance.naturalRoll = math.floor(naturalRoll or 0)
-    instance.breakthrough = false
-    instance.rollGuid = ""
-    instance.audit = ""
-
-    return instance
+function DTRoll.CreateNew(args)
+    args = args or {}
+    args.id = args.id or dmhub.GenerateGuid()
+    return DTRoll.new(args)
 end
 
 --- Sets the progress amount for this item

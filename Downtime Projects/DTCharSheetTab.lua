@@ -3,14 +3,6 @@
 --- @class DTCharSheetTab
 --- @field _instance DTCharSheetTab The singleton instance of this class
 DTCharSheetTab = RegisterGameType("DTCharSheetTab")
-DTCharSheetTab.__index = DTCharSheetTab
-
---- Creates a new DTCharSheetTab instance
---- @return DTCharSheetTab instance The new instance
-function DTCharSheetTab:new()
-    local instance = setmetatable({}, self)
-    return instance
-end
 
 --- Creates the main downtime panel for the character sheet
 --- @return table|nil panel The GUI panel containing downtime content
@@ -120,7 +112,7 @@ function DTCharSheetTab._createHeaderPanel()
                 end,
                 refreshToken = function(element)
                     local status = "UNKNOWN"
-                    local settings = DTSettings:new()
+                    local settings = DTSettings.CreateNew()
                     if settings then
                         status = settings:GetPauseRolls() and "PAUSED" or "AVAILABLE"
                     end
@@ -148,7 +140,7 @@ function DTCharSheetTab._createHeaderPanel()
                 end,
                 refreshToken = function(element)
                     local reason = ""
-                    local settings = DTSettings:new()
+                    local settings = DTSettings.CreateNew()
                     if settings then
                         if settings:GetPauseRolls() then
                             reason = "(<i>" .. settings:GetPauseRollsReason() .. "</i>)"
@@ -512,7 +504,7 @@ function DTCharSheetTab._refreshProjectsList(element)
             end
         end
         if not foundPanel then
-            panels[#panels + 1] = DTProjectEditor:new(project):CreateEditorPanel()
+            panels[#panels + 1] = DTProjectEditor.new{project = project}:CreateEditorPanel()
         end
     end
 
@@ -526,7 +518,7 @@ function DTCharSheetTab._refreshProjectsList(element)
             end
         end
         if not foundPanel then
-            panels[#panels + 1] = DTProjectEditor:new(entry.project):CreateSharedProjectPanel(entry.ownerName, entry.ownerId, entry.ownerColor)
+            panels[#panels + 1] = DTProjectEditor.new{project = entry.project}:CreateSharedProjectPanel(entry.ownerName, entry.ownerId, entry.ownerColor)
         end
     end
 

@@ -1,7 +1,6 @@
 --- Share dialog for sharing downtime projects with other characters
 --- @class DTShareDialog
 DTShareDialog = RegisterGameType("DTShareDialog")
-DTShareDialog.__index = DTShareDialog
 
 --- Creates a share dialog for AddChild usage
 --- @param options table Table with data, options, and callback functions

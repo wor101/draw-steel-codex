@@ -7,21 +7,16 @@
 --- @field commitBy string GUID of user who committed this item
 --- @field serverTime number VTT server time when roll was committed
 DTProgressItem = RegisterGameType("DTProgressItem")
-DTProgressItem.__index = DTProgressItem
+DTProgressItem.id = ""
+DTProgressItem.amount = 0
+DTProgressItem.commitDate = ""
+DTProgressItem.commitBy = ""
+DTProgressItem.serverTime = 0
 
---- Creates a new progress item instance
---- @param amount? number The progress amount for this item
---- @return DTProgressItem instance The new progress item instance
-function DTProgressItem:new(amount)
-    local instance = setmetatable({}, self)
-
-    instance.id = dmhub.GenerateGuid()
-    instance.amount = amount or 0
-    instance.commitDate = ""
-    instance.commitBy = ""
-    instance.serverTime = 0
-
-    return instance
+function DTProgressItem.CreateNew(args)
+    args = args or {}
+    args.id = args.id or dmhub.GenerateGuid()
+    return DTProgressItem.new(args)
 end
 
 --- Gets the identifier of this item

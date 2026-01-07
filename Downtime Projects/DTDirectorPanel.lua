@@ -33,7 +33,6 @@ local characterTriangleStyles = {
 --- @class DTDirectorPanel
 --- @field downtimeSettings DTSettings The downtime settings for shared data management
 DTDirectorPanel = RegisterGameType("DTDirectorPanel")
-DTDirectorPanel.__index = DTDirectorPanel
 
 --- Clean toggle-style tab styles (no backgrounds, borders, or lines)
 DTDirectorPanel.TabsStyles = {
@@ -86,18 +85,6 @@ DTDirectorPanel.TabsStyles = {
         transitionTime = 0.2,
     },
 }
-
---- Creates a new Downtime Director Panel instance
---- @param downtimeSettings DTSettings The downtime settings instance for shared data management
---- @return DTDirectorPanel|nil instance The new panel instance
-function DTDirectorPanel:new(downtimeSettings)
-    if not downtimeSettings then return nil end
-
-    local instance = setmetatable({}, self)
-    instance.downtimeSettings = downtimeSettings
-
-    return instance
-end
 
 --- Registers the dockable panel with the Codex UI system
 --- Creates and configures the main downtime director interface
@@ -223,7 +210,7 @@ function DTDirectorPanel:_buildHeaderPanel()
                             gui.Tooltip("Grant rolls")(element)
                         end,
                         click = function()
-                            DTGrantRollsDialog:new():ShowDialog()
+                            DTGrantRollsDialog.new{}:ShowDialog()
                         end,
                     },
                 }

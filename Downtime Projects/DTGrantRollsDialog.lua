@@ -2,14 +2,6 @@
 --- Provides interface for selecting characters and specifying number of rolls to grant
 --- @class DTGrantRollsDialog
 DTGrantRollsDialog = RegisterGameType("DTGrantRollsDialog")
-DTGrantRollsDialog.__index = DTGrantRollsDialog
-
---- Creates a new Grant Rolls Dialog instance
---- @return DTGrantRollsDialog instance The new dialog instance
-function DTGrantRollsDialog:new()
-    local instance = setmetatable({}, self)
-    return instance
-end
 
 --- Shows the grant rolls dialog modal
 function DTGrantRollsDialog:ShowDialog()

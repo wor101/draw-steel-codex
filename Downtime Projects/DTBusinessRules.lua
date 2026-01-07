@@ -212,7 +212,7 @@ function DTBusinessRules.GetSharedProjectsForRecipient(recipientId)
     end
 
     -- Get shares for this recipient
-    local shares = DTShares:new()
+    local shares = DTShares.CreateNew()
     local sharedWith = shares:GetSharedWith(recipientId)
     if not sharedWith or not next(sharedWith) then
         return {}

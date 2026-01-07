@@ -3,7 +3,6 @@ local mod = dmhub.GetModLoading()
 --- Select Item Dialog for choosing a crafting item
 --- @class DTSelectItemDialog
 DTSelectItemDialog = RegisterGameType("DTSelectItemDialog")
-DTSelectItemDialog.__index = DTSelectItemDialog
 
 --- Creates a select item dialog for AddChild usage
 --- @param callbacks table Table with confirm and cancel callback functions

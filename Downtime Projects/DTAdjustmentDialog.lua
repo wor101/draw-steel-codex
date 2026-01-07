@@ -2,7 +2,6 @@
 --- Provides consistent UI for editing adjustment amount and reason with validation
 --- @class DTAdjustmentDialog
 DTAdjustmentDialog = RegisterGameType("DTAdjustmentDialog")
-DTAdjustmentDialog.__index = DTAdjustmentDialog
 
 --- Creates a progress adjustment edit dialog for AddChild usage
 --- @param adjustment DTAdjustment The adjustment instance to edit

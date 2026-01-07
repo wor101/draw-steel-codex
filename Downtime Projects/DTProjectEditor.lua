@@ -3,18 +3,8 @@
 --- @class DTProjectEditor
 --- @field project DTProject The project being edited
 DTProjectEditor = RegisterGameType("DTProjectEditor")
-DTProjectEditor.__index = DTProjectEditor
 
 local mod = dmhub.GetModLoading()
-
---- Creates a new DTProjectEditor instance
---- @param project DTProject The project to edit
---- @return DTProjectEditor instance The new editor instance
-function DTProjectEditor:new(project)
-    local instance = setmetatable({}, self)
-    instance.project = project
-    return instance
-end
 
 --- Gets the fresh project data from the character sheet
 --- @return DTProject|nil project The current project or nil if not found
@@ -1276,7 +1266,7 @@ function DTProjectEditor:_createAdjustmentsPanel()
                                 click = function(element)
                                     local controller = element:FindParentWithClass("projectController")
                                     if controller then
-                                        local newAdjustment = DTAdjustment:new(0, "")
+                                        local newAdjustment = DTAdjustment.CreateNew()
                                         CharacterSheet.instance:AddChild(DTAdjustmentDialog.CreateAsChild(newAdjustment, {
                                             confirm = function()
                                                 controller:FireEvent("addAdjustment", newAdjustment)
@@ -1512,7 +1502,7 @@ function DTProjectEditor:_createRollButton(options)
                     local followerRolls = element.data.followerRolls(element)
                     local characterRolls = element.data.characterRolls(element)
                     if followerRolls + characterRolls > 0 then
-                        local settings = DTSettings:new()
+                        local settings = DTSettings.CreateNew()
                         if settings then
                             if settings:GetPauseRolls() then
                                 element.data.tooltipText = "Rolling is currently paused"
@@ -1577,7 +1567,7 @@ function DTProjectEditor:_createRollButton(options)
 
                 -- If no followers with rolls, go straight to roll dialog with character
                 if not hasFollowersWithRolls then
-                    local roller = DTRoller:new(token.properties)
+                    local roller = DTRoller.CreateNew(token.properties)
                     showRollDialog(roller)
                 else
                     -- Build context menu with character + followers
@@ -1586,7 +1576,7 @@ function DTProjectEditor:_createRollButton(options)
 
                     -- Add character as first menu item
                     if element.data.characterRolls(element) > 0 then
-                        local characterRoller = DTRoller:new(token.properties)
+                        local characterRoller = DTRoller.CreateNew(token.properties)
                         menuItems[#menuItems + 1] = {
                             text = characterRoller:GetName(),
                             click = function(menuElement)
@@ -1600,7 +1590,7 @@ function DTProjectEditor:_createRollButton(options)
 
                     -- Add each follower with rolls (iterate keyed table with pairs)
                     for _,follower in pairs(followersWithRolls) do
-                        local followerRoller = DTRoller:new(follower.properties, token.id)
+                        local followerRoller = DTRoller.CreateNew(follower.properties, token.id)
                         if followerRoller then
                             menuItems[#menuItems + 1] = {
                                 text = followerRoller:GetName(),
@@ -1676,7 +1666,7 @@ function DTProjectEditor:_createOwnedProjectButtons()
 
             local project = element.data.getProject(element)
             local controller = element:FindParentWithClass("projectController")
-            local shareData = DTShares:new()
+            local shareData = DTShares.CreateNew()
             if project and controller and shareData then
 
                 -- Build the list of characters to show
@@ -1748,7 +1738,7 @@ function DTProjectEditor:_createSharedProjectButtons(ownerName, ownerId)
                     "Cancel",
                     {
                         confirm = function()
-                            local shares = DTShares:new()
+                            local shares = DTShares.CreateNew()
                             if shares then
                                 shares:Revoke(ownerId, CharacterSheet.instance.data.info.token.id, project:GetID())
                             end
@@ -1942,7 +1932,7 @@ function DTProjectEditor:CreateEditorPanel()
             if downtimeController then
                 local roll = element.data.project:GetRoll(rollId)
                 if roll then
-                    local roller = DTRoller:new(roll)
+                    local roller = DTRoller.CreateNew(roll)
                     if roller then
                         element.data.project:RemoveRoll(rollId)
                         downtimeController:FireEvent("adjustRolls", 1, roller)
