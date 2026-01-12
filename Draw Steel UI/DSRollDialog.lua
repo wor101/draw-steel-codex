@@ -2404,6 +2404,7 @@ function GameHud.CreateRollDialog(self)
 
         if needReroll then
             rollAgainButton:FireEvent("press")
+            return true
         end
     end
 
@@ -2806,11 +2807,13 @@ function GameHud.CreateRollDialog(self)
                         local TryToProceed
                         local m_timerState = nil
 
+
                         TryToProceed = function()
                             if resultPanel.valid and showingDialog then
 
                                 local tokens = dmhub.allTokens
                                 local haveTriggers = false
+
 
                                 for _,tok in ipairs(tokens) do
                                     if tok.playerControlled then
@@ -2823,6 +2826,21 @@ function GameHud.CreateRollDialog(self)
                                         end
                                     end
                                 end
+
+                                --check to make sure we don't need to reroll.
+                                if not haveTriggers then
+                                    triggersContainer:FireEvent("charactersUpdated")
+                                    CalculateRollText()
+                                    local rerolling = RecalculateMultiTargets()
+                                    if rerolling then
+                                        --we need to reroll.
+                                        dmhub.Schedule(3.0, function()
+                                            TryToProceed()
+                                        end)
+                                        return
+                                    end
+                                end
+
 
                                 if haveTriggers and (m_timerState == nil or (dmhub.Time() < m_timerState.expire) or m_timerState.paused) then
                                     local t = dmhub.Time()
