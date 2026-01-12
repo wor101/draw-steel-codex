@@ -920,6 +920,7 @@ dmhub.RegisterEventHandler("refreshTables", function(keys)
                             targetToken.properties:InflictCondition(k, {
                                 duration = duration,
                                 sourceDescription = string.format("Inflicted by %s's <b>%s</b> ability", creature.GetTokenDescription(casterToken), ability.name),
+                                riders = riders,
                                 casterInfo = {
                                     tokenid = casterToken.charid,
                                 },

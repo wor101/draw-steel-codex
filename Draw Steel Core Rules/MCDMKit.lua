@@ -557,6 +557,20 @@ ApplyBonusesFromKit = function(kit, ability, modificationLog, additionFunction)
 	if ability.keywords["Melee"] and (ability.targetType == "cube" or not ability.keywords["Area"]) then
 		range = kit.reach
 		rangeDescription = "reach"
+
+        --if we have a range text override, we need to modify it to reflect reach increase
+        --this makes it so abilities such as Get In Get Out (Shadow ability which allows shifting before the attack) work correctly
+        local rangeTextOverride = ability:try_get("rangeTextOverride")
+        if rangeTextOverride ~= nil and kit.reach > 0 then
+            ability.rangeTextOverride = rangeTextOverride:gsub("^(Melee%s+)(%d+)(.*)$", function(prefix, numStr, suffix)
+                local num = tonumber(numStr)
+                if num ~= nil then
+                    return string.format("%s%d%s", prefix, additionFunction(num, kit.reach), suffix)
+                else
+                    return rangeTextOverride
+                end
+            end)
+        end
 	elseif ability.keywords["Ranged"] then
 		range = kit.range
 		rangeDescription = "range"

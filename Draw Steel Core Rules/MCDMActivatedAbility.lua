@@ -659,7 +659,7 @@ function ActivatedAbility:Render(options, params)
 
     local resourceTable = dmhub.GetTable(CharacterResource.tableName)
 
-	if self:has_key("resourceCost") and self:has_key("resourceNumber") then
+	if self:has_key("resourceCost") then
 		local resourceInfo = resourceTable[self.resourceCost]
 		if resourceInfo ~= nil then
 			local name = resourceInfo.name
@@ -668,11 +668,12 @@ function ActivatedAbility:Render(options, params)
             end
             
 			local symbols = table.shallow_copy(params.symbols)
+            local resourceNumberValue = rawget(self, "resourceNumber") or "1"
             local resourceNumber = 0
-            if tonumber(self.resourceNumber) ~= nil then
-                resourceNumber = tonumber(self.resourceNumber)
+            if tonumber(resourceNumberValue) ~= nil then
+                resourceNumber = tonumber(resourceNumberValue)
             elseif creatureProperties ~= nil then
-                resourceNumber = ExecuteGoblinScript(self.resourceNumber, creatureProperties:LookupSymbol(symbols), 0, "Determine resource number for " .. self.name)
+                resourceNumber = ExecuteGoblinScript(resourceNumberValue, creatureProperties:LookupSymbol(symbols), 0, "Determine resource number for " .. self.name)
 			end
             if resourceNumber == 0 then
 				costText = ""
@@ -839,9 +840,10 @@ function ActivatedAbility:Render(options, params)
                             bgcolor = "clear",
                             width = "auto",
                             height = "auto",
+                            maxHeight = 22,
                             text = "1",
                             fontFace = "DrawSteelGlyphs",
-                            fontSize = 40,
+                            fontSize = 34,
                             halign = "left",
                             valign = "center",
 
@@ -855,7 +857,7 @@ function ActivatedAbility:Render(options, params)
                             fontSize = 16,
                             halign = "left",
                             valign = "center",
-                            lmargin = 10,
+                            lmargin = 6,
                             textAlignment = "left",
                             markdown = true,
 
@@ -881,9 +883,10 @@ function ActivatedAbility:Render(options, params)
                             bgcolor = "clear",
                             width = "auto",
                             height = "auto",
+                            maxHeight = 22,
                             text = "2",
                             fontFace = "DrawSteelGlyphs",
-                            fontSize = 40,
+                            fontSize = 34,
                             halign = "left",
                             valign = "center",
 
@@ -897,7 +900,7 @@ function ActivatedAbility:Render(options, params)
                             fontSize = 16,
                             halign = "left",
                             valign = "center",
-                            lmargin = 10,
+                            lmargin = 6,
                             textAlignment = "left",
                             markdown = true,
 
@@ -920,9 +923,10 @@ function ActivatedAbility:Render(options, params)
                             bgcolor = "clear",
                             width = "auto",
                             height = "auto",
+                            maxHeight = 22,
                             text = "3",
                             fontFace = "DrawSteelGlyphs",
-                            fontSize = 40,
+                            fontSize = 34,
                             halign = "left",
                             valign = "center",
 
@@ -936,7 +940,7 @@ function ActivatedAbility:Render(options, params)
                             fontSize = 16,
                             halign = "left",
                             valign = "center",
-                            lmargin = 10,
+                            lmargin = 6,
                             textAlignment = "left",
                             markdown = true,
 
@@ -1258,7 +1262,7 @@ function ActivatedAbility:Render(options, params)
                     
                     gui.Label{
 
-                        text = string.format("<b>%s</b> <i>%s</i>", cond(self:HasKeyword("Melee"), "Melee", cond(self:HasKeyword("Ranged"), "Ranged", "")), self:DescribeRange(creatureProperties)),
+                        text = self:DescribeRange(creatureProperties),
                         fontSize = 18,
                         fontFace = "Newzald",
                         fontWeight = "Light",
@@ -1324,9 +1328,9 @@ function ActivatedAbility:Render(options, params)
                 bgcolor = "clear",
                 width = "100%",
                 height = "auto",
-                tmargin = 20,
+                tmargin = 2,
                 flow = "vertical",
-                bmargin = 15,
+                bmargin = 2,
 
                 gui.Label{
 
@@ -1358,7 +1362,7 @@ function ActivatedAbility:Render(options, params)
                 width = "100%",
                 height = "auto",
                 halign = "left",
-                bmargin = 20,
+                bmargin = 4,
             },
 
 			tokenDependentInfoPanel,
@@ -1530,7 +1534,12 @@ function ActivatedAbility:DescribeRange(castingCreature)
 
     local result = MeasurementSystem.NativeToDisplayString(range)
 
-    if self:IsMelee() then
+    if self:HasKeyword("Melee") and self:HasKeyword("Ranged") then
+        local melee = self:try_get("meleeRange", 1)
+        result = string.format("Melee %d or ranged %s", tonumber(melee) or 1, result)
+    elseif self:HasKeyword("Ranged") then
+        result = string.format("Ranged %s", result)
+    elseif self:HasKeyword("Melee") then
         result = string.format("Melee %s", result)
     end
 
