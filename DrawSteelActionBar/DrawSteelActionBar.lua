@@ -1179,6 +1179,75 @@ local function AbilityHeading(args)
                 end,
             }
 
+            if m_ability:has_key("sourceReference") then
+                if m_ability.sourceReference:url() ~= nil then
+                    entries[#entries + 1] = {
+                        text = 'View Source',
+                        click = function()
+                            element.popup = nil
+                            dmhub.OpenDocument(m_ability.sourceReference:url())
+                        end,
+                    }
+                end
+            end
+
+            if dmhub.isDM then
+                for domain, _ in pairs(m_ability.domains or {}) do
+                            if domain ~= "_luaTable" then
+                                --parse domain information
+                                local tableType, guid = string.match(domain, "^([^:]+):(.+)$")
+                                if tableType and guid then
+                                    -- Find the parent object (class/feat/etc) that contains this ability
+                                    local obj, tableid = FindAbilityParentByGuid(guid)
+                                    if obj and tableid then
+                                        local path = {}
+                                        --Find the path to the ability within the parent object
+                                        local found = FindObjectPathByGuid(m_ability.guid, obj, path)
+                                        --if a path is found create an edit option
+                                        if found then
+                                            entries[#entries + 1] = {
+                                                text = 'Edit Ability',
+                                                click = function()
+                                                    element.popup = nil
+
+                                                    element.root:AddChild(m_ability:ShowEditActivatedAbilityDialog{
+                                                        close = function()
+                                                            --Use found path to locate ability in parent object
+                                                            SetObjectAtPath(obj, path, m_ability)
+                        
+                                                            -- Upload the parent object
+                                                            dmhub.SetAndUploadTableItem(tableid, obj)
+                                                        end
+                                                    })
+                                                end,
+                                            }
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        
+                        --[[ element.root:AddChild(m_ability:ShowEditActivatedAbilityDialog{
+                            close = function()
+                                print("Ability Info::", g_token.properties:IsActivatedAbilityInnate(m_ability))
+                                for _, ability in ipairs(g_token.properties.innateActivatedAbilities or {}) do
+                                    
+                                end
+                                g_token:ModifyProperties {
+                                    description = "Update Ability",
+                                    execute = function()
+                                        -- This is a bit hacky, but we need to trigger a properties update so that any changes to the ability are reflected in the UI.
+                                        local props = g_token.properties
+                                        g_token.properties = nil
+                                        g_token.properties = props
+                                    end,
+                                }
+                            end
+                        })
+                    end
+                } ]]
+            end
+
             element.popup = gui.ContextMenu {
                 entries = entries,
             }
