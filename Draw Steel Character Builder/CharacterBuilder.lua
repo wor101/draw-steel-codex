@@ -114,6 +114,15 @@ Ancestry describes how you were born. Culture (part of Chapter 4: Background) de
 
 Your hero is one of these folks! The fantastic ancestry you choose bestows benefits that come from your anatomy and physiology. This choice doesn't grant you cultural benefits, such as crafting or lore skills, though. While many game settings have cultures made of mostly one ancestry, other cultures and worlds have a cosmopolitan mix of peoples.]]
 
+CharacterBuilder.STRINGS.CULTURE = {}
+CharacterBuilder.STRINGS.CULTURE.INTRO = [[
+A hero's culture describes the beliefs, customs, values, and way of life held by the community in which they were raised. This community provides life experiences that give a character some of their game statistics. Even if a hero doesn't share their culture's values, those values shaped their early development and way of life. In fact, some people become heroes primarily from the rejection of the ways of their culture.]]
+CharacterBuilder.STRINGS.CULTURE.OVERVIEW = [[
+Select one from each culture aspect:
+- Environment
+- Organization
+- Upbringing]]
+
 CharacterBuilder.STRINGS.CAREER = {}
 CharacterBuilder.STRINGS.CAREER.INTRO = [[
 Being a hero isn't a job. It's a calling. But before you answered that call, you had a different job or vocation that paid the bills. Thank the gods for that, because the experience you gained in that career is now helping you save lives and slay monsters.]]

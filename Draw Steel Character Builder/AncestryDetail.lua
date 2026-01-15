@@ -228,13 +228,9 @@ function CBAncestryDetail._lorePanel()
 
         gui.Label{
             classes = {"builder-base", "label", "info", "overview"},
-            -- width = "96%",
-            -- height = "auto",
-            -- valign = "top",
             halign = "center",
             tmargin = 20,
             text = "",
-            -- textAlignment = "left",
 
             refreshBuilderState = function(element, state)
                 local ancestryId = state:Get(SELECTOR .. ".selectedId")

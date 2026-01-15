@@ -260,12 +260,11 @@ function CBSelectors._ancestry()
     }
 end
 
---- @return Panel Culture selector with detail panel
+--- @return ActionButton Culture selector with detail panel
 function CBSelectors._culture()
-    return CBSelectors._makeDetailed{
+    return CBSelectors._makeButton{
         text = "Culture",
-        selectorName = SEL.CULTURE,
-        createChoicesPane = CBSelectors._cultureItems,
+        data = { selector = SEL.CULTURE },
     }
 end
 
@@ -333,7 +332,8 @@ CharacterBuilder.RegisterSelector{
 CharacterBuilder.RegisterSelector{
     id = SEL.CULTURE,
     ord = 4,
-    selector = CBSelectors._culture
+    selector = CBSelectors._culture,
+    detail = CBCultureDetail.CreatePanel,
 }
 
 CharacterBuilder.RegisterSelector{
@@ -390,20 +390,8 @@ local TEST_DETAIL = [[
 
 *Our initial objective is to function at par with the existing builder. That means that you should be able to see and edit everything that the other builder tab does, just with a different user experience.*
 
-**Character Section**
-- Everything
-
-**Ancestry Section**
-- Everything
-
-**Career Section**
-- Everything
-
-**Class Section**
-- Everything
-
-**Kits**
-- Everything
+**Left-Side Selectors** (Character, Ancestry, Culture, Career, Class, Kit)
+- Everything except *Complication* which is not implemented yet.
 
 **Character Panel**
 - Description Tab: Everything *(This echoes the content under the Character button.)*

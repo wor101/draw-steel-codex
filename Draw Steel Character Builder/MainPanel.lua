@@ -120,6 +120,23 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        cacheCultures = function(element, hero)
+            local aspectFeatures = CharacterAspectChoice.CreateAll()
+            if aspectFeatures then
+                local levelChoices = hero:GetLevelChoices()
+                
+                local cultureFeatures = {}
+                local cultureItem = hero:GetCulture()
+                if cultureItem then
+                    cultureItem:FillFeatureDetails(levelChoices, cultureFeatures)
+                end
+
+                cultureFeatures = table.append_arrays(aspectFeatures, cultureFeatures)
+                local featureCache = CBFeatureCache.CreateNew(hero, SEL.CULTURE, "Culture", cultureFeatures)
+                element.data.state:Set{ key = SEL.CULTURE .. ".featureCache", value = featureCache }
+            end
+        end,
+
         cacheLevelChoices = function(element)
             local state = element.data.state
             local hero = _getHero()
@@ -182,28 +199,34 @@ function CharacterBuilder.CreatePanel()
 
         refreshToken = function(element, info)
             -- print("THC:: MAIN:: REFRESHTOKEN::", os.date("%Y-%m-%d %H:%M:%S"))
-            local cachedToken = _getToken(element.data.state)
+            local state = element.data.state
+
+            local cachedToken = _getToken(state)
             local token
             if info then
                 token = info.token
-                element.data.state:Set{key = "token", value = token}
+                state:Set{key = "token", value = token}
             else
                 token = element.data._cacheToken(element)
             end
 
             if token then
                 if cachedToken and cachedToken.id ~= token.id then
-                    element.data.state = CharacterBuilderState.CreateNew()
-                    element.data.state:Set({key = "token", value = token})
+                    state = CharacterBuilderState.CreateNew()
+                    state:Set({key = "token", value = token})
                 end
                 element:FireEvent("ensureActiveSelector")
 
                 local creature = token.properties
                 if creature:IsHero() then
+                    local hero = creature
+
                     local ancestryId = creature:try_get("raceid")
                     if ancestryId  then
                         element:FireEvent("selectAncestry", ancestryId, true)
                     end
+
+                    element:FireEvent("cacheCultures", hero)
 
                     local careerItem = creature:Background()
                     if careerItem then
@@ -215,15 +238,13 @@ function CharacterBuilder.CreatePanel()
                         element:FireEvent("selectClass", classItem.id, true)
                     end
 
-                    local kitCache = element.data.state:Get(SEL.KIT .. ".featureCache")
-                    local hero = _getHero()
-                    if kitCache and hero then
+                    local kitCache = state:Get(SEL.KIT .. ".featureCache")
+                    if kitCache then
                         for _,featureEntry in ipairs(kitCache:GetSortedFeatures()) do
                             local feature = kitCache:GetFeature(featureEntry.guid)
                             if feature then feature:Update(hero) end
                         end
                     end
-
 
                     -- TODO: Remaining data stored into state
 
@@ -232,7 +253,7 @@ function CharacterBuilder.CreatePanel()
                     element:FireEvent("cachePerks")
                     element:FireEvent("cacheLevelChoices")
 
-                    element:FireEventTree("refreshBuilderState", element.data.state)
+                    element:FireEventTree("refreshBuilderState", state)
                 end
             end
             -- This event should never be processed by children.

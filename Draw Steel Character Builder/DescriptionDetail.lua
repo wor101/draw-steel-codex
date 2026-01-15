@@ -5,10 +5,11 @@ CBDescriptionDetail = RegisterGameType("CBDescriptionDetail")
 
 local mod = dmhub.GetModLoading()
 
-local SELECTOR = "character"
-
 local _getHero = CharacterBuilder._getHero
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
+local SEL = CharacterBuilder.SELECTOR
+
+local SELECTOR = SEL.CHARACTER
 
 --- Build the character description editor panel
 --- @return Panel

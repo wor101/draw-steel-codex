@@ -246,6 +246,7 @@ end
 function CBCharPanel._builderPanel(tabId)
 
     local ancestryStatusItem = CBCharPanel._statusItem(SEL.ANCESTRY, true)
+    local cultureStatusItem = CBCharPanel._statusItem(SEL.CULTURE, true, true)
     local careerStatusItem = CBCharPanel._statusItem(SEL.CAREER, true)
     local classStatusItem = CBCharPanel._statusItem(SEL.CLASS, true)
     local kitStatusItem = CBCharPanel._statusItem(SEL.KIT, function(hero)
@@ -269,6 +270,7 @@ function CBCharPanel._builderPanel(tabId)
         end,
 
         ancestryStatusItem,
+        cultureStatusItem,
         careerStatusItem,
         classStatusItem,
         kitStatusItem,

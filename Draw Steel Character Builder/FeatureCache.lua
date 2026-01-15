@@ -449,6 +449,7 @@ end
 function CBFeatureWrapper._deriveOrder(feature, category)
     local typeOrder = {
         -- Low numbers are reserved - stay between 100 & 998
+        CharacterAspectChoice              = 101,
         CharacterAncestryInheritanceChoice  = 110,
         CharacterCharacteristicChoice       = 120,
         CharacterDeityChoice                = 130,
