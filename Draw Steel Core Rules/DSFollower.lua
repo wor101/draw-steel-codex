@@ -153,7 +153,7 @@ CreateFollowerMonster = function(followerInfo, followerType, mentorToken, option
     local newFollower
 
     dmhub.Coroutine(function()
-        if followerType == "retainer" and (pregenid and pregenid ~= "none") then
+        if followerType == "premaderetainer" and (pregenid and pregenid ~= "none") then
             newFollower = game.SpawnTokenFromBestiaryLocally(pregenid, loc, {fitLocatoin = true})
             newCharId = newFollower.charid
 
