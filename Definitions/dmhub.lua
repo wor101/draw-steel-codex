@@ -176,6 +176,13 @@ function dmhub.DeregisterEventHandler(guid)
 	-- dummy implementation for documentation purposes only
 end
 
+--- FireGlobalEvent: Fires the given global event
+--- @param eventid string
+--- @param arg any
+function dmhub.FireGlobalEvent(eventid, arg)
+	-- dummy implementation for documentation purposes only
+end
+
 --- RefreshCharacterSheet: Forces the character sheet to be re-built. This can be an expensive operation and is mostly designed to be used during development if you change the code driving the character sheet. Doing this unnecessarily will cause lots of character sheet slowdowns.
 --- @return nil
 function dmhub.RefreshCharacterSheet()
@@ -1101,7 +1108,7 @@ end
 --- SetSettingValue: Sets the game setting to the given value. 
 --- @param settingid string
 --- @param val any
---- @paral lockValue nil|boolean
+--- @param lockValue nil|boolean
 function dmhub.SetSettingValue(settingid, val, lockValue)
 	-- dummy implementation for documentation purposes only
 end

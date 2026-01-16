@@ -158,9 +158,10 @@ function CBCharPanel._statusItem(selector, visible, suppressRow1)
                         }
                     end
                     local statusEntry = statusEntries[key]
-                    statusEntry.available = statusEntry.available + feature:GetNumChoices()
-                    statusEntry.selected = statusEntry.selected + feature:GetSelectedValue()
-                    local selectedNames = feature:GetSelectedNames()
+                    local featureStatus = feature:GetStatus()
+                    statusEntry.available = statusEntry.available + featureStatus.numChoices --feature:GetNumChoices()
+                    statusEntry.selected = statusEntry.selected + featureStatus.selected --feature:GetSelectedValue()
+                    local selectedNames = featureStatus.selectedNames --feature:GetSelectedNames()
                     table.move(selectedNames, 1, #selectedNames, #statusEntry.selectedDetail + 1, statusEntry.selectedDetail)
                     table.sort(statusEntry.selectedDetail)
                 end
@@ -246,11 +247,13 @@ end
 function CBCharPanel._builderPanel(tabId)
 
     local ancestryStatusItem = CBCharPanel._statusItem(SEL.ANCESTRY, true)
+    local cultureStatusItem = CBCharPanel._statusItem(SEL.CULTURE, true, true)
     local careerStatusItem = CBCharPanel._statusItem(SEL.CAREER, true)
     local classStatusItem = CBCharPanel._statusItem(SEL.CLASS, true)
     local kitStatusItem = CBCharPanel._statusItem(SEL.KIT, function(hero)
         return hero:CanHaveKits()
     end, true)
+    local complicationStatusItem = CBCharPanel._statusItem(SEL.COMPLICATION, true, true)
 
     return gui.Panel {
         classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
@@ -269,9 +272,11 @@ function CBCharPanel._builderPanel(tabId)
         end,
 
         ancestryStatusItem,
+        cultureStatusItem,
         careerStatusItem,
         classStatusItem,
         kitStatusItem,
+        complicationStatusItem,
     }
 end
 

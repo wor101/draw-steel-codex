@@ -260,12 +260,11 @@ function CBSelectors._ancestry()
     }
 end
 
---- @return Panel Culture selector with detail panel
+--- @return ActionButton Culture selector with detail panel
 function CBSelectors._culture()
-    return CBSelectors._makeDetailed{
+    return CBSelectors._makeButton{
         text = "Culture",
-        selectorName = SEL.CULTURE,
-        createChoicesPane = CBSelectors._cultureItems,
+        data = { selector = SEL.CULTURE },
     }
 end
 
@@ -333,7 +332,8 @@ CharacterBuilder.RegisterSelector{
 CharacterBuilder.RegisterSelector{
     id = SEL.CULTURE,
     ord = 4,
-    selector = CBSelectors._culture
+    selector = CBSelectors._culture,
+    detail = CBCultureDetail.CreatePanel,
 }
 
 CharacterBuilder.RegisterSelector{
@@ -360,7 +360,8 @@ CharacterBuilder.RegisterSelector{
 CharacterBuilder.RegisterSelector{
     id = SEL.COMPLICATION,
     ord = 8,
-    selector = CBSelectors._complication
+    selector = CBSelectors._complication,
+    detail = CBComplicationDetail.CreatePanel,
 }
 
 --[[
@@ -390,20 +391,8 @@ local TEST_DETAIL = [[
 
 *Our initial objective is to function at par with the existing builder. That means that you should be able to see and edit everything that the other builder tab does, just with a different user experience.*
 
-**Character Section**
-- Everything
-
-**Ancestry Section**
-- Everything
-
-**Career Section**
-- Everything
-
-**Class Section**
-- Everything
-
-**Kits**
-- Everything
+**Left-Side Selectors & Character Build**
+- Everything. All of it. It should be at par with the old builder at this point.
 
 **Character Panel**
 - Description Tab: Everything *(This echoes the content under the Character button.)*
@@ -414,11 +403,10 @@ local TEST_DETAIL = [[
 
 **User Experience**
 - The "Change X" buttons are in unfortunate positions.
-- Culture button opens inconsistently, sometimes requiring multiple clicks. (But its functionality isn't implemented yet.)
 
 **Functionality**
 - Some skill lists still show skills you already have selected. (*If you find one of these, please let me know how you got to it via a bug report.*)
-- In the selection lists, we sometimes display redundant, empty, or meaningless extra info / description info.
+- In the selection lists, we sometimes display redundant, empty, or meaningless extra info / description info. But try hovering it.
 - Exploration tab should list Perks.
 
 **Styling / UI**

@@ -246,6 +246,7 @@ function DTProjectEditor:_createProjectForm()
             gui.Label {
                 text = "Project Source:",
                 classes = {"DTLabel", "DTBase"},
+                width = "80%",
             },
             gui.Input {
                 width = "94%",

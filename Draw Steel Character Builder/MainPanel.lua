@@ -120,6 +120,46 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        cacheComplication = function(element, hero)
+            local state = element.data.state
+            local complicationFeature = CharacterComplicationChoice.CreateNew(hero)
+            if complicationFeature then
+                local levelChoices = hero:GetLevelChoices()
+                local features = {
+                    { feature = complicationFeature }
+                }
+                local selected = complicationFeature:GetSelected()
+                local items = dmhub.GetTableVisible(CharacterComplication.tableName)
+                for _,id in ipairs(selected) do
+                    local item = items[id]
+                    if item then
+                        item:FillFeatureDetails(levelChoices, features)
+                    end
+                end
+                local featureCache = CBFeatureCache.CreateNew(hero, SEL.COMPLICATION, "Complication", features)
+                state:Set{ key = SEL.COMPLICATION .. ".featureCache", value = featureCache }
+            else
+                state:Set{ key = SEL.COMPLICATION .. ".featureCache", value = nil }
+            end
+        end,
+
+        cacheCultures = function(element, hero)
+            local aspectFeatures = CharacterAspectChoice.CreateAll()
+            if aspectFeatures then
+                local levelChoices = hero:GetLevelChoices()
+
+                local cultureFeatures = {}
+                local cultureItem = hero:GetCulture()
+                if cultureItem then
+                    cultureItem:FillFeatureDetails(levelChoices, cultureFeatures)
+                end
+
+                cultureFeatures = table.append_arrays(aspectFeatures, cultureFeatures)
+                local featureCache = CBFeatureCache.CreateNew(hero, SEL.CULTURE, "Culture", cultureFeatures)
+                element.data.state:Set{ key = SEL.CULTURE .. ".featureCache", value = featureCache }
+            end
+        end,
+
         cacheLevelChoices = function(element)
             local state = element.data.state
             local hero = _getHero()
@@ -182,28 +222,36 @@ function CharacterBuilder.CreatePanel()
 
         refreshToken = function(element, info)
             -- print("THC:: MAIN:: REFRESHTOKEN::", os.date("%Y-%m-%d %H:%M:%S"))
-            local cachedToken = _getToken(element.data.state)
+            local state = element.data.state
+
+            local cachedToken = _getToken(state)
             local token
             if info then
                 token = info.token
-                element.data.state:Set{key = "token", value = token}
+                state:Set{key = "token", value = token}
             else
                 token = element.data._cacheToken(element)
             end
 
             if token then
                 if cachedToken and cachedToken.id ~= token.id then
-                    element.data.state = CharacterBuilderState.CreateNew()
-                    element.data.state:Set({key = "token", value = token})
+                    state = CharacterBuilderState.CreateNew()
+                    state:Set({key = "token", value = token})
                 end
                 element:FireEvent("ensureActiveSelector")
 
                 local creature = token.properties
                 if creature:IsHero() then
+                    local hero = creature
+
                     local ancestryId = creature:try_get("raceid")
                     if ancestryId  then
                         element:FireEvent("selectAncestry", ancestryId, true)
                     end
+
+                    element:FireEvent("cacheComplication", hero)
+
+                    element:FireEvent("cacheCultures", hero)
 
                     local careerItem = creature:Background()
                     if careerItem then
@@ -215,15 +263,13 @@ function CharacterBuilder.CreatePanel()
                         element:FireEvent("selectClass", classItem.id, true)
                     end
 
-                    local kitCache = element.data.state:Get(SEL.KIT .. ".featureCache")
-                    local hero = _getHero()
-                    if kitCache and hero then
+                    local kitCache = state:Get(SEL.KIT .. ".featureCache")
+                    if kitCache then
                         for _,featureEntry in ipairs(kitCache:GetSortedFeatures()) do
                             local feature = kitCache:GetFeature(featureEntry.guid)
                             if feature then feature:Update(hero) end
                         end
                     end
-
 
                     -- TODO: Remaining data stored into state
 
@@ -232,7 +278,7 @@ function CharacterBuilder.CreatePanel()
                     element:FireEvent("cachePerks")
                     element:FireEvent("cacheLevelChoices")
 
-                    element:FireEventTree("refreshBuilderState", element.data.state)
+                    element:FireEventTree("refreshBuilderState", state)
                 end
             end
             -- This event should never be processed by children.
@@ -243,35 +289,53 @@ function CharacterBuilder.CreatePanel()
         removeAncestry = function(element)
             local hero = _getHero(element.data.state)
             if hero and (hero:try_get("raceid") or hero:try_get("subraceid")) then
-                hero.raceid = nil
-                hero.subraceid = nil
-                element:FireEvent("tokenDataChanged")
+                element:AddChild(CharacterBuilder._confirmDialog{
+                    title = "Confirm Change Ancestry",
+                    message = "Click Confirm to remove your Ancestry and all related selections.",
+                    onConfirm = function()
+                        hero.raceid = nil
+                        hero.subraceid = nil
+                        element:FireEvent("tokenDataChanged")
+                    end,
+                })
             end
         end,
 
         removeCareer = function(element)
             local hero = _getHero(element.data.state)
             if hero then
-                hero.backgroundid = nil
-                element:FireEvent("tokenDataChanged")
+                element:AddChild(CharacterBuilder._confirmDialog{
+                    title = "Confirm Change Career",
+                    message = "Click Confirm to remove your Career and all related selections.",
+                    onConfirm = function()
+                        hero.backgroundid = nil
+                        element:FireEvent("tokenDataChanged")
+                    end,
+                })
             end
         end,
 
         removeClass = function(element)
             local hero = _getHero(element.data.state)
             if hero then
-                hero.classes = {}
-                for _,attr in pairs(hero:try_get("attributes" or {})) do
-                    attr.baseValue = 0
-                end
-                hero.attributeBuild = {}
-                hero.kitid = nil
-                hero.kitid2 = nil
-                local levelChoices = hero:GetLevelChoices() or {}
-                if levelChoices["kitBonusChoices"] then
-                    levelChoices["kitBonusChoices"] = nil
-                end
-                element:FireEvent("tokenDataChanged")
+                element:AddChild(CharacterBuilder._confirmDialog{
+                    title = "Confirm Change Career",
+                    message = "Click Confirm to remove your Career and all related selections.",
+                    onConfirm = function()
+                        hero.classes = {}
+                        for _,attr in pairs(hero:try_get("attributes" or {})) do
+                            attr.baseValue = 0
+                        end
+                        hero.attributeBuild = {}
+                        hero.kitid = nil
+                        hero.kitid2 = nil
+                        local levelChoices = hero:GetLevelChoices() or {}
+                        if levelChoices["kitBonusChoices"] then
+                            levelChoices["kitBonusChoices"] = nil
+                        end
+                        element:FireEvent("tokenDataChanged")
+                    end,
+                })
             end
         end,
 
@@ -368,22 +432,25 @@ function CharacterBuilder.CreatePanel()
             local state = element.data.state
             local cachedClassId = state:Get(SEL.CLASS .. ".selectedId")
             local cachedLevel = state:Get(SEL.CLASS .. ".level")
+            local cachedExtraLevel = state:Get(SEL.CLASS .. ".extraLevel")
             local cachedSubclasses = state:Get(SEL.CLASS .. ".selectedSubclasses")
             local cachedLevelChoices = state:Get("levelChoices")
             local cachedKitId = state:Get(SEL.KIT .. ".selectedId")
 
             local hero = _getHero()
-            local level = hero and hero:GetClassLevel()
+            local level = hero and hero:CharacterLevel()
+            local extraLevelInfo = hero:ExtraLevelInfo()
             local classAndSubClasses = hero and hero:GetClassesAndSubClasses() or {}
             local levelChoices = hero and hero:GetLevelChoices() or {}
 
             -- If nothing changed, there's nothing to do
             local classChanged = classId ~= cachedClassId
-            local levelChanged = level ~= cachedLevel
+            local levelChanged = level ~= cachedLevel or extraLevelInfo ~= cachedExtraLevel
             local subclassesChanged = dmhub.DeepEqual(classAndSubClasses, cachedSubclasses) ~= true
             local levelChoicesChanged = dmhub.DeepEqual(levelChoices, cachedLevelChoices) ~= true
             if not (classChanged or levelChanged or subclassesChanged or levelChoicesChanged) then
-                return
+                -- Caching is not working. Calculate always.
+                -- return
             end
 
             --[[
@@ -397,10 +464,12 @@ function CharacterBuilder.CreatePanel()
             local newState = {
                 { key = SEL.CLASS .. ".selectedId", value = classId },
                 { key = SEL.CLASS .. ".level", value = level },
+                { key = SEL.CLASS .. ".extraLevel", value = extraLevelInfo },
             }
             local classItem = dmhub.GetTableVisible(Class.tableName)[classId]
             if classItem then
-                if classChanged or levelChanged or subclassesChanged or levelChoicesChanged then
+                -- Cache isn't changing. Calculate always.
+                if true or classChanged or levelChanged or subclassesChanged or levelChoicesChanged then
                     local classFill = {}
 
                     -- Special case: Adapt baseCharacteristics to behave like a feature choice
@@ -412,7 +481,7 @@ function CharacterBuilder.CreatePanel()
                         }
                     end
 
-                    local extraLevelInfo = hero:ExtraLevelInfo()
+                    
                     if #classAndSubClasses > 0 then
                         for i,entry in ipairs(classAndSubClasses) do
                             entry.class:FillFeatureDetailsForLevel(levelChoices, entry.level, extraLevelInfo, i ~= 1, classFill)
@@ -425,7 +494,6 @@ function CharacterBuilder.CreatePanel()
                     newState[#newState+1] = { key = SEL.CLASS .. ".selectedItem", value = classItem }
                     newState[#newState+1] = { key = SEL.CLASS .. ".selectedSubclasses", value = classAndSubClasses }
                     newState[#newState+1] = { key = SEL.CLASS .. ".featureCache", value = featureCache }
-
                 end
                 if cachedKitId ~= classId then
                     local kitFeature = CharacterKitChoice.CreateNew(hero)

@@ -1040,6 +1040,10 @@ function ActivatedAbility:TargetPassesFilter(casterToken, targetToken, symbols, 
 		return false
 	end
 
+	if targetToken.properties:CalculateNamedCustomAttribute("Untargetable") > 0 then
+		return false
+	end
+
     if self.targetAllegiance == "dead" then
         print("Dead:: isCorpse =", targetToken.isCorpse)
         if not targetToken.isCorpse then

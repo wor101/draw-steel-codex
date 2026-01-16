@@ -46,11 +46,13 @@ function CharacterLanguageChoice:_cache()
             tagCache[#tagCache+1] = {
                 id = k,
                 text = text,
+                description = lang.description,
                 unique = true, --this means there will be checking in the builder so if we already have this id selected somewhere it won't be shown here.
             }
             optCache[#optCache+1] = {
                 guid = k,
                 name = text,
+                description = lang.description,
                 unique = true,
             }
         end

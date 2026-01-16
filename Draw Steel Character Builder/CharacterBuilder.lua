@@ -114,6 +114,15 @@ Ancestry describes how you were born. Culture (part of Chapter 4: Background) de
 
 Your hero is one of these folks! The fantastic ancestry you choose bestows benefits that come from your anatomy and physiology. This choice doesn't grant you cultural benefits, such as crafting or lore skills, though. While many game settings have cultures made of mostly one ancestry, other cultures and worlds have a cosmopolitan mix of peoples.]]
 
+CharacterBuilder.STRINGS.CULTURE = {}
+CharacterBuilder.STRINGS.CULTURE.INTRO = [[
+A hero's culture describes the beliefs, customs, values, and way of life held by the community in which they were raised. This community provides life experiences that give a character some of their game statistics. Even if a hero doesn't share their culture's values, those values shaped their early development and way of life. In fact, some people become heroes primarily from the rejection of the ways of their culture.]]
+CharacterBuilder.STRINGS.CULTURE.OVERVIEW = [[
+Select one from each culture aspect:
+- Environment
+- Organization
+- Upbringing]]
+
 CharacterBuilder.STRINGS.CAREER = {}
 CharacterBuilder.STRINGS.CAREER.INTRO = [[
 Being a hero isn't a job. It's a calling. But before you answered that call, you had a different job or vocation that paid the bills. Thank the gods for that, because the experience you gained in that career is now helping you save lives and slay monsters.]]
@@ -132,6 +141,10 @@ The knight in shining armor. The warrior priest. The sniper. Censors, furies, sh
 CharacterBuilder.STRINGS.KIT.OVERVIEW = [[
 # Customizing Equipment Appearances
 You should absolutely feel free to describe your equipment in a way that makes sense for the story of your game and hero. For instance, if your hero uses a weapon in the whip category as part of their kit, they could use a leather whip, a spiked chain, or a dagger tied to a knotted rope. A hero who wears heavy armor might wear a suit of chain mail, plate armor, or heavy wooden planks tied together. Your choices for equipment aren't limited just to the examples in this book.]]
+
+CharacterBuilder.STRINGS.COMPLICATION = {}
+CharacterBuilder.STRINGS.COMPLICATION.INTRO = [[
+Beyond the abilities and features bestowed by ancestry and class, your hero might have something else that makes them ... unusual. Perhaps an earth elemental lives in your body. Maybe your eldritch blade devastates enemies but feeds on your own vitality. A complication is an optional feature you can select to enrich your hero's backstory, with any complication providing you both a positive benefit and a negative drawback.]]
 
 --[[
     Ability to register selectors - controls down the left side of the window
@@ -518,6 +531,107 @@ end
 --[[
     Consistent UI
 ]]
+
+--- Display a confrmation dialog, calling callbacks as necessary
+--- @param opts table {title, message, confirmText, cancelText, onConfirm, onCancel}
+function CharacterBuilder._confirmDialog(opts)
+    local title = (opts.title and opts.title ~= "") and opts.title or "Confirm"
+    local message = (opts.message and opts.message ~= "") and opts.message or "Are you sure you want to take this action?"
+    local confirmText = (opts.confirmText and opts.confirmText ~= "") and opts.confirmText or "Confirm"
+    local cancelText = (opts.cancelText and opts.cancelText ~= "") and opts.cancelText or "Cancel"
+
+    local onCancel = function()
+        if opts.onCancel and type(opts.onCancel) == "function" then
+            opts.onCancel()
+        end
+    end
+
+    local onConfirm = function()
+        if opts.onConfirm and type(opts.onConfirm) == "function" then
+            opts.onConfirm()
+        end
+    end
+
+    local resultPanel = nil
+    resultPanel = gui.Panel {
+        styles = CBStyles.GetStyles(),
+        classes = {"confirmDialogController", "builder-base", "panel-base", "dialog"},
+        width = 500,
+        height = 300,
+        floating = true,
+        escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
+        captureEscape = true,
+        data = {
+            close = function()
+                resultPanel:DestroySelf()
+            end,
+        },
+
+        close = function(element)
+            element.data.close()
+        end,
+
+        escape = function(element)
+            onCancel()
+            element:FireEvent("close")
+        end,
+
+        children = {
+            -- Header
+            gui.Label{
+                classes = {"builder-base", "label", "dialog-header"},
+                text = title,
+            },
+            gui.MCDMDivider{
+                classes = {"builder-divider"},
+                layout = "dot",
+                width = "50%",
+                vpad = 4,
+                -- bgcolor = CBStyles.COLORS.GOLD,
+            },
+
+            -- Confirmation message
+            gui.Label{
+                classes = {"builder-base", "label", "dialog-message"},
+                text = message,
+            },
+
+            -- Button panel
+            gui.Panel{
+                classes = {"builder-base", "panel-base", "container"},
+                -- width = "100%",
+                height = 40,
+                halign = "center",
+                valign = "bottom",
+                flow = "horizontal",
+                gui.Button{
+                    classes = {"builder-base", "button", "dialog"},
+                    width = 120,
+                    text = cancelText,
+                    click = function(element)
+                        local controller = element:FindParentWithClass("confirmDialogController")
+                        if controller then
+                            controller:FireEvent("escape")
+                        end
+                    end
+                },
+                gui.Button{
+                    classes = {"builder-base", "button", "dialog"},
+                    width = 120,
+                    halign = "right",
+                    text = confirmText,
+                    click = function(element)
+                        onConfirm()
+                        local controller = element:FindParentWithClass("confirmDialogController")
+                        if controller then controller:FireEvent("close") end
+                    end
+                }
+            }
+        },
+    }
+
+    return resultPanel
+end
 
 --- Build a Category button, forcing consistent styling.
 --- Be sure to add behaviors for click and refreshBuilderState
