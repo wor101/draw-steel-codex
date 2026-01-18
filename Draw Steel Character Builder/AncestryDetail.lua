@@ -183,6 +183,12 @@ function CBAncestryDetail._overviewPanel()
         },
     }
 
+    local spacerPanel = gui.Panel{
+        classes = {"builder-base", "panel-base", "container"},
+        width = "50%",
+        height = "66%",
+    }
+
     return gui.Panel{
         id = "ancestryOverviewPanel",
         classes = {"ancestryOverviewPanel", "builder-base", "panel-base", "detail-overview-panel", "border", "collapsed"},
@@ -219,6 +225,19 @@ function CBAncestryDetail._overviewPanel()
             bmargin = 32,
             valign = "bottom",
             vscroll = true,
+            data = {
+                lastSelected = nil,
+            },
+
+            refreshBuilderState = function(element, state)
+                local currentSelected = state:Get(SELECTOR .. ".selectedId")
+                if currentSelected ~= element.data.lastSelected then
+                    element.data.lastSelected = currentSelected
+                    print("THC:: SCROLLER::", element)
+                end
+            end,
+
+            spacerPanel,
             nameLabel,
             introLabel,
             detailLabel,
