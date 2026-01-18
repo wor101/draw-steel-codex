@@ -189,8 +189,6 @@ function CBCareerDetail._navPanel()
 
         registerFeatureButton = function(element, button)
             element:AddChild(button)
-            -- local changeButton = element:FindChildRecursive(function(element) return element:HasClass("changeCareer") end)
-            -- if changeButton then changeButton:SetAsLastSibling() end
             element.children = CharacterBuilder._sortButtons(element.children)
         end,
 
@@ -209,31 +207,12 @@ function CBCareerDetail._navPanel()
     }
 end
 
---- Build the Select button
---- @return PrettyButton|Panel
-function CBCareerDetail._selectButton()
-    return CharacterBuilder._makeSelectButton{
-        classes = {"selectButton"},
-        press = function(element)
-            _fireControllerEvent("applyCurrentCareer")
-        end,
-        refreshBuilderState = function(element, state)
-            local hero = _getHero()
-            if hero then
-                local canSelect = hero:try_get("backgroundid") == nil and state:Get(SELECTOR .. ".selectedId") ~= nil
-                element:SetClass("collapsed", not canSelect)
-            end
-        end,
-    }
-end
-
 --- Build the career detail panel - the main central panel for Career work
 --- @return Panel
 function CBCareerDetail.CreatePanel()
 
     local navPanel = CBCareerDetail._navPanel()
     local overviewPanel = CBCareerDetail._overviewPanel()
-    -- local selectButton = CBCareerDetail._selectButton()
 
     local detailPanel = gui.Panel{
         id = "careerDetailPanel",
@@ -255,7 +234,6 @@ function CBCareerDetail.CreatePanel()
         end,
 
         overviewPanel,
-        -- selectButton,
     }
 
     return gui.Panel{

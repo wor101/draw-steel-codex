@@ -320,11 +320,12 @@ function CharacterBuilder.CreatePanel()
         end,
 
         removeClass = function(element)
-            local hero = _getHero(element.data.state)
+            local state = element.data.state
+            local hero = _getHero(state)
             if hero then
                 element:AddChild(CharacterBuilder._confirmDialog{
-                    title = "Confirm Change Career",
-                    message = "Click Confirm to remove your Career and all related selections.",
+                    title = "Confirm Change Class",
+                    message = "Click Confirm to remove your Class and all related selections.",
                     onConfirm = function()
                         hero.classes = {}
                         for _,attr in pairs(hero:try_get("attributes" or {})) do
@@ -337,6 +338,7 @@ function CharacterBuilder.CreatePanel()
                         if levelChoices["kitBonusChoices"] then
                             levelChoices["kitBonusChoices"] = nil
                         end
+                        state:Set{ key = SEL.CLASS .. ".blockFeatureSelection", value = true }
                         element:FireEvent("tokenDataChanged")
                     end,
                 })
@@ -463,6 +465,15 @@ function CharacterBuilder.CreatePanel()
             local levelChanged = level ~= cachedLevel or extraLevelInfo ~= cachedExtraLevel
             local subclassesChanged = dmhub.DeepEqual(classAndSubClasses, cachedSubclasses) ~= true
             local levelChoicesChanged = dmhub.DeepEqual(levelChoices, cachedLevelChoices) ~= true
+
+            -- Always update blockFeatureSelection based on current hero state
+            local heroHasClass = hero ~= nil and hero:GetClass() ~= nil
+            local blockFeatureSelection = not heroHasClass
+            local cachedBlock = state:Get(SEL.CLASS .. ".blockFeatureSelection")
+            if cachedBlock ~= blockFeatureSelection then
+                state:Set{ key = SEL.CLASS .. ".blockFeatureSelection", value = blockFeatureSelection }
+            end
+
             if not (classChanged or levelChanged or subclassesChanged or levelChoicesChanged) then
                 -- Caching is not working. Calculate always.
                 -- return

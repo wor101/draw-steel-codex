@@ -76,8 +76,6 @@ function CBAncestryDetail._navPanel()
 
         registerFeatureButton = function(element, button)
             element:AddChild(button)
-            -- local changeButton = element:FindChildRecursive(function(element) return element:HasClass("changeAncestry") end)
-            -- if changeButton then changeButton:SetAsLastSibling() end
             element.children = CharacterBuilder._sortButtons(element.children)
         end,
 
@@ -272,24 +270,6 @@ function CBAncestryDetail._lorePanel()
     }
 end
 
---- Build the Select button
---- @return PrettyButton|Panel
-function CBAncestryDetail._selectButton()
-    return CharacterBuilder._makeSelectButton{
-        classes = {"selectButton"},
-        press = function(element)
-            _fireControllerEvent("applyCurrentAncestry")
-        end,
-        refreshBuilderState = function(element, state)
-            local hero = _getHero()
-            if hero then
-                local canSelect = hero:try_get("raceid") == nil and state:Get(SELECTOR .. ".selectedId") ~= nil
-                element:SetClass("collapsed", not canSelect)
-            end
-        end,
-    }
-end
-
 --- Build the Ancestry Detail Panel - the main center panel for Ancestry work
 --- @return Panel
 function CBAncestryDetail.CreatePanel()
@@ -298,8 +278,6 @@ function CBAncestryDetail.CreatePanel()
 
     local overviewPanel = CBAncestryDetail._overviewPanel()
     local lorePanel = CBAncestryDetail._lorePanel()
-
-    -- local selectButton = CBAncestryDetail._selectButton()
 
     local detailPanel = gui.Panel{
         id = "ancestryDetailPanel",
@@ -322,7 +300,6 @@ function CBAncestryDetail.CreatePanel()
 
         overviewPanel,
         lorePanel,
-        -- selectButton,
     }
 
     return gui.Panel{
