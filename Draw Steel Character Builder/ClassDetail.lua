@@ -148,7 +148,7 @@ function CBClassDetail._overviewPanel()
                     local featureCache = state:Get(SELECTOR .. ".featureCache")
                     local featureDetails = featureCache:GetFlattenedFeatures()
                     for _,item in ipairs(featureDetails) do
-                        local s = item.feature:GetSummaryText()
+                        local s = item.feature:GetDetailedSummaryText()
                         if s ~= nil and #s > 0 then
                             textItems[#textItems+1] = s
                         end

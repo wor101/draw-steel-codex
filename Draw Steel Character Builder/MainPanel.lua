@@ -287,7 +287,8 @@ function CharacterBuilder.CreatePanel()
         end,
 
         removeAncestry = function(element)
-            local hero = _getHero(element.data.state)
+            local state = element.data.state
+            local hero = _getHero(state)
             if hero and (hero:try_get("raceid") or hero:try_get("subraceid")) then
                 element:AddChild(CharacterBuilder._confirmDialog{
                     title = "Confirm Change Ancestry",
@@ -295,6 +296,7 @@ function CharacterBuilder.CreatePanel()
                     onConfirm = function()
                         hero.raceid = nil
                         hero.subraceid = nil
+                        state:Set{ key = SEL.ANCESTRY .. ".blockFeatureSelection", value = true }
                         element:FireEvent("tokenDataChanged")
                     end,
                 })
@@ -369,6 +371,7 @@ function CharacterBuilder.CreatePanel()
                 newState[#newState+1] = { key = SEL.ANCESTRY .. ".selectedItem", value = ancestryItem }
                 newState[#newState+1] = { key = SEL.ANCESTRY .. ".inheritedId", value = inheritedAncestryId }
                 newState[#newState+1] = { key = SEL.ANCESTRY .. ".featureCache", value = featureCache }
+                newState[#newState+1] = { key = SEL.ANCESTRY .. ".blockFeatureSelection", value = hero:try_get("raceid") == nil}
             end
             state:Set(newState)
             if not noFire then
