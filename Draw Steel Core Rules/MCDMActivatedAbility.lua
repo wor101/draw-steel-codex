@@ -121,6 +121,15 @@ SpellRenderStyles = {
 		color = 'white',
 		width = '96%',
 	},
+    gui.Style{
+        classes = {"abilitySection"},
+        bgimage = true,
+        bgcolor = "clear",
+    },
+    gui.Style{
+        classes = {"abilitySection", "highlight"},
+        bgcolor = "red",
+    },
 }
 
 local g_damageTypeColors = {
@@ -354,6 +363,8 @@ function ActivatedAbility:Render(options, params)
 
 	params = params or {}
 	options = options or {}
+
+    options.noninteractive = nil
 
     params.symbols = params.symbols or {}
     params.symbols.mode = params.symbols.mode or 1
@@ -1235,15 +1246,26 @@ function ActivatedAbility:Render(options, params)
 
             --king panel for ranged and target
             gui.Panel{
+                classes = {"abilitySection"},
 
-                bgimage = true,
-                bgcolor = "clear",
                 width = "100%",
                 height = "auto",
                 tmargin = 2,
                 flow = "vertical",
-                bgcolor = "clear",
                 wrap = true,
+
+                showAbilitySection = function(element, options)
+                    if options.ability.name ~= self.name then
+                        element:SetClass("highlight", false)
+                        return
+                    end
+
+                    if options.section == "target" then
+                        element:SetClass("highlight", true)
+                    else
+                        element:SetClass("highlight", false)
+                    end
+                end,
 
                 gui.Panel{
                     width = "auto",
@@ -1255,8 +1277,9 @@ function ActivatedAbility:Render(options, params)
                         fontFace = "DrawSteelGlyphs",
                         fontSize = 20,
                         width = "auto",
-                        rmargin = 5,
-
+                        halign = "right",
+                        valign = "center",
+                        lmargin = 5,
                     },
 
                     
@@ -1323,14 +1346,25 @@ function ActivatedAbility:Render(options, params)
             --main Power Roll name + rolls king panel
             gui.Panel{
 
-                classes = {cond(self:GetPowerRollDisplay() == "", "collapsed", nil)},
-                bgimage = true,
-                bgcolor = "clear",
+                classes = {"abilitySection", cond(self:GetPowerRollDisplay() == "", "collapsed", nil)},
                 width = "100%",
                 height = "auto",
                 tmargin = 2,
                 flow = "vertical",
                 bmargin = 2,
+
+                showAbilitySection = function(element, options)
+                    if options.ability.name ~= self.name then
+                        element:SetClass("highlight", false)
+                        return
+                    end
+
+                    if options.section == "main" then
+                        element:SetClass("highlight", true)
+                    else
+                        element:SetClass("highlight", false)
+                    end
+                end,
 
                 gui.Label{
 
@@ -1356,13 +1390,32 @@ function ActivatedAbility:Render(options, params)
                 powerRollQueenPanel,
             },
 
-            gui.DocumentDisplay{
-                text = descriptionString,
-                noninteractive = true,
+            gui.Panel{
+                classes = {"abilitySection"},
                 width = "100%",
                 height = "auto",
-                halign = "left",
-                bmargin = 4,
+
+                showAbilitySection = function(element, options)
+                    if options.ability.name ~= self.name then
+                        element:SetClass("highlight", false)
+                        return
+                    end
+
+                    if options.section == "effects" then
+                        element:SetClass("highlight", true)
+                    else
+                        element:SetClass("highlight", false)
+                    end
+                end,
+
+                gui.DocumentDisplay{
+                    text = descriptionString,
+                    noninteractive = true,
+                    width = "100%",
+                    height = "auto",
+                    halign = "left",
+                    bmargin = 4,
+                },
             },
 
 			tokenDependentInfoPanel,

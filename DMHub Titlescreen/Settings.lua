@@ -1114,6 +1114,12 @@ setting{
 	storage = 'account',
 
 	default = '',
+
+  	onchange = function()
+		if dmhub.inGame then
+			dmhub.userDisplayName = dmhub.GetSettingValue("displayname")
+		end
+	end,
 }
 
 setting{

@@ -2633,17 +2633,27 @@ local function DSCharSheet()
 
                                 press = function(element)
                                     local token = CharacterSheet.instance.data.info.token
+                                    local baseValueEdit
                                     if token.properties:IsMonster() then
-                                        return
+                                        baseValueEdit = function(n)
+                                            n = math.max(0, round(n))
+                                            token.properties.stability = n
+                                            CharacterSheet.instance:FireEventTree("refresh")
+                                            CharacterSheet.instance:FireEvent("refreshAll")
+
+                                            return string.format("%d", token.properties.stability)
+                                        end
                                     end
+
                                     local baseStability = token.properties:BaseForcedMoveResistance()
                                     gui.PopupOverrideAttribute {
                                         parentElement = element,
                                         token = token,
                                         attributeName = "Stability",
-                                        baseValue = baseStability,
                                         modifications = token.properties:DescribeModifications("forcedmoveresistance", baseStability),
                                         characterSheet = true,
+                                        baseValue = baseStability,
+                                        baseValueEdit = baseValueEdit,
                                     }
                                 end,
 
@@ -2661,20 +2671,8 @@ local function DSCharSheet()
                                     valign = "center",
                                     characterLimit = 2,
 
-                                    change = function(element)
-                                        local token = CharacterSheet.instance.data.info.token
-                                        local n = tonumber(element.text)
-                                        if n ~= nil then
-                                            n = math.max(0, round(n))
-
-                                            token.properties.stability = n
-                                        end
-                                        CharacterSheet.instance:FireEvent("refreshAll")
-                                    end,
-
                                     refreshToken = function(element, info)
                                         local creature = CharacterSheet.instance.data.info.token.properties
-                                        element.editable = creature:IsMonster()
                                         element.text = creature:Stability()
                                     end,
 

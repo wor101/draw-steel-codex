@@ -613,7 +613,7 @@ local function CreateDrawSteelBubble()
 
                 local angle = math.atan(deltay, deltax)
                 local angleDegrees = math.deg(angle)
-                element.selfStyle.rotate = angleDegrees - 90
+                element.selfStyle.rotateNumber = angleDegrees - 90
 
                 element.thinkTime = 0.01
             end,

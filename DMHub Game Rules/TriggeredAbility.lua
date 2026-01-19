@@ -998,6 +998,8 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 
 			local sustain = true
 			local gameupdate = dmhub.ngameupdate
+
+            local expireAt = nil
             
 			while trigger ~= nil and (not trigger.triggered) and (not trigger.dismissed) and sustain do
 				coroutine.yield()
@@ -1007,16 +1009,12 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
                     break
                 end
 
-                if casterToken.properties:GetResourceRefreshId("turn") ~= turnid then
-                    local runtime = dmhub.Time() - starttime
-                    if runtime < 2 then
-                        --let it roll over to the next turn as our turn id since it changed
-                        --turn almost immediately.
-                        turnid = casterToken.properties:GetResourceRefreshId("turn")
-                    elseif runtime > 8 then
-                        --make sure we show the trigger for at least 8 seconds, then expire it.
+                if expireAt ~= nil then
+                    if dmhub.Time() >= expireAt then
                         sustain = false
                     end
+                elseif casterToken.properties:GetResourceRefreshId("turn") ~= turnid and (dmhub.initiativeQueue == nil or (not dmhub.initiativeQueue:ChoosingTurn())) then
+                    expireAt = dmhub.Time() + 6
                 end
 
                 local triggers = casterToken.properties:GetAvailableTriggers() or {}

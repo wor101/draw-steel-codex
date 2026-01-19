@@ -1292,6 +1292,11 @@ local function AbilityHeading(args)
                 m_ability.castImmediately = true
             end
 
+            CharacterPanel.HighlightAbilitySection{
+                ability = m_ability,
+                section = "target",
+            }
+
             g_abilityController:FireEventTree("beginCasting", m_ability, { targets = args.targets, cast = args.cast, fromui = true })
         end,
 
@@ -2111,7 +2116,7 @@ local AddRadiusMarker = function(locOverride, radius, color, filterFunction)
     end
 
 
-    print("MovementRadius:: MarkLocs", locs and #locs, "radius =", radius, "from token", tokenCasting.charid, "override =", locOverride)
+    print("MARK:: MovementRadius:: MarkLocs", locs and #locs, "radius =", radius, "from token", tokenCasting.charid, "override =", locOverride)
     g_radiusMarkers[#g_radiusMarkers + 1] = dmhub.MarkLocs {
         locs = locs,
         color = color,
@@ -3835,6 +3840,7 @@ CreateAbilityController = function()
                     token = g_token,
                     range = range,
                     radius = radius,
+                    checklos = true,
                     locOverride = locOverride or g_currentAbility:try_get("casterLocOverride"),
                     requireEmpty = requireEmpty,
                     emptyMayIncludeSelf = requireEmpty and (targetingType == "pathfind" or targetingType == "vacated" or targetingType == "straightline" or targetingType == "straightpath" or targetingType == "straightpathignorecreatures"),
@@ -3857,6 +3863,8 @@ CreateAbilityController = function()
                 g_pointTargeting.shapeRequiresConfirm = false
                 g_pointTargeting.shape = nil
             end
+
+            g_currentSymbols.targetArea = g_pointTargeting.shape
 
             local selfTarget = g_currentAbility.selfTarget
             local targetTokens = dmhub.tokenInfo.TokensInShape(g_pointTargeting.shape)
@@ -4124,6 +4132,7 @@ CreateAbilityController = function()
                         end
 
 
+                        print("MARK:: MARK LOCS")
                         g_radiusMarkers[#g_radiusMarkers + 1] = dmhub.MarkLocs{
                             locs = locs,
                             color = "#444444",
@@ -4166,6 +4175,7 @@ CreateAbilityController = function()
                             { moveFlags = moveFlags, waypoints = waypoints, mask = mask, filter = filterTargetPredicate})
 
                         if radiusMarker ~= nil then
+                        print("MARK:: MARK LOCS")
                             g_radiusMarkers[#g_radiusMarkers + 1] = radiusMarker
                             return
                         end
@@ -4198,6 +4208,11 @@ CreateAbilityController = function()
                     m_markLineOfSightToken = nil
                     m_markLineOfSightSourceToken = nil
                 end
+
+                CharacterPanel.HighlightAbilitySection{
+                    ability = g_currentAbility,
+                    section = "main",
+                }
 
                 local clearAbility = g_currentAbility
                 g_currentAbility:Cast(g_token, targets, {
@@ -4432,6 +4447,11 @@ CalculateSpellTargeting = function(forceCast, initialSetup)
                 end
             end
 
+            CharacterPanel.HighlightAbilitySection{
+                ability = g_currentAbility,
+                section = "main",
+            }
+
             local clearAbility = g_currentAbility
             g_currentAbility:Cast(g_token, targets, {
                 attachedTriggers = attachedTriggers,
@@ -4514,7 +4534,7 @@ CalculateSpellTargeting = function(forceCast, initialSetup)
 
                 local filterTargetPredicate = g_currentAbility:TargetLocPassesFilterPredicate(g_token, g_currentSymbols)
 
-                print("MovementRadius:: MARK", range)
+                print("MARK:: MovementRadius:: MARK", range)
                 g_radiusMarkers[#g_radiusMarkers + 1] = g_token:MarkMovementRadius(range,
                     { moveFlags = moveFlags, waypoints = waypoints, mask = mask, filter = filterTargetPredicate })
             elseif (g_currentAbility.targetType ~= 'line' or g_currentAbility.canChooseLowerRange) and g_currentAbility.targetType ~= 'cone' and g_currentAbility.targetType ~= 'self' and g_currentAbility.targetType ~= 'all' and g_currentAbility.targetType ~= 'map' and g_currentAbility.targetType ~= 'areatemplate' then

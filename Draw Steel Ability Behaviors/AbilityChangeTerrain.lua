@@ -22,16 +22,14 @@ function ActivatedAbilityChangeTerrainBehavior:Cast(ability, casterToken, target
         return
     end
 
-    if options.targetArea ~= nil and options.targetArea.shape == "Cube" then
+    if options.targetArea ~= nil then
         local points = {}
-        points[#points + 1] = options.targetArea.origin.x - options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.y - options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.x + options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.y - options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.x + options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.y + options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.x - options.targetArea.radius * 0.5
-        points[#points + 1] = options.targetArea.origin.y + options.targetArea.radius * 0.5
+        for _,pt in ipairs(options.targetArea.perimeter) do
+            points[#points + 1] = pt.x
+            points[#points + 1] = pt.y
+        end
+
+        print("TARGET:: EXECUTE WITH", #points / 2, "points")
 
         game.currentFloor:ExecutePolygonOperation {
             points = { points },
