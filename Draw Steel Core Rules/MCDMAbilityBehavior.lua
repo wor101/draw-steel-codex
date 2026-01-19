@@ -72,7 +72,14 @@ local function ExecuteDamage(behavior, ability, casterToken, targetToken, option
     local damageType = match.type or "untyped"
     local damage = tonumber(match.damage)
     
-    print("ExecuteDamage::", damage, damageType)
+    -- Count how many times (half) appears in the modifiers
+    local halfCount = 0
+    if match.mods then
+        local _, count = string.gsub(match.mods, "half", "")
+        halfCount = count
+    end
+    
+    print("ExecuteDamage::", damage, damageType, "halfCount:", halfCount)
 
     if damage == nil then
         local complete = false
@@ -132,15 +139,22 @@ local function ExecuteDamage(behavior, ability, casterToken, targetToken, option
             damage = damage + bonus
         end
 
-        if match.mult == "half" then
-            damage = math.floor(damage/2)
+        if halfCount > 0 then
+            for i = 1, halfCount do
+                damage = math.floor(damage/2)
+            end
         end
 
         local selfName = creature.GetTokenDescription(casterToken)
 
         local result
 
-        ability.RecordTokenMessage(targetToken, options, string.format("%d %s damage", damage, damageType))
+        local damageMessage = string.format("%d %s damage", damage, damageType)
+        if halfCount > 0 then
+            local halfText = string.rep("(half) ", halfCount)
+            damageMessage = damageMessage .. " " .. string.trim(halfText)
+        end
+        ability.RecordTokenMessage(targetToken, options, damageMessage)
         targetToken:ModifyProperties{
             description = "Inflict Damage",
             undoable = false,
@@ -230,9 +244,9 @@ local g_rulePatterns = {
     },
     --]]
     {
-        pattern = {"^(?<damage>[0-9 d+-]+)\\s*(?<type>[a-z]+)?\\s?damage(\\s*\\((?<mult>half)\\))?",
-            "^(?<damage>[0-9]+)\\s+(?<type>[a-z]+)\\s+damage(\\s*\\((?<mult>half)\\))?",
-            "^(?<damage>[0-9]+)\\s*\\+\\s*(?<bonus>[a-z, ]+ or [a-z]+ )(?<type>[a-z]+)\\s*damage(\\s*\\((?<mult>half)\\))?",
+        pattern = {"^(?<damage>[0-9 d+-]+)\\s*(?<type>[a-z]+)?\\s?damage(?<mods>(\\s*\\(half\\))*)",
+            "^(?<damage>[0-9]+)\\s+(?<type>[a-z]+)\\s+damage(?<mods>(\\s*\\(half\\))*)",
+            "^(?<damage>[0-9]+)\\s*\\+\\s*(?<bonus>[a-z, ]+ or [a-z]+ )(?<type>[a-z]+)\\s*damage(?<mods>(\\s*\\(half\\))*)",
         },
         execute = ExecuteDamage,
         isdamage = true,
