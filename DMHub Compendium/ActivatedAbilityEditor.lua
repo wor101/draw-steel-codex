@@ -497,6 +497,15 @@ function ActivatedAbility:GenerateEditor()
 				flow = "vertical",
 				valign = "top",
 			},
+			{
+				classes = {"effectInput"},
+				width = "80%",
+				height = "auto",
+				halign = "center",
+				margin = 8,
+				minHeight = 20,
+				textAlignment = "topleft",
+			},
 
 		},
 
@@ -879,15 +888,10 @@ function ActivatedAbility:GenerateEditor()
 			gui.Panel{
 				classes = {"formPanel"},
 				gui.Input{
-					classes = "formInput",
-					placeholderText = "Enter Effect Details...",
+					classes = {"effectInput","formInput"},
 					multiline = true,
-					width = "80%",
-					height = "auto",
-					halign = "center",
-					margin = 8,
-					minHeight = 20,
-					textAlignment = "topleft",
+					characterLimit = 2000,
+					placeholderText = "Enter Effect Details...",
 					text = self:try_get("preDescription", ""),
 					change = function(element)
 						self.preDescription = element.text
@@ -906,15 +910,10 @@ function ActivatedAbility:GenerateEditor()
 			gui.Panel{
 				classes = {"formPanel"},
 				gui.Input{
-					classes = "formInput",
-					placeholderText = "Enter Effect Details...",
+					classes = {"effectInput","formInput"},
 					multiline = true,
-					width = "80%",
-					height = "auto",
-					halign = "center",
-					margin = 8,
-					minHeight = 100,
-					textAlignment = "topleft",
+					characterLimit = 2000,
+					placeholderText = "Enter Effect Details...",
 					text = self.description,
 					change = function(element)
 						self.description = element.text
