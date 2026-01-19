@@ -288,7 +288,7 @@ local function _panelStyles()
         },
         {
             selectors = {"feature-selector", "select"},
-            bgimage = "ui-icons/Back.png", --"panels/open-inventory-arrow.png",
+            bgimage = "ui-icons/Back.png",
             bgcolor = "white",
         },
         {

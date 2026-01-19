@@ -74,7 +74,7 @@ end
 
 function CharacterComplicationChoice:SaveSelection(hero, option)
     local selected = hero:get_or_add("complications", {})
-    selected[option.guid] = true
+    selected[option.id] = true
     return true
 end
 
