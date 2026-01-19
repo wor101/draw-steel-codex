@@ -71,6 +71,7 @@ function CharacterAspectChoice:RemoveSelection(hero, option)
             aspects[self.guid] = ""
         end
     end
+    return true
 end
 
 --- Save the selected option to the hero.
