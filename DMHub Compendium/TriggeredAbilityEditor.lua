@@ -402,6 +402,7 @@ function TriggeredAbility:GenerateEditor(options)
 				margin = 8,
 				minHeight = 100,
 				textAlignment = "topleft",
+				characterLimit = 8192,
 				text = self.description,
 				change = function(element)
 					self.description = element.text
