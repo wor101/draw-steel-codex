@@ -104,5 +104,8 @@ function CharacterDescription:GetPhysicalFeatures()
 end
 
 character.Description = function(self)
-    return self.characterDescription
+    local description = self:try_get(CharacterDescription.CHARACTER_KEY)
+    if description == nil or description.typeName ~= "CharacterDescription" then
+        self[CharacterDescription.CHARACTER_KEY] = CharacterDescription.new{}
+    end
 end
