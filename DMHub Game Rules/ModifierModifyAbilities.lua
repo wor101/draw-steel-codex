@@ -158,6 +158,7 @@ CharacterModifier.RegisterAbilityModifier
 		operations = { "Add", "Multiply", "Set" },
 		set = function(modifier, creature, ability, operation, value)
 			local val = nil
+			value = dmhub.EvalGoblinScript(value, GenerateSymbols(creature, modifier:try_get("_tmp_symbols")), "Calculate Range Modifier")
 			if operation == "Set" then
 				val = tonumber(value)
 			elseif operation == "Multiply" then
@@ -175,6 +176,37 @@ CharacterModifier.RegisterAbilityModifier
 			end
 			return true
 		end,
+		documentation = {
+			help = string.format("This GoblinScript is appended to the range for abilities this modifier affects."),
+			output = "number",
+			examples = {
+				{
+					script = "1",
+					text = "1 is added to the range.",
+				},
+				{
+					script = "3 + 1 when level > 10",
+					text = "3 is added to the range, or 4 when the attacking creature is above level 10.",
+				},
+			},
+			subject = creature.helpSymbols,
+			subjectDescription = "The creature that is affected by this modifier",
+			symbols = {
+				target = {
+					name = "Target",
+					type = "creature",
+					desc = "The creature targeted with the ability.",
+					examples = {
+						"2 when Target.Type is undead",
+					},
+				},
+				ability = {
+					name = "Ability",
+					type = "ability",
+					desc = "The ability being modified",
+				},
+			},
+		},
 	}
 
 CharacterModifier.RegisterAbilityModifier
