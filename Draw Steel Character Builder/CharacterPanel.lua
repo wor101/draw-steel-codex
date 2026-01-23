@@ -5,7 +5,6 @@ CBCharPanel = RegisterGameType("CBCharPanel")
 
 local _blankToDashes = CharacterBuilder._blankToDashes
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
-local _formatOrder = CharacterBuilder._formatOrder
 local _getHero = CharacterBuilder._getHero
 local _getState = CharacterBuilder._getState
 local _getToken = CharacterBuilder._getToken
@@ -52,13 +51,8 @@ end
 
 --- Create a panel to display an element of builder status
 --- @param selector string The primary selector for querying state
---- @param visible? boolean|function(hero) Whether the panel should be visible
---- @param suppressRow1? boolean Whether to suppress the first row of detail
 --- @return Panel
-function CBCharPanel._statusItem(selector, visible, suppressRow1)
-    if visible == nil then visible = true end
-    if suppressRow1 == nil then suppressRow1 = false end
-
+function CBCharPanel._statusItem(selector)
     local headingText = _ucFirst(selector)
 
     local headerPanel = gui.Panel{
@@ -126,33 +120,12 @@ function CBCharPanel._statusItem(selector, visible, suppressRow1)
         end,
 
         calculateStatus = function(element, state)
-            local hero = _getHero()
-            local featureCache = state:Get(selector .. ".featureCache")
-
-            local statusEntries = {}
-            if not suppressRow1 then
-                statusEntries[headingText] = {
-                    id = headingText,
-                    order = _formatOrder(0, headingText),
-                    available = 1,
-                    selected = 0,
-                    selectedDetail = {},
-                }
+            local selectionStatus = state:Get(selector .. ".selectionStatus")
+            if selectionStatus then
+                element.data.statusEntries = selectionStatus:CalculateStatus()
+            else
+                element.data.statusEntries = {}
             end
-
-            if hero and featureCache then
-                if not suppressRow1 then
-                    statusEntries[headingText].selected = 1
-                    statusEntries[headingText].selectedDetail = { featureCache:GetSelectedName() }
-                end
-
-                local featureStatusEntries = featureCache:CalculateStatus()
-                statusEntries = CharacterBuilder._mergeKeyedTables(statusEntries, featureStatusEntries)
-            end
-            statusEntries = CharacterBuilder._toArray(statusEntries)
-            table.sort(statusEntries, function(a,b) return a.order < b.order end)
-
-            element.data.statusEntries = statusEntries
         end,
 
         reconcileChildren = function(element)
@@ -198,16 +171,10 @@ function CBCharPanel._statusItem(selector, visible, suppressRow1)
         flow = "vertical",
         data = {
             expanded = nil,
-            visible = visible,
         },
         refreshBuilderState = function(element, state)
-            local visible = element.data.visible
-            if type(visible) == "function" then
-                local hero = _getHero()
-                visible = visible(hero)
-            else
-                visible = element.data.visible == true
-            end
+            local selectionStatus = state:Get(selector .. ".selectionStatus")
+            local visible = selectionStatus and selectionStatus:IsVisible(_getHero()) or false
             element:SetClass("collapsed", not visible)
             if not visible then
                 element:HaltEventPropagation()
@@ -228,14 +195,12 @@ end
 
 function CBCharPanel._builderPanel(tabId)
 
-    local ancestryStatusItem = CBCharPanel._statusItem(SEL.ANCESTRY, true)
-    local cultureStatusItem = CBCharPanel._statusItem(SEL.CULTURE, true, true)
-    local careerStatusItem = CBCharPanel._statusItem(SEL.CAREER, true)
-    local classStatusItem = CBCharPanel._statusItem(SEL.CLASS, true)
-    local kitStatusItem = CBCharPanel._statusItem(SEL.KIT, function(hero)
-        return hero:CanHaveKits()
-    end, true)
-    local complicationStatusItem = CBCharPanel._statusItem(SEL.COMPLICATION, true, true)
+    local ancestryStatusItem = CBCharPanel._statusItem(SEL.ANCESTRY)
+    local cultureStatusItem = CBCharPanel._statusItem(SEL.CULTURE)
+    local careerStatusItem = CBCharPanel._statusItem(SEL.CAREER)
+    local classStatusItem = CBCharPanel._statusItem(SEL.CLASS)
+    local kitStatusItem = CBCharPanel._statusItem(SEL.KIT)
+    local complicationStatusItem = CBCharPanel._statusItem(SEL.COMPLICATION)
 
     return gui.Panel {
         classes = {"builder-base", "panel-base", "charpanel", "tab-content"},
@@ -449,7 +414,7 @@ function CBCharPanel._descriptionPanel(tabId)
                     if desc then element.text = _blankToDashes(desc:GetPhysicalFeatures()) end
                 end
             end,
-        }
+        },
     }
 
     return gui.Panel {

@@ -809,3 +809,52 @@ function CharacterBuilder._sortButtons(children)
 
     return result
 end
+
+--- @return Panel
+function CharacterBuilder.ProgressPip(index, opts)
+    local options = {
+        classes = {"builder-base", "panel-base", "progress-pip"},
+        rotate = 45,
+        data = {
+            index = index,
+        },
+        updateProgress = function(element, progress)
+            element:SetClass("filled", progress.done >= element.data.index)
+            element:SetClass("collapsed", element.data.index > progress.slots)
+        end
+    }
+
+    for k,v in pairs(opts or {}) do
+        options[k] = v
+    end
+
+    return gui.Panel(options)
+end
+
+--- @return Panel
+function CharacterBuilder.ProgressBar(opts)
+
+    local options = {
+        classes = {"builder-base", "panel-base", "progress-bar"},
+        floating = true,
+        valign = "bottom",
+        halign = "center",
+        -- hmargin = 20,
+        vmargin = -4,
+        updateProgress = function(element, progress)
+            local visible = progress.slots > 1
+            element:SetClass("collapsed", not visible)
+            if not visible then return end
+
+            for i = #element.children + 1, progress.slots do
+                element:AddChild(CharacterBuilder.ProgressPip(i))
+            end
+        end,
+    }
+
+    for k,v in pairs(opts) do
+        options[k] = v
+    end
+    
+    return gui.Panel(options)
+end

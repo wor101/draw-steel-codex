@@ -220,11 +220,10 @@ function CBClassDetail._overviewPanel()
                 local currentSelected = state:Get(SELECTOR .. ".selectedId")
                 if currentSelected ~= element.data.lastSelected then
                     element.data.lastSelected = currentSelected
-                    -- TODO: Scroll back to top. This doesn't work.
-                    -- element.vscrollPositon = 0
+                    element.vscrollPosition = 1
                 end
             end,
-            
+
             spacerPanel,
             nameLabel,
             introLabel,
