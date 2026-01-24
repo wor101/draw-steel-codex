@@ -99,8 +99,8 @@ end
 --- @return table Array of status entry tables
 function CBSelectionStatus:CalculateStatus()
     -- Return cached if available
-    local cached = self:try_get("statusEntries")
-    if cached then return cached end
+    -- local cached = self:try_get("statusEntries")
+    -- if cached then return cached end
 
     local statusEntries = {}
     local numSelected = 0

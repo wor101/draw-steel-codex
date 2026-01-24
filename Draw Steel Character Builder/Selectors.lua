@@ -198,9 +198,7 @@ function CBSelectors._makeButton(options)
             width = 12,
             borderColor = CBStyles.COLORS.GOLD03,
             refreshBuilderState = function(element, state)
-                -- Clear all progress classes (both opacity-based and gradient-based)
                 for i = 0, 100, 10 do
-                    element:SetClass("progress-" .. i, false)
                     element:SetClass("progress-gradient-" .. i, false)
                 end
                 local selector = element.parent.data.selector
@@ -210,14 +208,7 @@ function CBSelectors._makeButton(options)
                     if slots > 0 then
                         local pctComplete = math.floor((done / slots * 100) + 5)
                         pctComplete = math.floor(pctComplete / 10) * 10
-                        if false then
-                            -- Opacity-based fill (black overlay fades as progress increases)
-                            element:SetClass("progress-" .. pctComplete, true)
-                        else
-                            -- print("THC:: LINEAR::", element.parent.data.selector, pctComplete)
-                            -- Gradient fill (gold fills from bottom to top)
-                            element:SetClass("progress-gradient-" .. pctComplete, true)
-                        end
+                        element:SetClass("progress-gradient-" .. pctComplete, true)
                     end
                 end
             end,
@@ -507,6 +498,10 @@ local TEST_DETAIL = [[
 
 # Recent Changes *(Please test!)*
 
+*In newest to oldest order...*
+
+* Fixed issue w/ status indicators on kits
+* Added progress indicators to buttons in columns 1 & 2.
 * Skill items display descriptions.
 * Selecting and de-selecting Ancestry, Career, and Class changed - new buttons above Overview button.
 * Updated selection of features like skills, languages, etc. Removed the Select/Remove button at the bottom in favor of buttons on the choices. Let us know what you think of the new way.
@@ -515,6 +510,7 @@ local TEST_DETAIL = [[
 # Known Issues
 
 **Functionality**
+* Some selection items that should have ability cards do not.
 * In the selection lists, we sometimes display redundant, empty, or meaningless extra info / description info. But try hovering it.
 * Exploration tab should list Perks.
 

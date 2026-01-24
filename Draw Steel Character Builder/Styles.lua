@@ -52,7 +52,7 @@ CBStyles.SIZES = {
     SELECT_BUTTON_WIDTH = 200,
     SELECT_BUTTON_HEIGHT = 36,
 
-    PROGRESS_PIP_SIZE = 8,
+    PROGRESS_PIP_SIZE = 6,
 
     -- The little buttons top right on feature selector pane 3
     FEATURE_SELECT_WIDTH = 24,
@@ -396,50 +396,6 @@ local function _panelStyles()
         {
             selectors = {"progress-pip", "filled"},
             bgcolor = CBStyles.COLORS.GOLD,
-        },
-        {
-            selectors = {"progress-pip", "progress-0"},
-            bgcolor = "#000000FF",  -- 0% complete = fully opaque
-        },
-        {
-            selectors = {"progress-pip", "progress-10"},
-            bgcolor = "#000000E6",  -- 90% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-20"},
-            bgcolor = "#000000CC",  -- 80% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-30"},
-            bgcolor = "#000000B3",  -- 70% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-40"},
-            bgcolor = "#00000099",  -- 60% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-50"},
-            bgcolor = "#00000080",  -- 50% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-60"},
-            bgcolor = "#00000066",  -- 40% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-70"},
-            bgcolor = "#0000004D",  -- 30% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-80"},
-            bgcolor = "#00000033",  -- 20% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-90"},
-            bgcolor = "#0000001A",  -- 10% opacity
-        },
-        {
-            selectors = {"progress-pip", "progress-100"},
-            bgcolor = "#00000000",  -- 100% complete = fully transparent
         },
 
         -- Gradient-based progress pip styles (fill from bottom to top)

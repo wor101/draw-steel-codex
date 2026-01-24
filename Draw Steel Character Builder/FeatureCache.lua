@@ -153,13 +153,18 @@ function CBFeatureCache._processFeatures(opts, hero, features)
     opts.allFeaturesComplete = true
 
     for _,item in ipairs(features) do
-        if item.features ~= nil then
-            for _,feature in ipairs(item.features) do
+        local itemFeatures = _safeGet(item, "features")
+        local itemFeature = _safeGet(item, "feature")
+        if itemFeatures ~= nil then
+            for _,feature in ipairs(itemFeatures) do
                 flattened[#flattened+1] = { feature = feature }
                 addFeature(feature)
             end
-        elseif item.feature ~= nil then
+        elseif itemFeature ~= nil then
             addFeature(item.feature)
+        else
+            flattened[#flattened+1] = { feature = item }
+            addFeature(item)
         end
     end
 
