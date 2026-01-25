@@ -500,10 +500,13 @@ local TEST_DETAIL = [[
 
 **Latest Release**
 
-* Fixed issue with ability cards not appearing in selected items.
-* Fixed issue with ability cards not appearing in some choices. **If you find more of these, please report!**
+* Made the background on certain ability cards dark instead of transparent.
+* Added status indicator to Character left-side button.
 
 **Previous Releases**
+
+* Fixed issue with ability cards not appearing in selected items.
+* Fixed issue with ability cards not appearing in some choices. **If you find more of these, please report!**
 
 * Fixed issue w/ status indicators on kits.
 * Added progress indicators to buttons in columns 1 & 2.

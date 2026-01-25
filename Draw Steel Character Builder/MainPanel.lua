@@ -177,6 +177,17 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
+        cacheDescriptionStatus = function(element, hero)
+            local state = element.data.state
+            local descriptionStatus = CBDescriptionStatus.CreateNew{
+                selectorName = SEL.CHARACTER,
+                visible = true,
+                suppressRow1 = true,
+                displayName = "Character",
+            }
+            state:Set{ key = SEL.CHARACTER .. ".selectionStatus", value = descriptionStatus }
+        end,
+
         cacheLevelChoices = function(element)
             local state = element.data.state
             local hero = _getHero()
@@ -278,6 +289,8 @@ function CharacterBuilder.CreatePanel()
                     element:FireEvent("cacheComplication", hero)
 
                     element:FireEvent("cacheCultures", hero)
+
+                    element:FireEvent("cacheDescriptionStatus", hero)
 
                     local careerItem = creature:Background()
                     if careerItem then

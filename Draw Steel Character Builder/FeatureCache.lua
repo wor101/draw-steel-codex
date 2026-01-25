@@ -775,7 +775,10 @@ function CBOptionWrapper:Panel()
                     local ability = rawget(modifier, cond(modifier.behavior == "activated", "activatedAbility", "ability"))
                     if ability ~= nil then
                        return function()
-                            return ability:Render({width = 600}, {})
+                            return ability:Render({
+                                width = 600,
+                                bgimage = true,
+                                bgcolor = CBStyles.COLORS.BLACK03}, {})
                         end
                     end
                 end
