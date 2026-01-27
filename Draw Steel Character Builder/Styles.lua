@@ -397,6 +397,10 @@ local function _panelStyles()
             selectors = {"progress-pip", "filled"},
             bgcolor = CBStyles.COLORS.GOLD,
         },
+        {
+            selectors = {"progress-pip", "filled", "solo"},
+            bgcolor = CBStyles.COLORS.CREAM03
+        },
 
         -- Gradient-based progress pip styles (fill from bottom to top)
         -- For diamond shape (45° rotated), gradient goes from bottom corner to top corner

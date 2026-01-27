@@ -484,8 +484,6 @@ local TEST_DETAIL = [[
 
 ***Thank you** so much for testing this work in progress. We appreciate your effort. Your feedback will help us prepare this feature for release.*
 
-*Seriously, it's well nigh impossible to test what you've built yourself because you know how it's supposed to work and you stick to the script. We need you!*
-
 # Feedback Needed
 
 *We're looking for feedback in the following areas:*
@@ -500,14 +498,16 @@ local TEST_DETAIL = [[
 
 **Latest Release**
 
-* Made the background on certain ability cards dark instead of transparent.
-* Added status indicator to Character left-side button.
+* Added the ability to select aggregate cultures as starting points, then you can still change individual aspects.
+* Modified the progress indicators on the buttons in column 2.
 
 **Previous Releases**
 
+* Made the background on certain ability cards dark instead of transparent.
+* Added status indicator to Character left-side button.
+
 * Fixed issue with ability cards not appearing in selected items.
 * Fixed issue with ability cards not appearing in some choices. **If you find more of these, please report!**
-
 * Fixed issue w/ status indicators on kits.
 * Added progress indicators to buttons in columns 1 & 2.
 * Skill items display descriptions.

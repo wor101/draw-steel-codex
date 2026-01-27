@@ -740,25 +740,46 @@ function CharacterBuilder._makeFeatureRegistry(options)
                         element:SetClass("collapsed", not visible)
                     end,
                 },
-                CharacterBuilder.ProgressBar{
-                    vmargin = CBStyles.SIZES.PROGRESS_PIP_SIZE + 7,
-                    minPips = 1,
+                CharacterBuilder.ProgressPip(1, {
+                    rotate = 45,
+                    classes = {"builder-base", "panel-base", "progress-pip", "solo"},
+                    halign = "right",
+                    valign = "top",
+                    hmargin = -6,
+                    vmargin = -6,
+                    width = 12,
+                    height = 12,
+                    borderColor = CBStyles.COLORS.GOLD,
                     refreshBuilderState = function(element, state)
                         local visible = state:Get(selector .. ".blockFeatureSelection") ~= true
                         if visible then
                             local featureCache = state:Get(selector .. ".featureCache")
                             local feature = featureCache and featureCache:GetFeature(element.parent.data.featureId)
-                            local status = feature and feature:GetStatus()
-                            if status then
-                                element:FireEventTree("updateProgress", {
-                                    slots = status.numChoices,
-                                    done = status.selected,
-                                })
-                            end
+                            local filled = feature and feature:IsComplete()
+                            element:SetClass("filled", filled)
                         end
                         element:SetClass("collapsed", not visible)
                     end,
-                }
+                }),
+                -- CharacterBuilder.ProgressBar{
+                --     vmargin = CBStyles.SIZES.PROGRESS_PIP_SIZE + 7,
+                --     minPips = 1,
+                --     refreshBuilderState = function(element, state)
+                --         local visible = state:Get(selector .. ".blockFeatureSelection") ~= true
+                --         if visible then
+                --             local featureCache = state:Get(selector .. ".featureCache")
+                --             local feature = featureCache and featureCache:GetFeature(element.parent.data.featureId)
+                --             local status = feature and feature:GetStatus()
+                --             if status then
+                --                 element:FireEventTree("updateProgress", {
+                --                     slots = status.numChoices,
+                --                     done = status.selected,
+                --                 })
+                --             end
+                --         end
+                --         element:SetClass("collapsed", not visible)
+                --     end,
+                -- }
             },
             panel = CharacterBuilder._makeFeaturePanelContainer{
                 data = {

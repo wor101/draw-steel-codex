@@ -408,7 +408,8 @@ end
 
 --- @return boolean
 function CBFeatureWrapper:IsComplete()
-    return self:GetSelectedValue() >= self:GetNumChoices()
+    local status = self:GetStatus()
+    return status.selected >= status.numChoices
 end
 
 --- Callback to support custom unsetting
@@ -532,7 +533,8 @@ end
 function CBFeatureWrapper._deriveOrder(feature, category)
     local typeOrder = {
         -- Low numbers are reserved - stay between 100 & 998
-        CharacterAspectChoice               = 101,
+        CharacterCultureAggregateChoice     = 102,
+        CharacterAspectChoice               = 103,
         CharacterComplicationChoice         = 105,
         CharacterAncestryInheritanceChoice  = 110,
         CharacterCharacteristicChoice       = 120,
@@ -760,7 +762,7 @@ function CBOptionWrapper:Panel()
 
     -- Check if raw option has CreateDropdownPanel method (from GetOptions())
     local option = self.option
-    if type(option.CreateDropdownPanel) == "function" then
+    if type(_safeGet(option, "CreateDropdownPanel")) == "function" then
         return function()
             return option:CreateDropdownPanel(self:GetName())
         end

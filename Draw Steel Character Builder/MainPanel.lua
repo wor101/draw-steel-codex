@@ -153,8 +153,11 @@ function CharacterBuilder.CreatePanel()
         end,
 
         cacheCultures = function(element, hero)
-            local aspectFeatures = CharacterAspectChoice.CreateAll()
-            if aspectFeatures then
+            if hero == nil then hero = _getHero() end
+            if hero == nil then error("HOW TF IS HERO NIL?") end
+            local cultureAggregates = CharacterCultureAggregateChoice.CreateAll(hero)
+            local aspectFeatures = CharacterAspectChoice.CreateAll(hero)
+            if cultureAggregates or aspectFeatures then
                 local levelChoices = hero:GetLevelChoices()
 
                 local cultureFeatures = {}
@@ -164,6 +167,9 @@ function CharacterBuilder.CreatePanel()
                 end
 
                 cultureFeatures = table.append_arrays(aspectFeatures, cultureFeatures)
+                if cultureAggregates then
+                    cultureFeatures = table.append_arrays(cultureAggregates, cultureFeatures)
+                end
                 local featureCache = CBFeatureCache.CreateNew(hero, SEL.CULTURE, "Culture", cultureFeatures)
                 local selectionStatus = CBSelectionStatus.CreateNew{
                     featureCache = featureCache,
@@ -268,9 +274,8 @@ function CharacterBuilder.CreatePanel()
                 end
                 element:FireEvent("ensureActiveSelector")
 
-                local creature = token.properties
-                if creature:IsHero() then
-                    local hero = creature
+                local hero = token.properties
+                if hero:IsHero() then
 
                     -- Validate the description info
                     -- TODO: Ensure server storage if not in char sheet
@@ -281,7 +286,7 @@ function CharacterBuilder.CreatePanel()
                         end
                     end
 
-                    local ancestryId = creature:try_get("raceid")
+                    local ancestryId = hero:try_get("raceid")
                     if ancestryId  then
                         element:FireEvent("selectAncestry", ancestryId, true)
                     end
@@ -292,12 +297,12 @@ function CharacterBuilder.CreatePanel()
 
                     element:FireEvent("cacheDescriptionStatus", hero)
 
-                    local careerItem = creature:Background()
+                    local careerItem = hero:Background()
                     if careerItem then
                         element:FireEvent("selectCareer", careerItem.id, true)
                     end
 
-                    local classItem = creature:GetClass()
+                    local classItem = hero:GetClass()
                     if classItem then
                         element:FireEvent("selectClass", classItem.id, true)
                     end
