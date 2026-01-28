@@ -675,22 +675,12 @@ function CharacterBuilder.CreatePanel()
     return CharacterBuilder.builderPanel
 end
 
--- TODO: Remove the gate on the setting
-setting{
-    id = "testwipbuilder",
-    description = "Test WIP Builder",
-    editor = "check",
-    default = false,
-    storage = "preference",
-    section = "game",
-}
-
 --- Our tab in the character sheet
 CharSheet.RegisterTab {
     id = "builder2",
-    text = "Builder (WIP)",
+    text = "Builder",
 	visible = function(c)
-		return c ~= nil and c:IsHero() and dmhub.GetSettingValue("testwipbuilder") == true
+		return c ~= nil and c:IsHero()
 	end,
     panel = CharacterBuilder.CreatePanel
 }

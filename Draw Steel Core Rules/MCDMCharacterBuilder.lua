@@ -2655,7 +2655,7 @@ CharSheet.RegisterBuilderTab{
 
 CharSheet.RegisterTab{
 	id = "Builder",
-	text = "Builder",
+	text = "Builder (OLD)",
 	visible = function(c)
 		--only visible for characters.
 		return c ~= nil and c.typeName == "character"

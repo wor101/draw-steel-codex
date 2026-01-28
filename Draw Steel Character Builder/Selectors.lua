@@ -498,22 +498,20 @@ local TEST_DETAIL = [[
 
 **Latest Release**
 
-* Added the ability to select aggregate cultures as starting points, then you can still change individual aspects.
-* Modified the progress indicators on the buttons in column 2.
+* Everyone's opted in. Happy testing. Let us know what we broke.
 
 **Previous Releases**
 
+* Added the ability to select aggregate cultures as starting points, then you can still change individual aspects.
+* Modified the progress indicators on the buttons in column 2.
+
 * Made the background on certain ability cards dark instead of transparent.
 * Added status indicator to Character left-side button.
-
 * Fixed issue with ability cards not appearing in selected items.
 * Fixed issue with ability cards not appearing in some choices. **If you find more of these, please report!**
 * Fixed issue w/ status indicators on kits.
 * Added progress indicators to buttons in columns 1 & 2.
 * Skill items display descriptions.
-* Selecting and de-selecting Ancestry, Career, and Class changed - new buttons above Overview button.
-* Updated selection of features like skills, languages, etc. Removed the Select/Remove button at the bottom in favor of buttons on the choices. Let us know what you think of the new way.
-* Should be a lot smarter about excluding already selected items from choice lists.
 
 # Known Issues
 
