@@ -54,7 +54,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
 
     -- Build targetsContainer
     local targetsContainerDef = _mergeKeyedTables({
-        classes = {"builder-base", "panel-base", "container"},
+        classes = {"builder-base", "panel-base", "container", "feature-targets-drop"},
         flow = "vertical",
         data = {},
     }, overrides.targetsContainer)
@@ -62,7 +62,7 @@ function CBFeatureSelector.BuildSelectorPanel(overrides)
 
     -- Build optionsContainer
     local optionsContainerDef = _mergeKeyedTables({
-        classes = {"builder-base", "panel-base", "container"},
+        classes = {"builder-base", "panel-base", "container", "feature-options-drop"},
         data = {},
     }, overrides.optionsContainer)
     local optionsContainer = overrides.optionsContainer and gui.Panel(optionsContainerDef)
@@ -198,6 +198,21 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     controller:FireEvent("selectTarget", element.data.option:GetGuid())
                 end
             end,
+            canDragOnto = function(element, target)
+                if target == nil then return false end
+                if not target:HasClass("feature-choice") then return false end
+                return element.data.option ~= nil
+            end,
+            drag = function(element, target)
+                if target == nil then return end
+                local option = element.data.option
+                if option == nil then return end
+
+                local controller = getFeatureSelController(element)
+                if controller then
+                    controller:FireEvent("removeItem", option)
+                end
+            end,
             refreshBuilderState = function(element, state)
                 local cachedFeature = getCachedFeature(state, element.data.featureId)
                 local visible = false
@@ -231,6 +246,12 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 end
                 element:SetClass("filled", option ~= nil)
                 element:SetClass("selected", isSelected)
+
+                -- Enable dragging for filled target slots
+                local canDrag = option ~= nil
+                element.draggable = canDrag
+                element.dragTarget = true  -- Always a drag target (empty or filled)
+                element.hoverCursor = canDrag and "hand" or nil
             end,
             removeItem = function(element)
                 if element.data.option then
@@ -323,6 +344,34 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
             assignItem = function(element, option)
                 element.data.option = option
             end,
+            canDragOnto = function(element, target)
+                if target == nil then return false end
+                if not target:HasClass("feature-target") then return false end
+
+                local state = _getState()
+                if state == nil then return false end
+
+                local blockSel = state:Get(selector .. ".blockFeatureSelection") == true
+                if blockSel then return false end
+
+                local option = element.data.option
+                if option == nil then return false end
+
+                local cachedFeature = getCachedFeature(state, element.data.featureId)
+                if cachedFeature == nil then return false end
+
+                return cachedFeature:AllowSelection(option:GetGuid())
+            end,
+            drag = function(element, target)
+                if target == nil then return end
+                local option = element.data.option
+                if option == nil then return end
+
+                local controller = getFeatureSelController(element)
+                if controller then
+                    controller:FireEvent("applyItem", option)
+                end
+            end,
             doubleclick = function(element)
                 element:FireEvent("selectItem")
             end,
@@ -350,6 +399,16 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 element:FireEventTree("updateName", name)
                 element:FireEventTree("updateDesc", option:GetDescription())
                 element:FireEventTree("customPanel", option:Panel())
+
+                -- Enable dragging if selection is allowed
+                local canDrag = false
+                if visible and cachedFeature and option then
+                    local blockSel = state:Get(selector .. ".blockFeatureSelection") == true
+                    canDrag = not blockSel and cachedFeature:AllowSelection(option:GetGuid())
+                end
+                element.draggable = canDrag
+                element.dragTarget = true
+                element.hoverCursor = canDrag and "hand" or nil
             end,
             selectItem = function(element)
                 if element.data.option then

@@ -498,7 +498,10 @@ local TEST_DETAIL = [[
 
 **Latest Release**
 
-* Everyone's opted in. Happy testing. Let us know what we broke.
+* Everyone is opted in. Happy testing. Let us know what we broke.
+* Added double-click as a way to select & deselect features (column 3).
+* Added drag & drop as a way to select & deselect features (column 3).
+* Changed the select feature icon / button to a + (column 3) & added hover tooltip.
 
 **Previous Releases**
 

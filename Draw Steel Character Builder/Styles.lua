@@ -267,6 +267,26 @@ local function _panelStyles()
             selectors = {"feature-choice", "filtered"},
             collapsed = true,
         },
+        -- Drop target glow for individual target slots (when dragging options over)
+        {
+            selectors = {"feature-target", "drag-target"},
+            brightness = 1.3,
+        },
+        {
+            selectors = {"feature-target", "drag-target-hover"},
+            brightness = 1.6,
+            borderColor = CBStyles.COLORS.CREAM03,
+        },
+        -- Drop target glow for individual choice panels (when dragging targets over)
+        {
+            selectors = {"feature-choice", "drag-target"},
+            brightness = 1.3,
+        },
+        {
+            selectors = {"feature-choice", "drag-target-hover"},
+            brightness = 1.6,
+            borderColor = CBStyles.COLORS.CREAM03,
+        },
         {
             selectors = {"feature-selector"},
             width = CBStyles.SIZES.FEATURE_SELECT_WIDTH,
