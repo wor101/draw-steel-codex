@@ -640,15 +640,16 @@ function CharacterFeatureChoice:Choices(numOption, existingChoices, creature)
 			end
 
 			local text = feature.name
-			if usePoints then
-				local cost = feature:try_get("pointsCost", 1)
-				text = string.format("%s (%d %s)", text, cost, self.pointsName)
-			end
+			-- if usePoints then
+			-- 	local cost = feature:try_get("pointsCost", 1)
+			-- 	text = string.format("%s (%d %s)", text, cost, self.pointsName)
+			-- end
 			result[#result+1] = {
 				id = feature.guid,
 				text = text,
 				description = feature.description,
 				classes = classes,
+				pointsCost = feature:try_get("pointsCost", 1),
                 hasCustomPanel = feature:HasCustomDropdownPanel(),
                 panel = function()
                     return feature:CreateDropdownPanel(text)

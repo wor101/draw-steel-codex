@@ -8,6 +8,7 @@ CBOptionWrapper = RegisterGameType("CBOptionWrapper")
 
 local _formatOrder = CharacterBuilder._formatOrder
 local _hasFn = CharacterBuilder._hasFn
+local _safeFeatureName = CharacterBuilder._safeFeatureName
 local _safeGet = CharacterBuilder._safeGet
 
 --[[
@@ -295,7 +296,7 @@ end
 
 --- @return string|nil
 function CBFeatureWrapper:GetName()
-    return self.feature:try_get("name", "Unnamed Feature")
+    return _safeFeatureName(self.feature) --self.feature:try_get("name", "Unnamed Feature")
 end
 
 --- @return number
@@ -315,7 +316,7 @@ function CBFeatureWrapper:GetOptionDisplayName(option)
     local name = option:GetName()
     if self:CostsPoints() then
         if not name:lower():find(" points)") then
-            local pointCost = string.format(" (%d Points)", option:GetPointsCost())
+            local pointCost = string.format(" (%d %s)", option:GetPointsCost(), self:GetPointsName())
             name = string.format("%s%s", name, pointCost)
         end
     end
@@ -340,6 +341,11 @@ end
 --- @return string
 function CBFeatureWrapper:GetOrder()
     return self:try_get("order", _formatOrder(999, "zzz"))
+end
+
+--- @return string
+function CBFeatureWrapper:GetPointsName()
+    return _safeGet(self.feature, "pointsName", "Points")
 end
 
 --- @return RollTableReference
@@ -557,7 +563,7 @@ function CBFeatureWrapper._deriveOrder(feature, category)
     }
 
     local orderNum = typeOrder[feature.typeName] or 999
-    local nameOrder = _formatOrder(orderNum, feature:try_get("name", "Unnamed Feature"))
+    local nameOrder = _formatOrder(orderNum, _safeFeatureName(feature)) --feature:try_get("name", "Unnamed Feature"))
     local catOrder = _formatOrder(orderNum, category)
 
     return nameOrder, catOrder

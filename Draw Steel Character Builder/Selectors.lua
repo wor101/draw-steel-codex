@@ -191,6 +191,7 @@ function CBSelectors._makeButton(options)
     options.children = {
         gui.ActionButton(button),
         CharacterBuilder.ProgressPip(1, {
+            classes = {"builder-base", "panel-base", "progress-pip", "solo"},
             floating = true,
             halign = "center",
             valign = "top",
@@ -501,6 +502,7 @@ local TEST_DETAIL = [[
 * Swapped order of Ancestry & Character buttons.
 * Removed the debug randomizer on character description.
 * Resolved issue w/ caching Ancestry too aggressively - status indicators lingering when they should not.
+* We should not see any more "Unnamed Feature" buttons. If you do, please let us know how you got to it.
 
 **Previous Releases**
 

@@ -441,6 +441,22 @@ function CharacterBuilder._parseStartingCharacteristics(baseChars)
     return str
 end
 
+--- Gets a safe display name for a feature
+--- @param feature table The feature object
+--- @return string The feature name
+function CharacterBuilder._safeFeatureName(feature)
+    local name = feature:try_get("name")
+    if name then
+        return name
+    end
+
+    -- Extract type name without "Character" prefix
+    local typeName = feature.typeName:sub(10)  -- Remove "Character"
+
+    -- Add spaces before capitals (except first char)
+    return typeName:sub(1, 1) .. typeName:sub(2):gsub("(%u)", " %1")
+end
+
 --- Safely get a named property from an item, defaulting to nil
 --- Works with both class instances (with try_get) and plain tables
 --- @param item table The item to check
@@ -906,7 +922,7 @@ function CharacterBuilder.ProgressBar(opts)
         floating = true,
         valign = "bottom",
         halign = "center",
-        vmargin = -1 * (CBStyles.SIZES.PROGRESS_PIP_SIZE / 2),
+        vmargin = 4, --CBStyles.SIZES.PROGRESS_PIP_SIZE,
         data = {
             visible = false,
         },
@@ -917,7 +933,9 @@ function CharacterBuilder.ProgressBar(opts)
 
             local maxPips = math.min(progress.slots, 20)
             for i = #element.children + 1, maxPips do
-                element:AddChild(CharacterBuilder.ProgressPip(i))
+                element:AddChild(CharacterBuilder.ProgressPip(i, {
+                    rotate = 0,
+                }))
             end
         end,
     }

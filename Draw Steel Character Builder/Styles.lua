@@ -409,13 +409,18 @@ local function _panelStyles()
             width = CBStyles.SIZES.PROGRESS_PIP_SIZE,
             height = CBStyles.SIZES.PROGRESS_PIP_SIZE,
             bgimage = true,
+            bgcolor = CBStyles.COLORS.GRAY02,
+            border = 0,
+            borderColor = CBStyles.COLORS.GOLD,
+        },
+        {
+            selectors = {"progress-pip", "solo"},
             bgcolor = CBStyles.COLORS.BLACK,
             border = 1,
-            borderColor = CBStyles.COLORS.GOLD03,
         },
         {
             selectors = {"progress-pip", "filled"},
-            bgcolor = CBStyles.COLORS.GOLD,
+            bgcolor = CBStyles.COLORS.GOLD03,
         },
         {
             selectors = {"progress-pip", "filled", "solo"},
