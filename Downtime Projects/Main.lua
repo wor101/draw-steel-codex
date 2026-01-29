@@ -112,6 +112,8 @@ local function _migrateFollowerRollsToHero()
     end
 end
 
+if dmhub.isDM then
 Commands.dtmigratefollowerrolls = function()
     _migrateFollowerRollsToHero()
+end
 end
