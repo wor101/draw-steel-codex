@@ -288,10 +288,7 @@ function CharacterBuilder.CreatePanel()
                         end
                     end
 
-                    local ancestryId = hero:try_get("raceid")
-                    if true or ancestryId  then
-                        element:FireEvent("selectAncestry", ancestryId, true)
-                    end
+                    element:FireEvent("selectAncestry", hero:try_get("raceid"))
 
                     element:FireEvent("cacheComplication", hero)
 
@@ -300,14 +297,12 @@ function CharacterBuilder.CreatePanel()
                     element:FireEvent("cacheDescriptionStatus", hero)
 
                     local careerItem = hero:Background()
-                    if careerItem then
-                        element:FireEvent("selectCareer", careerItem.id, true)
-                    end
+                    local careerId = careerItem and careerItem.id
+                    element:FireEvent("selectCareer", careerId)
 
                     local classItem = hero:GetClass()
-                    if classItem then
-                        element:FireEvent("selectClass", classItem.id, true)
-                    end
+                    local classId = classItem and classItem.id
+                    element:FireEvent("selectClass", classId)
 
                     local kitCache = state:Get(SEL.KIT .. ".featureCache")
                     if kitCache then
@@ -389,7 +384,7 @@ function CharacterBuilder.CreatePanel()
             end
         end,
 
-        selectAncestry = function(element, ancestryId, noFire)
+        selectAncestry = function(element, ancestryId)
             local state = element.data.state
 
             local cachedAncestryId = state:Get(SEL.ANCESTRY .. ".selectedId")
@@ -430,12 +425,9 @@ function CharacterBuilder.CreatePanel()
             end
             newState[#newState+1] = { key = SEL.ANCESTRY .. ".blockFeatureSelection", value = hero:try_get("raceid") == nil}
             state:Set(newState)
-            if not noFire then
-                element:FireEventTree("refreshBuilderState", state)
-            end
         end,
 
-        selectCareer = function(element, careerId, noFire)
+        selectCareer = function(element, careerId)
             local state = element.data.state
 
             local cachedCareerId = state:Get(SEL.CAREER .. ".selectedId")
@@ -454,9 +446,7 @@ function CharacterBuilder.CreatePanel()
                 state:Set{ key = SEL.CAREER .. ".blockFeatureSelection", value = blockFeatureSelection }
             end
 
-            if not (careerChanged or levelChoicesChanged) then
-                return
-            end
+            if not (careerChanged or levelChoicesChanged) then return end
 
             local newState = {
                 { key = SEL.CAREER .. ".selectedId", value = careerId },
@@ -500,12 +490,9 @@ function CharacterBuilder.CreatePanel()
                 newState[#newState+1] = { key = SEL.CAREER .. ".blockFeatureSelection", value = hero:try_get("backgroundid") == nil}
             end
             state:Set(newState)
-            if not noFire then
-                element:FireEventTree("refreshBuilderState", state)
-            end
         end,
 
-        selectClass = function(element, classId, noFire)
+        selectClass = function(element, classId)
             local state = element.data.state
             local cachedClassId = state:Get(SEL.CLASS .. ".selectedId")
             local cachedLevel = state:Get(SEL.CLASS .. ".level")
@@ -620,9 +607,6 @@ function CharacterBuilder.CreatePanel()
                 newState[#newState+1] = { key = SEL.KIT .. ".selectionStatus", value = nil }
             end
             state:Set(newState)
-            if not noFire then
-                element:FireEventTree("refreshBuilderState", state)
-            end
         end,
 
         selectItem = function(element, info)
@@ -635,6 +619,7 @@ function CharacterBuilder.CreatePanel()
             local eventName = events[info.selector]
             if eventName then
                 element:FireEvent(eventName, info.id)
+                element:FireEventTree("refreshBuilderState", CharacterBuilder._getState())
             end
         end,
 
