@@ -956,6 +956,7 @@ function ActivatedAbility:GenerateEditor()
 					halign = "center",
 					margin = 8,
 					minHeight = 60,
+                    characterLimit = 2048,
 					textAlignment = "topleft",
 					text =self:try_get("implementationDetails"),
 					change = function(element)
