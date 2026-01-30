@@ -238,7 +238,13 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
 
                 local isSelected = false
                 if option and cachedFeature then
-                    element:FireEventTree("customPanel", option:Panel())
+                    local panelFn = option:Panel()
+                    if panelFn == nil then
+                        -- WORKAROUND: Check in the choice
+                        local choice = cachedFeature:GetChoice(option:GetGuid())
+                        if choice then panelFn = choice:Panel() end
+                    end
+                    element:FireEventTree("customPanel", panelFn)
                     isSelected = cachedFeature:GetSelectedOptionId() == option:GetGuid()
                 end
                 element:SetClass("filled", option ~= nil)

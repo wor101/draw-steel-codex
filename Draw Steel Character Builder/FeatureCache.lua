@@ -775,14 +775,22 @@ end
 
 --- @return function|nil
 function CBOptionWrapper:Panel()
+    -- if self:GetName() == "Amnesia" then print("THC:: PANEL::", json(self.option)) end
     -- It has a panel built in (from Choices())
     local fn = _safeGet(self.option, "panel", nil)
     if fn ~= nil then return fn end
 
     local function evaluateModifier(modifier)
+        -- if self:GetName() == "Amnesia" then
+        --     print("THC:: EVALMOD::", modifier.behavior or "nil", json(modifier))
+        -- end
         if modifier.behavior == "activated" or modifier.behavior == "triggerdisplay" or modifier.behavior == "routine" then
             local ability = rawget(modifier, cond(modifier.behavior == "activated", "activatedAbility", "ability"))
+            -- if self:GetName() == "Amnesia" then
+            --     print("THC:: EVALMOD::", ability ~= nil, json(ability))
+            -- end
             if ability ~= nil then
+                -- if self:GetName() == "Amnesia" then print("THC:: RETURNPANEL::") end
                 return function()
                     return ability:Render({
                         width = "96%",
@@ -794,6 +802,7 @@ function CBOptionWrapper:Panel()
         end
     end
 
+    -- if self:GetName() == "Amnesia" then print("THC:: STEP_1::") end
     -- See if we can calculate a panel from modifiers
     local modifiers = _safeGet(self.option, "modifiers", {})
     for _,modifier in ipairs(modifiers) do
@@ -801,6 +810,7 @@ function CBOptionWrapper:Panel()
         if fn then return fn end
     end
 
+    -- if self:GetName() == "Amnesia" then print("THC:: STEP_2::") end
     -- See if we can calculate a panel from modifierInfo
     local modifierInfo = _safeGet(self.option, "modifierInfo")
     if modifierInfo then
@@ -812,6 +822,16 @@ function CBOptionWrapper:Panel()
         end
     end
 
+    -- if self:GetName() == "Amnesia" then print("THC:: STEP_3::") end
+    -- Check if raw option has CreateDropdownPanel method (from GetOptions())
+    local option = self.option
+    if type(_safeGet(option, "CreateDropdownPanel")) == "function" then
+        return function()
+            return option:CreateDropdownPanel(self:GetName())
+        end
+    end
+
+    -- if self:GetName() == "Amnesia" then print("THC:: STEP_4::") end
     -- No panel
     return nil
 end
