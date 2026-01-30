@@ -477,7 +477,7 @@ CharacterBuilder.RegisterSelector{
 
 --[[
     Sharing information about testing status
-    TODO: Remove before release
+    TODO: Remove here to end of file before release
 ]]
 CharacterBuilder.INITIAL_SELECTOR = "test"
 local TEST_DETAIL = [[
@@ -495,14 +495,17 @@ local TEST_DETAIL = [[
 
 *You're welcome to test with custom configured elements like ancestries, careers, classes, etc. Please validate that any issues aren't configuration before logging them.*
 
-# Recent Changes *(Please test!)*
+# Recent Updates *(Please test!)*
 
 **Latest Release**
 
 * Swapped order of Ancestry & Character buttons.
-* Removed the debug randomizer on character description.
-* Resolved issue w/ caching Ancestry too aggressively - status indicators lingering when they should not.
+* Removed the debug data randomizer on character description.
+* Resolved issue w/ status indicators displaying inaccurately on Ancestry, Career, and Class when switching between characters.
 * We should not see any more "Unnamed Feature" buttons. If you do, please let us know how you got to it.
+* Resolved issue with trimming off the top of some Ancestry Lore entries.
+* Added hover tooltip to remind you to choose your main feature before choosing sub-features.
+* Aggregate cultures that have langages now set their cultural language.
 
 **Previous Releases**
 

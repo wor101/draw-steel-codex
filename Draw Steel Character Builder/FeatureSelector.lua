@@ -376,6 +376,23 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
             doubleclick = function(element)
                 element:FireEvent("selectItem")
             end,
+            hover = function(element)
+                local state = _getState()
+                local blockSel = state:Get(selector .. ".blockFeatureSelection") == true
+                if blockSel then
+                    local tip = string.format("Select your %s before chooing features.", CharacterBuilder._ucFirst(selector))
+                    gui.Tooltip{
+                        halign = "center",
+                        valign = "top",
+                        hmargin = 20,
+                        vmargin = 20,
+                        text = tip,
+                        fontSize = 16,
+                        bgimage = true,
+                        bgcolor = CBStyles.COLORS.GOLD,
+                    }(element)
+                end
+            end,
             press = function(element)
                 if element.data.option == nil then return end
                 local controller = getFeatureSelController(element)

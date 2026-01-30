@@ -309,24 +309,33 @@ function CharacterFeatChoice.CreateNew()
 	}
 end
 
+local g_allCache = {}
 local g_tagCache = {}
 local g_optCache = {}
 
 dmhub.RegisterEventHandler("refreshTables", function(keys)
+	g_allCache = {}
 	g_tagCache = {}
 	g_optCache = {}
 end)
 
 function CharacterFeatChoice:_cache()
-	if g_tagCache[self.tag] ~= nil and g_optCache[self.tag] ~= nil then return end
+	if (g_tagCache[self.tag] ~= nil and g_optCache[self.tag] ~= nil) or (self.tag == nil and #g_allCache > 0) then return end
 
 	local tags = self:Tags()
 
+	local all = {}
 	local tagCache = {}
 	local optCache = {}
 
-	local featsTable = dmhub.GetTable(CharacterFeat.tableName)
+	local featsTable = dmhub.GetTableVisible(CharacterFeat.tableName)
 	for k,feat in pairs(featsTable) do
+		all[#all+1] = {
+			id = k,
+			text = feat.name,
+			description = feat:try_get("description"),
+			unique = true,
+		}
         for _,tag in ipairs(tags) do
             if feat:HasTag(tag) then
                 tagCache[#tagCache+1] = {
@@ -353,16 +362,25 @@ function CharacterFeatChoice:_cache()
         end
 	end
 
+	g_allCache = all
 	g_tagCache[self.tag] = tagCache
 	g_optCache[self.tag] = optCache
 end
 
 function CharacterFeatChoice:Choices(numOption, existingChoices, creature)
+	if self.tag == nil or #self.tag == 0 or self.tag == "feat" then
+		if #g_allCache == 0 then self:_cache() end
+		return g_allCache
+	end
 	if g_tagCache[self.tag] == nil then self:_cache() end
 	return g_tagCache[self.tag]
 end
 
 function CharacterFeatChoice:GetOptions(choices)
+	if self.tag == nil or #self.tag == 0 or self.tag == "feat" then
+		if #g_allCache == 0 then self:_cache() end
+		return g_allCache
+	end
 	if g_optCache[self.tag] == nil then self:_cache() end
 	return g_optCache[self.tag]
 end

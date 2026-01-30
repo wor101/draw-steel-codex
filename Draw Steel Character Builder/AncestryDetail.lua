@@ -267,25 +267,34 @@ function CBAncestryDetail._lorePanel()
             element:SetClass("collapsed", not visible)
         end,
 
-        gui.Label{
-            classes = {"builder-base", "label", "info", "overview"},
-            halign = "center",
-            tmargin = 20,
-            text = "",
+        gui.Panel{
+            classes = {"builder-base", "panel-base", "container"},
+            width = "100%",
+            height = "auto",
+            valign = "top",
+            gui.Label{
+                classes = {"builder-base", "label", "info", "overview"},
+                halign = "center",
+                height = "auto",
+                tmargin = 20,
+                text = "",
+                wrap = true,
+                textAlignment = "topLeft",
 
-            refreshBuilderState = function(element, state)
-                local ancestryId = state:Get(SELECTOR .. ".selectedId")
-                if ancestryId then
-                    local race = state:Get(SELECTOR .. ".selectedItem")
-                    if not race then
-                        race = dmhub.GetTable(Race.tableName)[ancestryId]
+                refreshBuilderState = function(element, state)
+                    local ancestryId = state:Get(SELECTOR .. ".selectedId")
+                    if ancestryId then
+                        local race = state:Get(SELECTOR .. ".selectedItem")
+                        if not race then
+                            race = dmhub.GetTable(Race.tableName)[ancestryId]
+                        end
+                        element.text = (race and race.lore and #race.lore > 0)
+                            and race.lore
+                            or string.format("No lore found for %s.", race.name)
                     end
-                    element.text = (race and race.lore and #race.lore > 0)
-                        and race.lore
-                        or string.format("No lore found for %s.", race.name)
-                end
-            end,
-        }
+                end,
+            },
+        },
     }
 end
 

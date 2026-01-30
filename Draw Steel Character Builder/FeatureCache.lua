@@ -549,7 +549,7 @@ end
 --- @return string nameOrder
 --- @return string categoryOrder
 function CBFeatureWrapper._deriveOrder(feature, category, level)
-    local typeOrder = {
+    local typeOrderTable = {
         -- Low numbers are reserved - stay between 100 & 998
         CharacterCultureAggregateChoice     = 102,
         CharacterAspectChoice               = 103,
@@ -566,10 +566,10 @@ function CBFeatureWrapper._deriveOrder(feature, category, level)
         CharacterIncidentChoice             = 200,
     }
 
-    local typeOrder = typeOrder[feature.typeName] or 999
+    local typeOrder = typeOrderTable[feature.typeName] or 999
     local levelOrder = level or 99
     local nameOrder = _formatOrder(levelOrder, _formatOrder(typeOrder, _safeFeatureName(feature)))
-    local catOrder = _formatOrder(levelOrder, _formatOrder(typeOrder, category))
+    local catOrder = _formatOrder(typeOrder, category)
 
     return nameOrder, catOrder
 end

@@ -20,6 +20,7 @@ CharacterAspectChoice.hasRoll = false
 CharacterCultureAggregateChoice.description = [[
 Selecting an aggregate culture, like ancestry or archetypical, is an optional step.
 Choosing one will fill in all 3 Culture aspects: Environment, Organization, and Upbringing with the values associated with that aggregate.
+If the aggregate has a language, that will also be selected.
 You will be able to change any or all of these aspects after choosing an aggregate.]]
 
 function CharacterAspectChoice.CreateNew(aspect)
@@ -176,20 +177,27 @@ function CharacterCultureAggregateChoice.CreateNew(items)
     local group = items[1].group
 
     local aspectsTable = dmhub.GetTableVisible(CultureAspect.tableName)
+    local languagesTable = dmhub.GetTableVisible(Language.tableName)
 
     local options = {}
     local choices = {}
     for _,item in ipairs(items) do
 
+        local languageId = item:try_get("languageid")
         local description = g_descriptionCache[item.id]
         if description == nil then
             local e = aspectsTable[item.aspects.environment]
             local o = aspectsTable[item.aspects.organization]
             local u = aspectsTable[item.aspects.upbringing]
+            local l = languagesTable[languageId]
             e = e and e.name or "(not found)"
             o = o and o.name or "(not found)"
             u = u and u.name or "(not found)"
+            l = l and l.name or nil
             description = string.format("**Environment:** %s; **Organization:** %s; **Upbringing:** %s", e, o, u)
+            if l then
+                description = string.format("%s; **Language:** %s", description, l)
+            end
             g_descriptionCache[item.id] = description
         end
 
@@ -199,13 +207,15 @@ function CharacterCultureAggregateChoice.CreateNew(items)
             description = description,
             unique = true,
             aspects = item.aspects,
+            languageId = languageId,
         }
         choices[#choices+1] = {
             id = item.id,
             text = item.name,
             description = description,
             unique = true,
-            aspects = item.aspects
+            aspects = item.aspects,
+            languageId = languageId,
         }
     end
     table.sort(options, function(a,b) return a.name < b.name end)
@@ -260,6 +270,10 @@ function CharacterCultureAggregateChoice:RemoveSelection(hero, option)
             aspects[k] = ""
         end
         culture.aggregate = ""
+        if option.languageId and #option.languageId > 0 then
+            local levelChoices = hero:GetLevelChoices()
+            levelChoices.cultureLanguageChoice = {}
+        end
     end
     return true
 end
@@ -276,6 +290,14 @@ function CharacterCultureAggregateChoice:SaveSelection(hero, option)
     end
     culture.aspects = dmhub.DeepCopy(option.aspects)
     culture.aggregate = option.id
+    if option.languageId and #option.languageId > 0 then
+        local levelChoices = hero:GetLevelChoices()
+        if levelChoices then
+            levelChoices.cultureLanguageChoice = {
+                option.languageId
+            }
+        end
+    end
     return true
 end
 
