@@ -845,6 +845,10 @@ function CBOptionWrapper:Panel()
         end
     end
 
+    if type(_safeGet(option, "render")) == "function" then
+        return option.render
+    end
+
     -- It has a panel built in (from Choices())
     -- local fn = _safeGet(self.option, "panel", nil)
     -- if fn ~= nil then return fn end

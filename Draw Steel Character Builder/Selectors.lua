@@ -500,6 +500,7 @@ local TEST_DETAIL = [[
 **Latest Release**
 
 * Feature selection entries now show when they have more info to display.
+* Fixed bug preventing complication additional information from displaying.
 
 **Previous Releases**
 

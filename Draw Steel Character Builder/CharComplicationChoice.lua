@@ -87,19 +87,20 @@ function CharacterComplicationChoice._optionsAndChoices(hero)
             passFilter = GoblinScriptTrue(ExecuteGoblinScript(item.prerequisite, hero:LookupSymbol(), 0, string.format("Complication %s prerequisite", item.name)))
         end
         if passFilter then
+            local renderFn = function() return item:Render() end
             options[#options+1] = {
                 guid = id,
                 name = item.name,
                 description = nil,
                 unique = true,
+                render = renderFn,
             }
             choices[#choices+1] = {
                 id = id,
                 text = item.name,
                 description = nil,
                 unique = true,
-                hasCustomPanel = true,
-                panel = function() return item:Render() end,
+                render = renderFn,
             }
         end
     end
