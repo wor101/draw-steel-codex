@@ -355,16 +355,16 @@ CreateChatPanel = function()
 
                             if devmode() then
                                 --call unsafely as a dev. We want to get errors.
-                                result = CreateSingleChatPanel(message, adoptiveParentPanel)
+                                result = CreateSingleChatPanel(message)
                                 ok = true
                             else
-                                ok, result = pcall(CreateSingleChatPanel, message, adoptiveParentPanel)
+                                ok, result = pcall(CreateSingleChatPanel, message)
                             end
 
                             if ok then
                                 child = result
                             else
-                                dmhub.CloudError("Error creating chat panel: ", message.messageType, result)
+                                dmhub.CloudError("Error creating chat panel: ", result)
                                 g_errorPanels[message.key] = true
                             end
                         end
