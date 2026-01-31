@@ -16,6 +16,11 @@ Commands.doc = function(str)
 
     local doc = assets.pdfDocumentsTable[args[1]]
     if doc == nil then
+        local doc = (dmhub.GetTable(CustomDocument.tableName) or {})[args[1]]
+        if doc ~= nil then
+            CustomDocument.OpenContent(doc)
+            return
+        end
         print("Document not found.")
         return
     end
@@ -633,7 +638,7 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
                                 }
                             }
 
-                            if member.nodeType == "pdf" then
+                            if member.nodeType == "pdf" or member.nodeType == "custom" then
                                 entries[#entries + 1] = {
                                     text = "Set Keybind...",
                                     click = function()
