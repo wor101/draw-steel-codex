@@ -887,6 +887,27 @@ function CharacterSubclassChoice.CreateNew(args)
 	return CharacterSubclassChoice.new(params)
 end
 
+--- @return Panel|nil
+local function renderSubclass(item)
+	local fd = {}
+	item:FillFeatureDetailsForLevel({}, 1, nil, "nonprmiary", fd)
+	if #fd == 0 then return nil end
+	local textItems = {}
+	for _,item in ipairs(fd) do
+		local s = item.feature:GetDetailedSummaryText()
+		if s ~= nil and #s > 0 then
+			textItems[#textItems+1] = s
+		end
+	end
+	local text = table.concat(textItems, "\n")
+	return gui.Label{
+		height = "auto",
+		width = "96%",
+		textAlignment = "topleft",
+		text = text,
+	}
+end
+
 function CharacterSubclassChoice:Choices(numOption, existingChoices, creature)
 	local result = {}
 
@@ -897,6 +918,8 @@ function CharacterSubclassChoice:Choices(numOption, existingChoices, creature)
 				result[#result+1] = {
 					id = k,
 					text = subclass.name,
+					description = subclass.details,
+					-- TODO: If building out descriptions gets prioritized render = function() return renderSubclass(subclass) end,
 				}
 			end
 		end
@@ -912,7 +935,9 @@ function CharacterSubclassChoice:GetOptions(choices, creature)
 		options[#options+1] = {
 			guid = item.id,
 			name = item.text,
+			description = item.description,
 			unique = true,
+			render = item.render,
 		}
 	end
 	return options
