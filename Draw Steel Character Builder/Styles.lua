@@ -15,7 +15,7 @@ CBStyles.COLORS = {
     GOLD03 = "#F1D3A5",
     GRAY02 = "#666663",
     PANEL_BG = "#080B09",
-    GRAY_TRANSPARENT = "#10110FF0",
+    GRAY_TRANSPARENT = "#10110FF3",
 
     -- For selections like skills etc.
     FILLED_ITEM_BG = "#E9B86F0F",
