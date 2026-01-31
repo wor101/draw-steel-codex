@@ -504,6 +504,7 @@ local TEST_DETAIL = [[
 * Added level groupings to Class feature selection (col2).
 * Resolved ability cards painting outside the "lines".
 * Removed redundant extra information when expanding a feature choice.
+* Reordered right side tabs.
 
 **Previous Releases**
 
