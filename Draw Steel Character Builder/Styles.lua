@@ -267,6 +267,19 @@ local function _panelStyles()
             selectors = {"feature-choice", "filtered"},
             collapsed = true,
         },
+        {
+            selectors = {"feature-toggle"},
+            width = 16,
+            height = 16,
+            valign = "center",
+            hmargin = 8,
+            bgimage = "ui-icons/AudioPlayButton.png",
+            bgcolor = "white",
+        },
+        {
+            selectors = {"feature-toggle", "parent:selected"},
+            bgimage = "panels/triangle.png",
+        },
         -- Drop target glow for individual target slots (when dragging options over)
         {
             selectors = {"feature-target", "drag-target"},
@@ -294,7 +307,7 @@ local function _panelStyles()
             halign = "right",
             valign = "top",
             hmargin = 4,
-            vmargin = -4,
+            vmargin = 0,
             bgcolor = "white",
         },
         {
@@ -738,7 +751,7 @@ local function _labelStyles()
         {
             selectors = {"feature-target", "parent:filled"},
             halign = "left",
-            hpad = 20,
+            hpad = 8,
             textAlignment = "left",
         },
         {

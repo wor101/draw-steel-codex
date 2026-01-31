@@ -237,16 +237,17 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 element:FireEventTree("updateDesc", option and option:GetDescription() or "")
 
                 local isSelected = false
+                local panelFn = nil
                 if option and cachedFeature then
-                    local panelFn = option:Panel()
+                    panelFn = option:Panel()
                     if panelFn == nil then
                         -- WORKAROUND: Check in the choice
                         local choice = cachedFeature:GetChoice(option:GetGuid())
                         if choice then panelFn = choice:Panel() end
                     end
-                    element:FireEventTree("customPanel", panelFn)
                     isSelected = cachedFeature:GetSelectedOptionId() == option:GetGuid()
                 end
+                element:FireEventTree("customPanel", panelFn)
                 element:SetClass("filled", option ~= nil)
                 element:SetClass("selected", isSelected)
 
@@ -264,12 +265,29 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     end
                 end
             end,
-            gui.Label{
-                classes = {"builder-base", "label", "feature-target"},
-                text = "Empty Slot",
-                updateName = function(element, text)
-                    if element.text ~= text then element.text = text end
+            gui.Panel{
+                classes = {"builder-base", "panel-base", "container"},
+                flow = "horizontal",
+                height = "auto",
+                width = "98%",
+                halign = "center",
+                refreshBuilderState = function(element, state)
+                    element:SetClass("filled", element.parent:HasClass("filled"))
+                    element:SetClass("selected", element.parent:HasClass("selected"))
                 end,
+                gui.Panel{
+                    classes = {"builder-base", "panel-base", "feature-toggle", "collapsed"},
+                    customPanel = function(element, panelFn)
+                        element:SetClass("collapsed", panelFn == nil)
+                    end,
+                },
+                gui.Label{
+                    classes = {"builder-base", "label", "feature-target"},
+                    text = "Empty Slot",
+                    updateName = function(element, text)
+                        if element.text ~= text then element.text = text end
+                    end,
+                },
             },
             gui.Label{
                 classes = {"builder-base", "label", "feature-target", "desc"},
@@ -439,12 +457,28 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     end
                 end
             end,
-            gui.Label{
-                classes = {"builder-base", "label", "feature-choice"},
-                text = "",
-                updateName = function(element, text)
-                    if element.text ~= text then element.text = text end
+            gui.Panel{
+                classes = {"builder-base", "panel-base", "container"},
+                flow = "horizontal",
+                height = "auto",
+                width = "98%",
+                halign = "center",
+                refreshBuilderState = function(element, state)
+                    element:SetClass("selected", element.parent:HasClass("selected"))
                 end,
+                gui.Panel{
+                    classes = {"builder-base", "panel-base", "feature-toggle", "collapsed"},
+                    customPanel = function(element, panelFn)
+                        element:SetClass("collapsed", panelFn == nil)
+                    end,
+                },
+                gui.Label{
+                    classes = {"builder-base", "label", "feature-choice"},
+                    text = "",
+                    updateName = function(element, text)
+                        if element.text ~= text then element.text = text end
+                    end,
+                },
             },
             gui.Label{
                 classes = {"builder-base", "label", "feature-choice", "desc"},
