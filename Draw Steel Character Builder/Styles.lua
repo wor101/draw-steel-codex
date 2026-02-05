@@ -29,7 +29,7 @@ CBStyles.COLORS = {
 CBStyles.SIZES = {
     -- Panels
     CHARACTER_PANEL_WIDTH = 447,
-    CHARACTER_PANEL_HEADER_HEIGHT = 270,
+    CHARACTER_PANEL_HEADER_HEIGHT = 310,
 
     DESCRIPTION_PANEL_WIDTH = 450,
 
@@ -670,7 +670,7 @@ local function _labelStyles()
             valign = "top",
             textAlignment = "center",
             fontSize = 24,
-            tmargin = 12,
+            tmargin = 6,
         },
 
         -- Dialog
@@ -1023,16 +1023,23 @@ local function _dropdownStyles()
             cornerRadius = 4,
             borderWidth = 2,
         },
-        -- {
-        --     selectors = {"dropdownLabel"},
-        --     textAlignment = "left",
-        --     halign = "left",
-        -- },
         {
             selectors = {"primary"},
             height = 48,
             fontSize = 20,
         },
+        {
+            selectors = {"charlevel"},
+            width = "240",
+            height = 32,
+            bgcolor = "#0a0c0b",
+            borderWidth = 1,
+            halign = "center",
+        },
+        {
+            selectors = {"charlevel", "hover"},
+            color = Styles.textColor,
+        }
     })
 end
 
