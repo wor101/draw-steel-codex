@@ -2662,7 +2662,7 @@ setting{
 }
 
 CharSheet.RegisterTab{
-	id = "Builder",
+	id = "BuilderOld",
 	text = "Builder (OLD)",
 	visible = function(c)
 		--only visible for characters.

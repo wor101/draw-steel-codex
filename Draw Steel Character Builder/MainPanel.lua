@@ -632,7 +632,7 @@ end
 
 --- Our tab in the character sheet
 CharSheet.RegisterTab {
-    id = "builder2",
+    id = "Builder",
     text = "Builder",
 	visible = function(c)
 		return c ~= nil and c:IsHero()
