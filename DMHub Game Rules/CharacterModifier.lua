@@ -3369,6 +3369,11 @@ function CharacterModifier:HasTriggeredEvent(creature, eventName, targetsOther)
             return false
         end
 
+        local token = dmhub.LookupToken(creature)
+        if token == nil or (self.triggeredAbility:try_get("whenActive", "combat") == "combat" and dmhub.initiativeQueue:HasInitiative(InitiativeQueue.GetInitiativeId(token)) == false) then
+            return false
+        end
+
         if not self.triggeredAbility:subjectHasRequiredCondition(creature, creature) and not targetsOther then
             return false
         end
@@ -3396,6 +3401,17 @@ function CharacterModifier:TriggerEvent(creature, eventName, info, modContext, d
                     name = self.triggeredAbility.name,
                     success = false,
                     reason = "Token not found",
+                }
+            end
+            return false
+        end
+
+        if self.triggeredAbility:try_get("whenActive", "always") == "combat" and dmhub.initiativeQueue:HasInitiative(InitiativeQueue.GetInitiativeId(creatureToken)) == false then
+            if debugLog ~= nil then
+                debugLog[#debugLog+1] = {
+                    name = self.triggeredAbility.name,
+                    success = false,
+                    reason = "Not in combat",
                 }
             end
             return false
