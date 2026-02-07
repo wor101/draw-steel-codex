@@ -991,6 +991,11 @@ Kit.helpSymbols = {
 	__name = "Kit",
 	__sampleFields = {"speed"},
 
+	name = {
+		name = "Name",
+		type = "string",
+		desc = "The name of the kit.",
+	},
 	stamina = {
         name = "Stamina",
         type = "number",
@@ -1037,6 +1042,9 @@ Kit.helpSymbols = {
 Kit.lookupSymbols = {
 	datatype = function(c)
 		return "kit"
+	end,
+	name = function(c)
+		return c.name
 	end,
 	stamina = function(c)
 		return c.health
