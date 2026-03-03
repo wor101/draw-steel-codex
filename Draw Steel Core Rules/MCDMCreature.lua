@@ -2774,6 +2774,12 @@ end
 function creature:NotifyConditionCaster(token, conditionid)
     local conditionCasterSource = self:get_or_add("_tmp_conditionCasterSource", {})
     conditionCasterSource[conditionid] = conditionCasterSource[conditionid] or {}
+    if conditionCasterSource[conditionid][token.charid] == nil then
+        -- New condition caster data; invalidate modifier cache so it
+        -- recalculates with the updated _tmp_conditionCasterSource.
+        self._tmp_modifiersRefresh = nil
+        self._tmp_modifiersRefreshExcludingAuras = nil
+    end
     conditionCasterSource[conditionid][token.charid] = dmhub.ngameupdate
 end
 
@@ -3483,10 +3489,10 @@ end
 --- @param info {type: string, amount: number, instances: number, aura: AuraInstance}
 function creature:AuraDamage(token, info)
     token:ModifyProperties {
-        description = info.aura.name,
+        description = info.aura.aura.name,
         execute = function()
             for i = 1, info.instances do
-                self:InflictDamageInstance(info.amount, info.type, {}, info.aura.name, { damagesound = "Attack.Enviro" })
+                self:InflictDamageInstance(info.amount, info.type, {}, info.aura.aura.name, { damagesound = "Attack.Enviro" })
             end
         end,
     }
