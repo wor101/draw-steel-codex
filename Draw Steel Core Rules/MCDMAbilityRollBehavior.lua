@@ -1063,11 +1063,17 @@ function ActivatedAbilityPowerRollBehavior:Cast(ability, casterToken, targets, o
             end
         end
 
-        dialog = CharacterPanel.EmbedDialogInAbility()
+        -- EmbedDialogInAbility returns nil when the sidebar is not available
+        -- (e.g. triggered ability context). Only overwrite dialog if successful
+        -- so the fallback GameHud.instance.rollDialog is preserved.
+        local embeddedDialog = CharacterPanel.EmbedDialogInAbility()
+        if embeddedDialog ~= nil then
+            dialog = embeddedDialog
 
-        --give a few cycles for the dialog to init.
-        for i=1,4 do
-            coroutine.yield(0.01)
+            --give a few cycles for the dialog to init.
+            for i=1,4 do
+                coroutine.yield(0.01)
+            end
         end
     end
 
@@ -1083,7 +1089,7 @@ function ActivatedAbilityPowerRollBehavior:Cast(ability, casterToken, targets, o
         amendable = true,
         modifiers = modifiersApplied,
         multitargets = multitargets,
-        RecalculateMultitargets = CalculateMultitargets,
+        CalculateMultiTargets = CalculateMultitargets,
         creature = caster,
         targetCreature = appliedTargetCreature,
         symbols = options.symbols,

@@ -513,6 +513,7 @@ function ActivatedAbilityInvokeAbilityBehavior:EditorItems(parentPanel)
                 end
             }
         }
+
     end
 
 	result[#result+1] = gui.Panel{

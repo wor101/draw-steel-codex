@@ -1840,7 +1840,11 @@ function GameHud:NextInitiative(oncomplete)
         --damage is done in the end turn event it still shouldn't take damage.
 		for i,tok in ipairs(tokens) do
 			if tok.properties ~= nil then
-				tok.properties:EndTurn(tok)
+                if tok.properties:IsTurnSkipped(tok) then
+                    -- Suppress EndTurn: save-ends and end-of-turn effects do not trigger.
+                else
+				    tok.properties:EndTurn(tok)
+                end
 			end
 		end
 

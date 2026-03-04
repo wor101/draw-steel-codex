@@ -9,6 +9,15 @@ creature.minionDead = false
 --- @field creature.initiativeGrouping false|string
 creature.initiativeGrouping = false
 
+--- @field creature.skipTurnInitiativeId string The initiative id for which this creature's turn was skipped.
+creature.skipTurnInitiativeId = ""
+
+--- @field creature.skipTurnRoundId string The round ID in which this creature's turn was skipped.
+creature.skipTurnRoundId = ""
+
+--- @field creature.skipTurnTurnsTaken number The turnsTaken value for the entry at the time of the skip.
+creature.skipTurnTurnsTaken = 0
+
 --- @alias SquadInfo table
 
 
@@ -453,11 +462,41 @@ function creature:RefreshToken(token)
     end
 end
 
+function creature:MarkTurnSkipped(initiativeid)
+    if dmhub.initiativeQueue == nil then return end
+    local q = dmhub.initiativeQueue
+    self.skipTurnInitiativeId = initiativeid or ""
+    self.skipTurnRoundId = q:GetRoundId() or ""
+    local entry = q.entries[initiativeid]
+    self.skipTurnTurnsTaken = (entry ~= nil) and (entry.turnsTaken or 0) or 0
+end
+
+function creature:IsTurnSkipped(token)
+    if dmhub.initiativeQueue == nil then return false end
+    local q = dmhub.initiativeQueue
+    if self:try_get("skipTurnRoundId", "") ~= (q:GetRoundId() or "") then return false end
+    local myInitiativeId = InitiativeQueue.GetInitiativeId(token)
+    if self:try_get("skipTurnInitiativeId", "") ~= myInitiativeId then return false end
+    local entry = q.entries[myInitiativeId]
+    if entry ~= nil then
+        if (entry.turnsTaken or 0) > self:try_get("skipTurnTurnsTaken", 0) then
+            return false  -- multi-turn boss used another turn; skip has expired
+        end
+    end
+    return true
+end
+
 function creature:RefreshInitiativeInfo(token)
     local q = dmhub.initiativeQueue
     if q == nil or q.hidden then
         self._tmp_initiativeStatus = nil
     else
+        -- Check if this creature's turn was skipped. Show as "Done" even during
+        -- a grouped turn where other creatures still have their turns available.
+        if self:IsTurnSkipped(token) then
+            self._tmp_initiativeStatus = "Done"
+            return
+        end
         local initiativeid = InitiativeQueue.GetInitiativeId(token)
         local initiativeEntry = q:GetFirstInitiativeEntry()
         if initiativeEntry ~= nil and initiativeEntry.initiativeid == initiativeid then
@@ -640,6 +679,7 @@ function creature:RefreshSquadInfo(token)
         }
 
         local liveMinions = 0
+        local activeMinions = 0
         local damage_taken_charid = self._tmp_minionSquad.damage_taken_charid or nil
         local damage_taken = self._tmp_minionSquad.damage_taken or 0
         local damage_taken_seq = self._tmp_minionSquad.damage_taken_seq or 0
@@ -654,6 +694,9 @@ function creature:RefreshSquadInfo(token)
                     self._tmp_minionSquad.tokens[#self._tmp_minionSquad.tokens + 1] = tok
                     if (not tok.properties.minionDead) and tok.properties.minion then
                         liveMinions = liveMinions + 1
+                        if not tok.properties:IsTurnSkipped(tok) then
+                            activeMinions = activeMinions + 1
+                        end
                     end
 
                     if tok.properties:has_key("squadpos") then
@@ -710,6 +753,7 @@ function creature:RefreshSquadInfo(token)
 
         self._tmp_minionSquad.hasCaptain = newHasCaptain
         self._tmp_minionSquad.liveMinions = liveMinions
+        self._tmp_minionSquad.activeMinions = activeMinions
         self._tmp_minionSquad.health_single = health_single
         self._tmp_minionSquad.maximum_health = health_single * liveMinions
         self._tmp_minionSquad.damage_taken = damage_taken

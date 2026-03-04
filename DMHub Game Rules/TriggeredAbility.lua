@@ -635,7 +635,6 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 
     argOptions = argOptions or {}
 
-
 	local casterToken = dmhub.LookupToken(creature)
 	if casterToken == nil then
         if argOptions.debugLog then

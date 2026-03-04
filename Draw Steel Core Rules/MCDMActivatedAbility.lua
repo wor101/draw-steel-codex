@@ -2276,8 +2276,9 @@ function ActivatedAbility:GetNumTargets(casterToken, symbols)
     local result = g_numTargetsFunction(self, casterToken, symbols)
 
     if (not mod.unloaded) and casterToken ~= nil and casterToken.properties.minion and self.categorization == "Signature Ability" and result == 1 and casterToken.properties:has_key("_tmp_minionSquad") then
-        --minion signature abilities can target one target for each member of the squad.
-        return casterToken.properties._tmp_minionSquad.liveMinions
+        --minion signature abilities can target one target for each active (non-skipped) member.
+        return casterToken.properties._tmp_minionSquad.activeMinions
+            or casterToken.properties._tmp_minionSquad.liveMinions
     end
 
     return result
