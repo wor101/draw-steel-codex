@@ -590,7 +590,7 @@ DrawSteelMinion.SquadHud = function(floorid, squad)
 
                             thinkTime = 0.01,
                             think = function(element)
-                                if tok.valid then
+                                if tok.valid and m_currentPos ~= nil then
                                     local tokenPos = tok.pos
                                     tokenPos = game.GetFloor(floorid):AdjustParallaxPositionOnGround(tokenPos.x, tokenPos.y)
 

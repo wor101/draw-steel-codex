@@ -3624,6 +3624,7 @@ CharacterPanel.CreateMultiEdit = function()
 	return resultPanel
 end
 
+
 CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, memberPanes)
 
 	local m_folderPanels = element.data.folderPanels or {}
@@ -3645,7 +3646,7 @@ CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, mem
 			local folder = nil
 			local squadid = creature:MinionSquad()
 
-			if squadid ~= nil then
+			if type(squadid) == "string" then
 				key = squadid .. '-' .. charid
 
 				folder = newFolderPanels[squadid]

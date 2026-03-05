@@ -978,8 +978,12 @@ local function RefreshRemoteAbilityDisplay(displayPanel, shareData)
     end
 
     -- Full rebuild: build the ability tooltip card.
+    if ability.typeName ~= "ActivatedAbility" then
+        return
+    end
+
     local tooltipAbility = ability
-    if casterToken ~= nil and casterToken.valid and ability.typeName == "ActivatedAbility" then
+    if casterToken ~= nil and casterToken.valid then
         tooltipAbility = ability:GetActiveVariation(casterToken) or ability
     end
 
