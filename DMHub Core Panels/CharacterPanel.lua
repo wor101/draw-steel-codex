@@ -1847,7 +1847,9 @@ local CreateBestiaryFolder = function(nodeid)
 
         local addBestiaryEntryButton = gui.AddButton {
             id = "AddBestiaryEntryButton",
+            floating = true,
             halign = "right",
+            valign = "center",
             width = 24,
             height = 24,
             hover = gui.Tooltip("Create a bestiary entry"),
@@ -1936,10 +1938,9 @@ local CreateBestiaryFolder = function(nodeid)
                         children = {
                             searchInput,
                             clearSearchButton,
+                            addBestiaryEntryButton,
                         },
                     },
-
-                    addBestiaryEntryButton,
                 },
             }
     end
@@ -2073,6 +2074,7 @@ local CreateBestiaryFolder = function(nodeid)
             gui.Label({
                 text = 'Bestiary',
                 classes = { "bestiaryLabel" },
+                x = 4,
                 editableOnDoubleClick = (nodeid ~= ''), --all folders except the root Bestiary folder can be renamed.
                 characterLimit = 24,
                 events = {
