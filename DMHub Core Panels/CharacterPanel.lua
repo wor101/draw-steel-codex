@@ -2811,6 +2811,10 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
                     return
                 end
 
+                if #partyMembers == 0 then
+                    return
+                end
+
                 isCollapsed = not isCollapsed
 
                 triangle:SetClass('expanded', not isCollapsed)
@@ -2935,7 +2939,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             gui.Label {
                 text = partyName,
                 classes = { "bestiaryLabel" },
-                editableOnDoubleClick = party ~= nil,
+                editableOnDoubleClick = false,
                 characterLimit = 24,
                 events = {
                     change = function(element)
