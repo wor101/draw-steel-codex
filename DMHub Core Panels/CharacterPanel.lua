@@ -2771,6 +2771,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
     RefreshParty()
 
     local folderPane
+    local selectAllPanel = nil
 
     local triangle = nil
     triangle = gui.Panel({
@@ -2814,6 +2815,9 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
 
                 triangle:SetClass('expanded', not isCollapsed)
                 folderPane:FireEvent("refreshCollapsed")
+                if selectAllPanel ~= nil then
+                    selectAllPanel:FireEvent("refreshCollapsed")
+                end
 
                 if not isCollapsed then
                     folderPane:FireEvent('expand')
@@ -2872,41 +2876,31 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             end,
 
             press = function(element)
-                if partyid == nil then
-                    return
-                end
-
-                local setFocus = false
-                element:FireEventOnParents("ClearCharacterPanelSelection")
-                for k, p in pairs(memberPanes) do
-                    if not setFocus then
-                        gui.SetFocus(p)
-                        setFocus = true
-                    else
-                        element:FireEventOnParents("AddCharacterPanelToSelection", p)
-                    end
-                end
-
-                if isCollapsed then
-                    triangle:FireEvent("press")
-                end
+                triangle:FireEvent("press")
             end,
 
             rightClick = function(element)
-                if #memberPanes == 0 and party ~= nil then
-                    element.popup = gui.ContextMenu {
-                        entries = {
-                            {
-                                text = "Delete Party",
-                                click = function()
-                                    party.hidden = true
-                                    dmhub.SetAndUploadTableItem(Party.tableName, party)
-                                    element.popup = nil
-                                end,
-
-                            }
+                if party ~= nil then
+                    local entries = {
+                        {
+                            text = "Party Settings",
+                            click = function()
+                                Compendium.ShowModalEditDialog(Party, party.id)
+                                element.popup = nil
+                            end,
                         },
                     }
+                    if #memberPanes == 0 then
+                        entries[#entries + 1] = {
+                            text = "Delete Party",
+                            click = function()
+                                party.hidden = true
+                                dmhub.SetAndUploadTableItem(Party.tableName, party)
+                                element.popup = nil
+                            end,
+                        }
+                    end
+                    element.popup = gui.ContextMenu { entries = entries }
                 elseif partyid == "graveyard" then
                     element.popup = gui.ContextMenu{
                         entries = {
@@ -2954,15 +2948,6 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
                 },
             },
 
-            gui.SettingsButton {
-                classes = { cond(party == nil, "hidden") },
-                width = 16,
-                height = 16,
-                swallowPress = true,
-                press = function(element)
-                    Compendium.ShowModalEditDialog(Party, party.id)
-                end,
-            }
         },
     }
 
@@ -2987,12 +2972,55 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             end
 
             memberPanes = CharacterPanel.PopulatePartyMembers(element, party, partyMembers, memberPanes)
+            selectAllPanel:FireEvent("refreshCollapsed")
         end,
 
         expand = function(element)
             element:FireEvent("refresh")
         end,
 
+    }
+
+    selectAllPanel = gui.Panel {
+        classes = { cond(isCollapsed or partyid == nil or partyid == "graveyard" or #partyMembers == 0, "collapsed") },
+        width = "100%",
+        height = BestiaryPanelHeight,
+        bgimage = "panels/square.png",
+        styles = {
+            {
+                bgcolor = "#ffffff00",
+                borderWidth = 0,
+                flow = "horizontal",
+            },
+            {
+                selectors = { "hover" },
+                bgcolor = Styles.textColor,
+                brightness = 0.8,
+            },
+        },
+        refreshCollapsed = function(element)
+            element:SetClass("collapsed", isCollapsed or partyid == nil or partyid == "graveyard" or #partyMembers == 0)
+        end,
+        press = function(element)
+            local setFocus = false
+            element:FireEventOnParents("ClearCharacterPanelSelection")
+            for k, p in pairs(memberPanes) do
+                if not setFocus then
+                    gui.SetFocus(p)
+                    setFocus = true
+                else
+                    element:FireEventOnParents("AddCharacterPanelToSelection", p)
+                end
+            end
+        end,
+        gui.Label {
+            classes = { "bestiaryLabel" },
+            width = "100%",
+            halign = "center",
+            valign = "center",
+            textAlignment = "center",
+            text = "Select All",
+        },
     }
 
     resultPanel = gui.Panel {
@@ -3026,6 +3054,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
 
         headerPanel,
         folderPane,
+        selectAllPanel,
 
     }
 
