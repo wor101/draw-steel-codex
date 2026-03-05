@@ -344,6 +344,9 @@ function TriggeredAbility:GenerateEditor(options)
         local triggerInfo = TriggeredAbility.GetTriggerById(self.trigger)
         if triggerInfo ~= nil then
             for k,v in pairs(triggerInfo.symbols or {}) do
+                if type(v) == "table" and v.name then
+                    k = string.lower(string.gsub(v.name, "%s+", ""))
+                end
                 helpSymbols[k] = v
             end
 

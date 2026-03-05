@@ -1099,7 +1099,7 @@ GameSystem.OnEndCastActivatedAbility = function(casterToken, ability, options)
     ability:FireUseAbility(casterToken, options)
 
 	if ability.categorization == "Signature Ability" and (ability:HasKeyword("Area") or ability:HasKeyword("Strike")) then
-		casterToken.properties:DispatchEvent("castsignature", {ability = ability, cast = options.symbols.cast})
+		casterToken.properties:DispatchEvent("castsignature", {usedability = ability, cast = options.symbols.cast})
 	end
 end
 
@@ -2553,7 +2553,7 @@ GameSystem.OnEndCastActivatedAbility = function(casterToken, ability, options)
     ability:FireUseAbility(casterToken, options)
 
 	if ability.categorization == "Signature Ability" and (ability:HasKeyword("Area") or ability:HasKeyword("Strike")) then
-		casterToken.properties:DispatchEvent("castsignature", {ability = ability, cast = options.symbols.cast})
+		casterToken.properties:DispatchEvent("castsignature", {usedability = ability, cast = options.symbols.cast})
 	end
 end
 
