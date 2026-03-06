@@ -34,6 +34,9 @@ function ActivatedAbilityAugmentedAbilityBehavior:SynthesizeAbilities(ability, c
 			local synth = DeepCopy(a)
 			synth._tmp_temporaryClone = true
 
+			-- Apply modifier behaviors before overriding casting properties
+			synth = modifierFunction(self.modifier, creature, synth)
+
 	        local OnBeginCast = ability:try_get("OnBeginCast")
 	        local OnFinishCast = ability:try_get("OnFinishCast")
 
@@ -80,7 +83,6 @@ function ActivatedAbilityAugmentedAbilityBehavior:SynthesizeAbilities(ability, c
 			if ability:has_key("level") then
 				synth.level = ability.level
 			end
-			synth = modifierFunction(self.modifier, creature, synth)
 
 			result[#result+1] = synth
 		end
