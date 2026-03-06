@@ -2978,7 +2978,9 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             end
 
             memberPanes = CharacterPanel.PopulatePartyMembers(element, party, partyMembers, memberPanes)
-            selectAllPanel:FireEvent("refreshCollapsed")
+            if selectAllPanel ~= nil then
+                selectAllPanel:FireEvent("refreshCollapsed")
+            end
         end,
 
         expand = function(element)
@@ -2987,47 +2989,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
 
     }
 
-    selectAllPanel = gui.Panel {
-        classes = { cond(isCollapsed or partyid == nil or partyid == "graveyard" or #partyMembers == 0, "collapsed") },
-        width = "100%",
-        height = BestiaryPanelHeight,
-        bgimage = "panels/square.png",
-        styles = {
-            {
-                bgcolor = "#ffffff00",
-                borderWidth = 0,
-                flow = "horizontal",
-            },
-            {
-                selectors = { "hover" },
-                bgcolor = Styles.textColor,
-                brightness = 0.8,
-            },
-        },
-        refreshCollapsed = function(element)
-            element:SetClass("collapsed", isCollapsed or partyid == nil or partyid == "graveyard" or #partyMembers == 0)
-        end,
-        press = function(element)
-            local setFocus = false
-            element:FireEventOnParents("ClearCharacterPanelSelection")
-            for k, p in pairs(memberPanes) do
-                if not setFocus then
-                    gui.SetFocus(p)
-                    setFocus = true
-                else
-                    element:FireEventOnParents("AddCharacterPanelToSelection", p)
-                end
-            end
-        end,
-        gui.Label {
-            classes = { "bestiaryLabel" },
-            width = "100%",
-            halign = "center",
-            valign = "center",
-            textAlignment = "center",
-            text = "Select All",
-        },
-    }
+
 
     resultPanel = gui.Panel {
         flow = "vertical",
@@ -3060,7 +3022,6 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
 
         headerPanel,
         folderPane,
-        selectAllPanel,
 
     }
 
@@ -3111,6 +3072,7 @@ local CreateBestiaryAndPartyPanel = function(noBestiary)
                 height = "auto",
                 flow = "horizontal",
                 halign = "right",
+                rmargin = 8,
 
                 gui.AddButton {
                     bgimage = "icons/icon_app/icon_app_18.png",
