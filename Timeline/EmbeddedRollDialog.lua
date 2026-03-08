@@ -2627,6 +2627,15 @@ function GameHud.CreateEmbeddedRollDialog()
         press = function(element)
             print("REROLL:: DOING REROLL...", g_activeRoll)
             if g_activeRoll == nil then
+                -- Hook for external mods (e.g., DiceVision) to handle re-rolls
+                if RollDialog.OnReroll then
+                    local hookResult = RollDialog.OnReroll({
+                        rollArgs = g_activeRollArgs,
+                    })
+                    if hookResult == "intercept" then
+                        return
+                    end
+                end
                 return
             end
 

@@ -9,6 +9,7 @@ end
 
 RollDialog = {
     OnBeforeRoll = false,
+    OnReroll = false,
 }
 
 local g_activeRoll = nil
