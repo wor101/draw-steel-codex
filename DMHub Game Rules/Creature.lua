@@ -460,10 +460,10 @@ function creature:CanTeleport()
     return false
 end
 
---- If the creature has climbing.
+--- If the creature can climb at all. (Don't have to have a climb movement type)
 --- @return boolean
 function creature:CanClimb()
-    return self:GetSpeed("climb") >= self:WalkingSpeed()
+    return not self:try_get("_tmp_prone")
 end
 
 
@@ -8335,7 +8335,7 @@ function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
 	return true
 end
 
-function creature:DispatchEvent(eventName, info, onCompleteCallback)
+function creature:DispatchEvent(eventName, info)
 
     local triggeredOnOthers = false
     if info == nil or info.subject == nil then

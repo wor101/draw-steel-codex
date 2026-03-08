@@ -587,7 +587,7 @@ function CharacterFeatureChoice:GetEntries(creature)
 	local result = {}
 	for _,f in ipairs(options) do
 		--make sure the creature meets the pre-requisites for this feature.
-		local prereqs = f:try_get("prerequisites", {})
+		local prereqs = rawget(f, "prerequisites") or {}
 		if #prereqs > 0 then
 			for i,prerequisite in ipairs(prereqs) do
 				if prerequisite:Met(creature) then
@@ -622,6 +622,9 @@ function CharacterFeatureChoice:GetOptions(choices)
                                 if feature.typeName == "CharacterFeatureChoice" and feature.costsPoints then
                                     --get any feature that costs points from the former life.
                                     for _,option in ipairs(feature.options) do
+                                        if getmetatable(option) == nil then
+                                            print("ERROR:: NO META in GetOptions PATH:inheritedOptions option:", option.name, "from ancestry:", inheritedAncestry.name)
+                                        end
                                         inheritedOptions[#inheritedOptions+1] = option
                                     end
                                 end
@@ -633,11 +636,14 @@ function CharacterFeatureChoice:GetOptions(choices)
 
             if #inheritedOptions > 0 then
                 for _,option in ipairs(self.options) do
+                    if getmetatable(option) == nil then
+                        print("ERROR:: NO META in GetOptions PATH:inheritedOptions+self option:", option.name, "choice:", self.name)
+                    end
                     inheritedOptions[#inheritedOptions+1] = option
                 end
 
                 return inheritedOptions
-            end 
+            end
         end
     end
 
@@ -652,18 +658,44 @@ function CharacterFeatureChoice:GetOptions(choices)
         for _,choiceRef in ipairs(self.inheritChoice) do
             local choice = choiceRef:Resolve()
             if choice ~= nil then
+                if getmetatable(choice) == nil then
+                    print("ERROR:: NO META on Resolve() result itself, choice:", self.name, "resolved typeName:", rawget(choice, "typeName") or "NONE")
+                end
+                -- Check resolved choice's raw options before GetOptions processes them
+                local rawOpts = rawget(choice, "options")
+                if rawOpts ~= nil then
+                    for i,opt in ipairs(rawOpts) do
+                        if getmetatable(opt) == nil then
+                            print("ERROR:: NO META on resolved choice raw options[" .. i .. "]:", opt.name, "resolved choice:", choice.name, "typeName in data:", rawget(opt, "typeName") or rawget(opt, "__typeName") or "NONE")
+                        end
+                    end
+                else
+                    print("ERROR:: Resolve() choice has no raw 'options' field. choice:", self.name, "resolved:", choice.name, "resolved typeName:", choice.typeName, "has inheritChoice:", choice.inheritChoice and #choice.inheritChoice or "none", "has _tmp_options:", rawget(choice, "_tmp_options") ~= nil)
+                end
                 local choiceOptions = choice:GetOptions(choices)
                 for _,option in ipairs(choiceOptions) do
+                    if getmetatable(option) == nil then
+                        print("ERROR:: NO META in GetOptions PATH:inheritChoice option:", option.name, "choice:", self.name)
+                    end
                     options[#options+1] = option
                 end
             end
         end
-        
+
         for _,option in ipairs(self.options) do
+            if getmetatable(option) == nil then
+                print("ERROR:: NO META in GetOptions PATH:inheritChoice+self option:", option.name, "choice:", self.name)
+            end
             options[#options+1] = option
         end
 
         return options
+    end
+
+    for _,option in ipairs(self.options) do
+        if getmetatable(option) == nil then
+            print("ERROR:: NO META in GetOptions PATH:self.options option:", option.name, "choice:", self.name)
+        end
     end
 
     return self.options
@@ -676,6 +708,7 @@ function CharacterFeatureChoice:Choices(numOption, existingChoices, creature)
 	end
 
     local options = self:GetOptions(creature:GetLevelChoices())
+    print("OPTIONS::", options)
 
 	local usePoints = self:try_get("costsPoints")
 	local pointsSpend = 0
@@ -718,7 +751,7 @@ function CharacterFeatureChoice:Choices(numOption, existingChoices, creature)
 		end
 
 		--make sure the creature meets the pre-requisites for this feature.
-		for i,prerequisite in ipairs(feature:try_get("prerequisites", {})) do
+		for i,prerequisite in ipairs(rawget(feature, "prerequisites") or {}) do
 			if not prerequisite:Met(creature) then
 				canChoose = false
 			end
@@ -727,7 +760,7 @@ function CharacterFeatureChoice:Choices(numOption, existingChoices, creature)
 		local isDisabled = false
 		local classes = nil
 
-		if usePoints and pointsSpend - thisFeaturePointSpend + feature:try_get("pointsCost", 1) > pointsAvailable then
+		if usePoints and pointsSpend - thisFeaturePointSpend + (rawget(feature, "pointsCost") or 1) > pointsAvailable then
 			isDisabled = true
 			classes = {"disabled"}
 		end
@@ -747,9 +780,9 @@ function CharacterFeatureChoice:Choices(numOption, existingChoices, creature)
 				text = text,
 				description = feature.description,
 				classes = classes,
-				pointsCost = feature:try_get("pointsCost", 1),
-				modifiers = feature:try_get("modifiers"),
-                hasCustomPanel = feature:HasCustomDropdownPanel(),
+				pointsCost = rawget(feature, "pointsCost") or 1,
+				modifiers = rawget(feature, "modifiers"),
+                hasCustomPanel = feature.typeName and feature:HasCustomDropdownPanel(),
                 panel = function()
                     return feature:CreateDropdownPanel(text)
                 end,

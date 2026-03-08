@@ -121,9 +121,9 @@ function ActivatedAbilityReplenishBehavior:Cast(ability, casterToken, targets, o
 
     local quantity = nil
     local rollComplete = false
+    local rollCanceled = false
 
     local roll = dmhub.EvalGoblinScript(self.quantity, casterToken.properties:LookupSymbol(options.symbols), string.format("Resource roll for %s", ability.name))
-    print("QUANTITY::", self.quantity, "symbols =", table.keys(options.symbols), "RESULT =", roll)
 
     local rollResults = {}
 
@@ -135,20 +135,55 @@ function ActivatedAbilityReplenishBehavior:Cast(ability, casterToken, targets, o
         end
         quantity = safe_toint(roll)
     else
-        local dcaction = ability:RequireSavingThrowsCo(self, casterToken, ActivatedAbility.GetTokenIds(targets), {
-            rollType = "custom",
-            id = "",
-            text = ability.name,
-            explanation = "Roll for " .. resourceName,
-            roll = roll,
-            targets = targets,
-        })
+        local dialog
+        local existingEmbedded = CharacterPanel.FindEmbeddedRollDialog()
+        if existingEmbedded ~= nil then
+            dialog = existingEmbedded
+        else
+            local displayed = CharacterPanel.DisplayAbility(casterToken, ability, options.symbols, {lock = true})
+            if displayed then
+                options.OnFinishCastHandlers = options.OnFinishCastHandlers or {}
+                options.OnFinishCastHandlers[#options.OnFinishCastHandlers+1] = function()
+                    CharacterPanel.HideAbility(ability)
+                end
+            end
 
-        if dcaction == nil then
-            return
+            local embeddedDialog = CharacterPanel.EmbedDialogInAbility()
+            if embeddedDialog ~= nil then
+                dialog = embeddedDialog
+                for j=1,4 do
+                    coroutine.yield(0.01)
+                end
+            else
+                dialog = GameHud.instance.rollDialog
+            end
         end
 
-        rollResults = dcaction.info.tokens
+        dialog.data.ShowDialog{
+            title = string.format("%s: Roll for %s", ability.name, resourceName),
+            description = string.format("%s %s Roll", ability.name, resourceName),
+            roll = roll,
+            creature = casterToken.properties,
+            skipDeterministic = true,
+            cancelRoll = function()
+                rollCanceled = true
+            end,
+            completeRoll = function(rollInfo)
+                rollComplete = true
+                local total = rollInfo.total or 0
+                for _,target in ipairs(targets) do
+                    rollResults[target.token.charid] = { result = total }
+                end
+                quantity = total
+            end,
+        }
+
+        while not rollComplete do
+            if rollCanceled then
+                return
+            end
+            coroutine.yield(0.1)
+        end
     end
 
     for _,target in ipairs(targets) do

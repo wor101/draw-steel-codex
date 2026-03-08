@@ -10,6 +10,17 @@ end
 local g_activeRoll = nil
 local g_activeRollArgs = nil
 
+local g_settingTriggerDelay = setting{
+    id = "rolltriggerdelay",
+    description = "Trigger Delay",
+    editor = "slider",
+    default = 5,
+    min = 0,
+    max = 10,
+    storage = "game",
+    section = "Game",
+}
+
 setting {
     id = "privaterolls",
     description = "Default Roll Visibility",
@@ -2566,45 +2577,47 @@ function GameHud.CreateEmbeddedRollDialog()
         RelinquishPanel()
     end
 
-    m_triggerProgressDice = gui.ProgressDice{
-        data = {
-            startTime = 0,
-        },
-        classes = {"shownWhenPending", "collapsed"},
-        width = 64,
-        height = 64,
-        halign = "center",
-        valign = "center",
-        hover = gui.Tooltip("Allow time for triggers to be used."),
-        pending = function(element)
-            if triggersTab:HasClass("hasTriggers") then
-                element:SetClass("collapsed", false)
-                rollAgainButton:SetClass("collapsed", true)
-                proceedAfterRollButton:SetClass("collapsed", true)
-                element.thinkTime = 0.01
-                element.data.startTime = dmhub.Time()
-            end
-        end,
+    if g_settingTriggerDelay:Get() > 0.1 then
+        m_triggerProgressDice = gui.ProgressDice{
+            data = {
+                startTime = 0,
+            },
+            classes = {"shownWhenPending", "collapsed"},
+            width = 64,
+            height = 64,
+            halign = "center",
+            valign = "center",
+            hover = gui.Tooltip("Allow time for triggers to be used."),
+            pending = function(element)
+                if triggersTab:HasClass("hasTriggers") then
+                    element:SetClass("collapsed", false)
+                    rollAgainButton:SetClass("collapsed", true)
+                    proceedAfterRollButton:SetClass("collapsed", true)
+                    element.thinkTime = 0.01
+                    element.data.startTime = dmhub.Time()
+                end
+            end,
 
-        think = function(element)
-            if not triggersTab:HasClass("hasTriggers") then
-                element.thinkTime = nil
-                element:SetClass("collapsed", true)
-                rollAgainButton:SetClass("collapsed", false)
-                proceedAfterRollButton:SetClass("collapsed", false)
-                return
-            end
+            think = function(element)
+                if not triggersTab:HasClass("hasTriggers") then
+                    element.thinkTime = nil
+                    element:SetClass("collapsed", true)
+                    rollAgainButton:SetClass("collapsed", false)
+                    proceedAfterRollButton:SetClass("collapsed", false)
+                    return
+                end
 
-            local t = (dmhub.Time() - element.data.startTime)/5
-            element:FireEventTree("progress", t)
-            if t >= 1 then
-                rollAgainButton:SetClass("collapsed", false)
-                proceedAfterRollButton:SetClass("collapsed", false)
-                element:SetClass("collapsed", true)
-                element.thinkTime = nil
-            end
-        end,
-    }
+                local t = (dmhub.Time() - element.data.startTime)/g_settingTriggerDelay:Get()
+                element:FireEventTree("progress", t)
+                if t >= 1 then
+                    rollAgainButton:SetClass("collapsed", false)
+                    proceedAfterRollButton:SetClass("collapsed", false)
+                    element:SetClass("collapsed", true)
+                    element.thinkTime = nil
+                end
+            end,
+        }
+    end
 
     rollAgainButton = gui.PrettyButton {
         text = "Re-roll",
@@ -3431,7 +3444,7 @@ function GameHud.CreateEmbeddedRollDialog()
 
                 OnHide()
 
-                local dmonly = false
+                local dmonly = dmhub.GetSettingValue("privaterolls") == "dm"
                 local instant = false
 
                 --we must save off anything from the surrounding scope since this dialog might be reused after this.
@@ -3689,7 +3702,12 @@ function GameHud.CreateEmbeddedRollDialog()
                             resultPanel:SetClassTree("finishedRolling", true)
                             BroadcastDialogState()
                             resultPanel:SetClassTree("rollPending", true)
-                            m_triggerProgressDice:FireEvent("pending")
+                            if m_triggerProgressDice ~= nil then
+                                m_triggerProgressDice:FireEvent("pending")
+                            else
+                                rollAgainButton:SetClass("collapsed", false)
+                                proceedAfterRollButton:SetClass("collapsed", false)
+                            end
                         end
                     end,
                     complete = function(rollInfo)

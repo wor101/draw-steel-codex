@@ -926,10 +926,10 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 
 	local executeTrigger = function()
 
-		local options = { symbols = symbols }
+		local options = { symbols = symbols, alreadyPaid = argOptions.alreadyPaid }
 		local needCoroutine = self:CastInstantPortion(casterToken, targets, options)
 		if not needCoroutine then
-			if options.pay then
+			if options.pay and not options.alreadyPaid then
 				self:ConsumeResources(casterToken, {
 					costOverride = options.costOverride,
 				})
@@ -959,6 +959,13 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 	end
 
 	if self:IsMandatory() or (self:try_get("mandatoryDifferentPlayer", false) and casterToken.activeControllerId == nil) then
+		-- For mandatory triggers with a usage limit, pay the full cost upfront
+		-- before entering the coroutine. This prevents the same trigger from
+		-- firing multiple times in a single movement loop.
+		if self.usageLimitOptions.resourceRefreshType ~= 'none' then
+			self:ConsumeResources(casterToken, {})
+			argOptions.alreadyPaid = true
+		end
 		executeTrigger()
 	else
 		dmhub.Coroutine(function()
@@ -1166,6 +1173,7 @@ function TriggeredAbility:TriggerCo(targets, characterModifier, casterToken, cre
 		symbols = symbols,
         targetArea = targetArea,
 		alreadyInCoroutine = true,
+		alreadyPaid = argOptions.alreadyPaid,
         OnFinishCastHandlers = {
             function()
                 if argOptions.complete then

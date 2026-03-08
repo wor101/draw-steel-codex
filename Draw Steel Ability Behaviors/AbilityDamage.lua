@@ -157,7 +157,32 @@ function ActivatedAbilityDamageBehavior:Cast(ability, casterToken, targets, opti
         local rollStr = dmhub.EvalGoblinScript(targetGroup.roll, casterToken.properties:LookupSymbol(symbols), string.format("Damage roll for %s", ability.name))
 		local rollid = nil
         print("ROLL:: SHOW", rollStr)
-		rollid = gamehud.rollDialog.data.ShowDialog{
+
+		local dialog
+		local existingEmbedded = CharacterPanel.FindEmbeddedRollDialog()
+		if existingEmbedded ~= nil then
+			dialog = existingEmbedded
+		else
+			local displayed = CharacterPanel.DisplayAbility(casterToken, ability, options.symbols, {lock = true})
+			if displayed then
+				options.OnFinishCastHandlers = options.OnFinishCastHandlers or {}
+				options.OnFinishCastHandlers[#options.OnFinishCastHandlers+1] = function()
+					CharacterPanel.HideAbility(ability)
+				end
+			end
+
+			local embeddedDialog = CharacterPanel.EmbedDialogInAbility()
+			if embeddedDialog ~= nil then
+				dialog = embeddedDialog
+				for j=1,4 do
+					coroutine.yield(0.01)
+				end
+			else
+				dialog = GameHud.instance.rollDialog
+			end
+		end
+
+		rollid = dialog.data.ShowDialog{
 			title = title,
 			description = description,
 			roll = rollStr,

@@ -727,7 +727,7 @@ AuraInstance.helpSymbols = {
 --- @param targetCreature nil|creature The creature that triggered the event, added as "target" if provided.
 --- @return table
 function AuraInstance:GetSymbolsForTrigger(targetCreature)
-    local result = DeepCopy(self.symbols or {})
+    local result = DeepCopy(self:try_get("symbols") or {})
     result.aura = GenerateSymbols(self)
 
     if targetCreature ~= nil then

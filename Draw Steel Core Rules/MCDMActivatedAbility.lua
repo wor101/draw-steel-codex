@@ -1180,6 +1180,7 @@ function ActivatedAbility:Render(options, params)
 
                             width = "auto",
                             id = "spellName",
+                            classes = {"abilityName"},
                             fontSize = 24,
                             fontFace = "Newzald",
                             fontWeight = "Light",
@@ -1187,9 +1188,6 @@ function ActivatedAbility:Render(options, params)
                             text = string.format("<b>%s</b>%s <size=18>%s</size>", self.name, meleeOrRangedVariantText, costString),
                             height = "auto",
                             markdown = true,
-
-
-
                         },
 
                         --Type of ability
