@@ -2526,6 +2526,54 @@ creature.RegisterSymbol {
     }
 }
 
+creature.RegisterSymbol {
+    symbol = "effectscount",
+    lookup = function(c)
+        local result = {}
+        local conditions = {}
+        local ongoingEffects = c:ActiveOngoingEffects()
+        local pureOngoingEffectsCount = 0
+        if #ongoingEffects > 0 then
+            local ongoingEffectsTable = dmhub.GetTable("characterOngoingEffects") or {}
+            for i, cond in ipairs(ongoingEffects) do
+                local ongoingEffectInfo = ongoingEffectsTable[cond.ongoingEffectid]
+                if ongoingEffectInfo.condition ~= 'none' then
+                    --effect has an underlying condition; count it as a condition only.
+                    conditions[ongoingEffectInfo.condition] = 1
+                else
+                    pureOngoingEffectsCount = pureOngoingEffectsCount + 1
+                end
+            end
+        end
+
+        --get bestowed conditions.
+        for i, modifier in ipairs(c:GetActiveModifiers()) do
+            if modifier.mod:CanBestowConditions() and modifier.mod:PassesFilter(c) then
+                modifier.mod:BestowConditions(modifier, c, conditions)
+            end
+        end
+
+        local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
+        for k, _ in pairs(conditions) do
+            local conditionInfo = conditionsTable[k]
+            result[#result + 1] = conditionInfo.name
+        end
+
+        local inflictedConditions = c:get_or_add("inflictedConditions", {})
+        for condid, _ in pairs(inflictedConditions) do
+            result[#result + 1] = conditionsTable[condid].name
+        end
+
+        return #result + pureOngoingEffectsCount
+    end,
+    help = {
+        name = "Effects Count",
+        type = "number",
+        desc = "The number of conditions and ongoing effects currently active on this creature.",
+        seealso = {"ConditionCount"},
+    }
+}
+
 --override default InflictCondition to include MCDM condition rules.
 
 --- Inflict a condition on a creature. (Or purge the condition using the 'purge' argument.)
