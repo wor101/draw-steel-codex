@@ -40,6 +40,10 @@ TriggeredAbility.mandatoryTriggerSettings = {
         text = "Occurs Automatically",
     },
     {
+        id = "local",
+        text = "Automatic/Locally",
+    },
+    {
         id = false,
         text = "Prompt",
     },
@@ -52,7 +56,7 @@ TriggeredAbility.mandatoryTriggerSettings = {
 --- Returns true if this triggered ability should fire automatically without prompting the player.
 --- @return boolean
 function TriggeredAbility:IsMandatory()
-    if self.mandatory == true then
+    if self.mandatory == true or self.mandatory == "local" then
         return true
     elseif self.mandatory == false then
         return false
@@ -63,9 +67,15 @@ function TriggeredAbility:IsMandatory()
     return mandatory
 end
 
+--- Returns true if this triggered ability fires locally and should never be dispatched to a remote controller.
+--- @return boolean
+function TriggeredAbility:IsLocalOnly()
+    return self.mandatory == "local"
+end
+
 --- @return boolean
 function TriggeredAbility:MayBePrompted()
-    if self.mandatory == true then
+    if self.mandatory == true or self.mandatory == "local" then
         return false
     end
 
@@ -552,6 +562,12 @@ TriggeredAbility.RegisterTrigger{
             desc = "The creature which caused the dying condition.",
         },
     }
+}
+
+TriggeredAbility.RegisterTrigger{
+    id = "endrespite",
+    text = "End Respite",
+    symbols = {}
 }
 
 table.sort(TriggeredAbility.triggers, function(a,b) return a.text < b.text end)

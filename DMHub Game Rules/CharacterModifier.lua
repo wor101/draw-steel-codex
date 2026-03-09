@@ -3401,8 +3401,19 @@ function CharacterModifier:ApplyOngoingEffectsToSelfOnRoll(creature)
 	return nil
 end
 
-function CharacterModifier:HasTriggeredEvent(creature, eventName, targetsOther)
+--- @param creature creature
+--- @param eventName string
+--- @param targetsOther boolean|nil
+--- @param localFilter nil|string nil = all triggers, "localOnly" = only local-only triggers, "skipLocal" = skip local-only triggers
+function CharacterModifier:HasTriggeredEvent(creature, eventName, targetsOther, localFilter)
 	if self:has_key('triggeredAbility') and self.triggeredAbility.trigger == eventName then
+
+        -- Filter by local-only status if requested.
+        if localFilter == "localOnly" and not self.triggeredAbility:IsLocalOnly() then
+            return false
+        elseif localFilter == "skipLocal" and self.triggeredAbility:IsLocalOnly() then
+            return false
+        end
 
         local subject = self.triggeredAbility:try_get("subject", "self")
         if subject == "self" and targetsOther then
@@ -3425,7 +3436,7 @@ function CharacterModifier:HasTriggeredEvent(creature, eventName, targetsOther)
         if not self.triggeredAbility:subjectHasRequiredCondition(creature, creature) and not targetsOther then
             return false
         end
-        
+
 		if self:HasResourcesAvailable(creature) == false or (not self.triggeredAbility:CanAfford(dmhub.LookupToken(creature))) then
 			return false
 		end
@@ -3436,8 +3447,15 @@ function CharacterModifier:HasTriggeredEvent(creature, eventName, targetsOther)
 end
 
 --modContext is a 'mod context' as returned by creature.GetActiveModifiers(). We use it to affect the ongoing effect or other context.
-function CharacterModifier:TriggerEvent(creature, eventName, info, modContext, debugLog)
+--localFilter: nil = all triggers, "localOnly" = only local-only triggers, "skipLocal" = skip local-only triggers
+function CharacterModifier:TriggerEvent(creature, eventName, info, modContext, debugLog, localFilter)
 	if self:has_key('triggeredAbility') and self.triggeredAbility.trigger == eventName then
+        -- Filter by local-only status if requested.
+        if localFilter == "localOnly" and not self.triggeredAbility:IsLocalOnly() then
+            return false
+        elseif localFilter == "skipLocal" and self.triggeredAbility:IsLocalOnly() then
+            return false
+        end
         if self.triggeredAbility:try_get("whenActive", "always") == "combat" and (dmhub.initiativeQueue == nil or dmhub.initiativeQueue.hidden) then
             return false
         end

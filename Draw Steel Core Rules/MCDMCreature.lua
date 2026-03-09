@@ -2208,7 +2208,7 @@ function creature:GetActivatedAbilities(options)
     if options.manualTriggers then
         local triggeredAbilities = self:GetTriggeredAbilities()
         for i, trigger in ipairs(triggeredAbilities) do
-            if trigger.ability:try_get("hasManualVersion", false) then
+            if trigger.ability:try_get("hasManualVersion", false) and not trigger.ability:IsLocalOnly() then
                 --- @type TriggeredAbility
                 local ability = trigger.ability:GenerateManualVersion()
                 result[#result + 1] = ability

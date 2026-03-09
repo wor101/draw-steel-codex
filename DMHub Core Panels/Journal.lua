@@ -258,7 +258,8 @@ local function CreateFolderPanel(journalPanel, folderid)
 
     local resultPanel
     resultPanel = gui.TreeNode {
-        classes = { "documentFolder" },
+        classes = cond(builtinFolder, { "documentFolder" }, { "documentFolder", "subfolder" }),
+        headerExtraClasses = cond(builtinFolder, {}, { "subfolder" }),
         editable = not builtinFolder,
         width = "100%",
         dragTarget = true,
@@ -389,7 +390,7 @@ CreateFolderContentsPanel = function(journalPanel, folderid)
         dragTarget = dragTarget,
         dragTargetPriority = 1,
         classes = { "contentPanel" },
-        x = cond(folderid == "", 0, 8),
+        x = 0,
 
         expand = function(element)
             if m_invalidated then
@@ -1244,6 +1245,11 @@ CreateJournalPanel = function()
                     bgcolor = "black",
                 },
                 {
+                    priority = 6,
+                    selectors = { "folder", "parent:subfolder" },
+                    bgcolor = Styles.RichBlack04,
+                },
+                {
                     priority = 5,
                     selectors = { "folder", "hover" },
                     bgcolor = Styles.textColor,
@@ -1293,6 +1299,31 @@ CreateJournalPanel = function()
                     color = "black",
                 },
                 {
+                    priority = 6,
+                    selectors = { "folderLabel", "parent:subfolder" },
+                    color = Styles.Grey01,
+                },
+                {
+                    priority = 6,
+                    selectors = { "folderLabel", "parent:subfolder", "parent:hover" },
+                    color = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "folderLabel", "parent:subfolder", "parent:drag-target" },
+                    color = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "folderLabel", "parent:subfolder", "parent:press" },
+                    color = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "folderLabel", "parent:subfolder", "parent:expanded" },
+                    color = "white",
+                },
+                {
                     priority = 5,
                     selectors = { "triangle" },
                     bgcolor = Styles.textColor,
@@ -1311,6 +1342,31 @@ CreateJournalPanel = function()
                     priority = 5,
                     selectors = { "triangle", "empty" },
                     bgcolor = "grey",
+                },
+                {
+                    priority = 6,
+                    selectors = { "triangle", "parent:subfolder" },
+                    bgcolor = Styles.Grey01,
+                },
+                {
+                    priority = 6,
+                    selectors = { "triangle", "parent:subfolder", "parent:hover" },
+                    bgcolor = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "triangle", "parent:subfolder", "parent:drag-target" },
+                    bgcolor = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "triangle", "parent:subfolder", "parent:press" },
+                    bgcolor = "white",
+                },
+                {
+                    priority = 6,
+                    selectors = { "triangle", "parent:subfolder", "parent:expanded" },
+                    bgcolor = "white",
                 },
             },
 

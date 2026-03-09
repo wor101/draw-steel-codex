@@ -4547,7 +4547,8 @@ function creature:RefreshToken(token)
                         info = deserializedInfo
                     end
 
-					self:TriggerEvent(eventInfo.eventName, info, true)
+					--Skip local-only triggers since they already fired on the originating machine.
+					self:TriggerEvent(eventInfo.eventName, info, true, "skipLocal")
 				end
 			end
 
@@ -8386,7 +8387,8 @@ end
 creature.debugTriggerHandler = false
 
 --an event is triggered which could cause triggered abilities to go off.
-function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
+--localFilter: nil = all triggers, "localOnly" = only local-only triggers, "skipLocal" = skip local-only triggers
+function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers, localFilter)
 
     if (not alreadyTriggeredOnOthers) and (info == nil or info.subject == nil) then
         self:TriggerEventOnOthers(eventName, info)
@@ -8401,7 +8403,7 @@ function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
     end
 
 	for i,mod in ipairs(mods) do
-		local triggered = mod.mod:TriggerEvent(self, eventName, info, mod, debugLog)
+		local triggered = mod.mod:TriggerEvent(self, eventName, info, mod, debugLog, localFilter)
 		if triggered then
 			result = true
 		end
@@ -8429,9 +8431,26 @@ function creature:DispatchEvent(eventName, info)
     end
 
 	local mods = self:GetActiveModifiers()
+	local targetsOther = info ~= nil and info.subject ~= nil
+
+	-- Check for local-only triggers that must fire on this machine regardless of controller.
+	local hasLocalOnlyTrigger = false
+	for i,mod in ipairs(mods) do
+		if mod.mod:HasTriggeredEvent(self, eventName, targetsOther, "localOnly") then
+			hasLocalOnlyTrigger = true
+			break
+		end
+	end
+
+	-- Fire local-only triggers immediately on this machine.
+	if hasLocalOnlyTrigger then
+		self:TriggerEvent(eventName, info, triggeredOnOthers, "localOnly")
+	end
+
+	-- Check for non-local triggers that need normal dispatch.
 	local hasTrigger = false
 	for i,mod in ipairs(mods) do
-		if mod.mod:HasTriggeredEvent(self, eventName, info ~= nil and info.subject ~= nil) then
+		if mod.mod:HasTriggeredEvent(self, eventName, targetsOther, "skipLocal") then
 			hasTrigger = true
 			break
 		end
@@ -8439,7 +8458,9 @@ function creature:DispatchEvent(eventName, info)
 
 	if hasTrigger == false then
 		--still remove any ongoing effects.
-		self:RemoveOngoingEffectsOnTrigger(eventName, info)
+		if not hasLocalOnlyTrigger then
+			self:RemoveOngoingEffectsOnTrigger(eventName, info)
+		end
         if creature.debugTriggerHandler then
             creature.debugTriggerHandler(self, eventName, info, false)
         end
@@ -8451,7 +8472,7 @@ function creature:DispatchEvent(eventName, info)
 
 	--we are the best choice to handle this event.
 	if activecontroller == nil then
-		self:TriggerEvent(eventName, info, triggeredOnOthers)
+		self:TriggerEvent(eventName, info, triggeredOnOthers, "skipLocal")
 		return
 	end
 
@@ -9757,7 +9778,7 @@ function creature:Render(args, options)
 					local skillMod = self:SkillModStr(skillInfo)
 					local attrMod = ModStr(self:GetAttribute(skillInfo.attribute):Modifier())
 					if skillMod ~= attrMod then
-						items[#items+1] = string.format("%s %s", skillInfo.name, skillMod)
+						items[#items+1] = skillInfo.name
 					end
 				end
 

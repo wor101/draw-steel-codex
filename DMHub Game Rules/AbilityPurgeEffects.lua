@@ -203,11 +203,23 @@ function ActivatedAbilityPurgeEffectsBehavior:Cast(ability, casterToken, targets
         return
     end
 
+    --Check if there is a caster to limit effects to.
+    local limitToCasterid
+    if self:try_get("fromCaster", "") ~= "" then
+        if options.symbols == nil then
+            options.symbols = {}
+        end
+        local effectCaster = dmhub.EvalGoblinScriptToObject(self.fromCaster, casterToken.properties:LookupSymbol(options.symbols), "Determine source of purge")
+        if effectCaster ~= nil and type(effectCaster) == "table" and (effectCaster.typeName == "creature" or effectCaster.typeName == "character" or effectCaster.typeName == "monster" or effectCaster.typeName == "follower") then
+            limitToCasterid = dmhub.LookupTokenId(effectCaster)
+        end
+    end
+
     local messages = {}
 
     for _,target in ipairs(targets) do
         if target.token ~= nil then
-            self:CastOnTarget(casterToken, target.token, ability, options)
+            self:CastOnTarget(casterToken, target.token, ability, options, limitToCasterid)
 
             if self.chatMessage ~= "" then
                 local existingMessage = messages[#messages]
@@ -234,30 +246,26 @@ function ActivatedAbilityPurgeEffectsBehavior:Cast(ability, casterToken, targets
     ability:CommitToPaying(casterToken, options)
 end
 
-function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetToken, ability, options)
+-- limitToCasterid: optional charid string; when set, only effects/conditions from that caster are purged.
+function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetToken, ability, options, limitToCasterid)
     local targetCreature = targetToken.properties
+
     local effects = targetCreature:ActiveOngoingEffects()
     local filteredEffects = {}
     for _,effect in ipairs(effects) do
         if self:AppliesToEffect(effect) then
-            filteredEffects[#filteredEffects+1] = effect
+            if limitToCasterid == nil then
+                filteredEffects[#filteredEffects+1] = effect
+            else
+                local effectCasterInfo = effect:try_get("casterInfo")
+                if effectCasterInfo ~= nil and effectCasterInfo.tokenid == limitToCasterid then
+                    filteredEffects[#filteredEffects+1] = effect
+                end
+            end
         end
     end
 
     local result = {}
-
-    local limitToCaster
-    if self:try_get("fromCaster", "") ~= "" then
-        if options.symbols == nil then
-            options.symbols = {}
-        end
-        options.symbols.target = targetToken.properties
-        local effectCaster = dmhub.EvalGoblinScriptToObject(self.fromCaster, casterToken.properties:LookupSymbol(options.symbols), "Determine source of purge")
-        --make sure effectCaster is a valid creature type
-        if type(effectCaster) == "table" and (effectCaster.typeName == "creature" or effectCaster.typeName == "character" or effectCaster.typeName == "monster" or effectCaster.typeName == "follower") then
-            limitToCaster = dmhub.LookupToken(effectCaster)
-        end
-    end
 
     if self.mode == "conditions" and targetCreature:has_key("inflictedConditions") then
         local conditions = {}
@@ -270,8 +278,8 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
                         local shouldAdd = true
                         
                         -- Check caster filter if specified
-                        if limitToCaster ~= nil and conditionInfo.casterInfo ~= nil then
-                            if limitToCaster.id ~= conditionInfo.casterInfo.tokenid then
+                        if limitToCasterid ~= nil and conditionInfo.casterInfo ~= nil then
+                            if limitToCasterid ~= conditionInfo.casterInfo.tokenid then
                                 shouldAdd = false
                             end
                         end
@@ -306,8 +314,12 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
             targetToken:ModifyProperties{
                 description = "Purge Conditions",
                 execute = function()
+                    local purgeArgs = {purge = true}
+                    if limitToCasterid ~= nil then
+                        purgeArgs.casterInfo = {tokenid = limitToCasterid}
+                    end
                     for _,condid in ipairs(conditionsToPurge) do
-                        targetCreature:InflictCondition(condid, {purge = true})
+                        targetCreature:InflictCondition(condid, purgeArgs)
                         result[#result+1] = condid
                     end
 
@@ -334,7 +346,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
             description = "Purge Effects",
             execute = function()
                 for _,effect in ipairs(filteredEffects) do
-                    numStacks = targetCreature:RemoveOngoingEffect(effect.ongoingEffectid, numStacks)
+                    targetCreature:RemoveOngoingEffectBySeq(effect.seq)
                     result[#result+1] = effect.ongoingEffectid
                 end
             end,
@@ -601,6 +613,7 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowSelectionDialog(casterToken, t
 
         local option = {
             id = effect.ongoingEffectid,
+            seq = effect.seq,
             selected = self.purgeType ~= "one" or i == 1,
             iconid = effectInfo.iconid,
             display = effectInfo.display,
@@ -619,7 +632,7 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowSelectionDialog(casterToken, t
             execute = function()
                 for i,option in ipairs(args.options) do
                     if option.selected then
-                        numStacks = targetToken.properties:RemoveOngoingEffect(option.id, numStacks)
+                        targetToken.properties:RemoveOngoingEffectBySeq(option.seq)
                     end
                 end
             end,
@@ -835,7 +848,7 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
     }
 
     --Future support Shwayguy
-    --[[ result[#result+1] = gui.Panel{
+    result[#result+1] = gui.Panel{
         classes = {"formPanel"},
         gui.Label{
             classes = {"formLabel"},
@@ -883,7 +896,7 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
                 })
 			},
         }
-    } ]]
+    }
 
     result[#result+1] = gui.Panel{
         classes = {"formPanel"},
