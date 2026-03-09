@@ -564,6 +564,12 @@ TriggeredAbility.RegisterTrigger{
     }
 }
 
+TriggeredAbility.RegisterTrigger{
+    id = "endrespite",
+    text = "End Respite",
+    symbols = {}
+}
+
 table.sort(TriggeredAbility.triggers, function(a,b) return a.text < b.text end)
 
 function TriggeredAbility.GetTriggerDropdownOptions(includeNone)
