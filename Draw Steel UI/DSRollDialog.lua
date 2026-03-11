@@ -9,6 +9,7 @@ end
 
 RollDialog = {
     OnBeforeRoll = false,
+    OnReroll = false,
 }
 
 local g_activeRoll = nil
@@ -2148,6 +2149,11 @@ function GameHud.CreateRollDialog(self)
         press = function(element)
             print("REROLL:: DOING REROLL...", g_activeRoll)
             if g_activeRoll == nil then
+                if RollDialog.OnReroll then
+                    RollDialog.OnReroll({
+                        rollArgs = g_activeRollArgs,
+                    })
+                end
                 return
             end
 
