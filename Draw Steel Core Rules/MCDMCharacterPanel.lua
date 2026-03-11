@@ -60,6 +60,9 @@ TacPanelSizes.Fonts = {
     movePanelTitle = 14,
     movePanelValue = 24,
 }
+TacPanelSizes.VisionBtn = {
+    size = 24,
+}
 TacPanelSizes.HealthBar = {
     segmentHeight = 10,
     diamondSize = 12,
@@ -192,7 +195,32 @@ TacPanelStyles.SummaryInfo = {
         selectors = {"label", "summary-info", "subclass"},
         fontSize = TacPanelSizes.Fonts.charSubclass,
         color = MUTED,
-    }
+    },
+
+    -- Light button
+    {
+        selectors = {"vision-btn"},
+        bgcolor = TEAL_HEAL,
+        halign = "left",
+        valign = "top",
+        pad = 4,
+        border = 1,
+        cornerRadius = 4,
+        borderColor = DIMMER,
+    },
+    {
+        selectors = {"vision-btn", "on"},
+        bgcolor = TEAL,
+    },
+    {
+        selectors = {"vision-btn", "hover"},
+        brightness = 1.5,
+        transitionTime = 0.2,
+    },
+    {
+        selectors = {"vision-btn", "press"},
+        brightness = 0.5,
+    },
 }
 TacPanelStyles.TokenBox = {
     {
@@ -1149,23 +1177,23 @@ local HERO_TOKEN_TOOLTIP = [[**Hero Tokens**
 
 --     -- Light button
 --     {
---         selectors = {"light-btn"},
+--         selectors = {"vision-btn"},
 --         bgcolor = TacPanelConstants.COLORS.GRAY02,
 --         halign = "right",
 --         valign = "top",
 --         hmargin = 20,
 --     },
 --     {
---         selectors = {"light-btn", "on"},
+--         selectors = {"vision-btn", "on"},
 --         bgcolor = "white",
 --     },
 --     {
---         selectors = {"light-btn", "hover"},
+--         selectors = {"vision-btn", "hover"},
 --         brightness = 1.5,
 --         transitionTime = 0.2,
 --     },
 --     {
---         selectors = {"light-btn", "press"},
+--         selectors = {"vision-btn", "press"},
 --         brightness = 0.5,
 --     },
 
@@ -1827,6 +1855,72 @@ function TacPanel.Summary()
 
                 TacPanel.HeroTokenBox(),
                 TacPanel.SurgesBox(),
+            }
+        },
+        gui.Panel{
+            classes = {"container"},
+            flow = "horizontal",
+            gui.EnhIconButton{
+                classes = {"vision-btn"},
+                bgimage = "icons/icon_weather/icon_weather_1.png",
+                width = TacPanelSizes.VisionBtn.size,
+                height = TacPanelSizes.VisionBtn.size,
+                refreshCharacter = function(element, token)
+                    local bgcolor = (token.properties.selectedLoadout == 1)
+                        and TEAL
+                        or DIM
+                    element.selfStyle.bgcolor = bgcolor
+                end,
+                setToken = function(element, token)
+                    element:FireEvent("refreshCharacter", token)
+                end,
+                press = function(element)
+                    Commands.light()
+                end,
+                linger = function(element)
+                    gui.Tooltip("Toggle Light")(element)
+                end,
+            },
+            gui.EnhIconButton{
+                classes = {"vision-btn", "collapsed"},
+                bgimage = "ui-icons/eye.png",
+                width = TacPanelSizes.VisionBtn.size,
+                height = TacPanelSizes.VisionBtn.size,
+                hmargin = 8,
+                data = { token = nil },
+                monitor = "lookup",
+                events = {
+                    monitor = function(element)
+                        local cur = dmhub.GetSettingValue("lookup")
+                        element.selfStyle.bgcolor = (cur >= 1) and TEAL or DIM
+                    end,
+                },
+                refreshCharacter = function(element, token)
+                    element.data.token = token
+                    if token == nil or (dmhub.isDM and dmhub.tokenVision == nil)
+                        or token.countFloorsWithVisionAbove <= 0 then
+                        element:SetClass("collapsed", true)
+                        return
+                    end
+                    element:SetClass("collapsed", false)
+                    local cur = dmhub.GetSettingValue("lookup")
+                    element.selfStyle.bgcolor = (cur >= 1) and TEAL or DIM
+                end,
+                refreshToken = function(element, token)
+                    element:FireEvent("refreshCharacter", token)
+                end,
+                setToken = function(element, token)
+                    element:FireEvent("refreshCharacter", token)
+                end,
+                press = function(element)
+                    local cur = dmhub.GetSettingValue("lookup")
+                    dmhub.SetSettingValue("lookup", (cur >= 1) and 0 or 1)
+                end,
+                linger = function(element)
+                    local cur = dmhub.GetSettingValue("lookup")
+                    local text = (cur >= 1) and "Look forward" or "Look up"
+                    gui.Tooltip(text)(element)
+                end,
             }
         }
     }
@@ -3509,7 +3603,7 @@ local function _tacPanelBasicInfo()
         _tacPanelHealthBar(),
         _tacPanelHealthControls(),
         gui.EnhIconButton{
-            classes = {"light-btn"},
+            classes = {"vision-btn"},
             bgimage = "icons/icon_weather/icon_weather_1.png",
             floating = true,
             halign = "right",
