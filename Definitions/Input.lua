@@ -5,6 +5,7 @@
 --- @field placeholderText string The grayed text to display when the input field is empty.
 --- @field editable boolean (default=true) If the input is editable by the user.
 --- @field multiline boolean (default=false) If the input displays multiple lines.
+--- @field verticalScrollbar boolean (default=false) If set to true, a vertical scrollbar is shown on the input when in multiline mode. The scrollbar color can be styled using the scrollHandleColor style property.
 --- @field lineType "SingleLine"|"MultiLineSubmit"|"MultiLineNewLine" When this is SingleLine, the input is a single line. Pressing enter will fire the 'submit' event. When MultiLineSubmit, the input is multiple lines but pressing enter will still fire 'submit'. The user can press shift+enter to enter a new line. MultiLineNewLine will be multiple lines. Pressing enter will create a new line, rather than firing submit.
 --- @field characterLimit number The maximum number of characters this input can contain.
 --- @field hasInputFocus boolean True if this input has the input focus.
@@ -12,6 +13,7 @@
 --- @field caretPosition number The position of the cursor within the input.
 --- @field selectionAnchorPosition number The bounds of the selection. The @caretPosition is the opposite bounds of the selection. If this is equal to @see caretPosition the user has no text selected.
 --- @field password boolean If set to true, this input will not display the text that is being typed on-screen to keep it secret and safe.
+--- @field consumeTab boolean (default=false) If set to true, pressing Tab while editing will fire the 'tab' event but will not insert a tab character or remove focus from the input.
 --- @field restoreOriginalTextOnEscape boolean If set to true, all edits will be canceled, and the text will be restored if the user presses escape while editing.
 --- @field blockChangesWhenEditing boolean If set to true, setting @see text in code will fail if the user is editing the text.
 --- @field placeholderAlpha number The alpha value of placeholder text. (default=0.6)
@@ -24,6 +26,7 @@ Input = {}
 --- @field placeholderText nil|string The grayed text to display when the input field is empty.
 --- @field editable nil|boolean (default=true) If the input is editable by the user.
 --- @field multiline nil|boolean (default=false) If the input displays multiple lines.
+--- @field verticalScrollbar nil|boolean (default=false) If set to true, a vertical scrollbar is shown on the input when in multiline mode. The scrollbar color can be styled using the scrollHandleColor style property.
 --- @field lineType nil|"SingleLine"|"MultiLineSubmit"|"MultiLineNewLine" When this is SingleLine, the input is a single line. Pressing enter will fire the 'submit' event. When MultiLineSubmit, the input is multiple lines but pressing enter will still fire 'submit'. The user can press shift+enter to enter a new line. MultiLineNewLine will be multiple lines. Pressing enter will create a new line, rather than firing submit.
 --- @field characterLimit nil|number The maximum number of characters this input can contain.
 --- @field hasInputFocus nil|boolean True if this input has the input focus.
@@ -31,6 +34,7 @@ Input = {}
 --- @field caretPosition nil|number The position of the cursor within the input.
 --- @field selectionAnchorPosition nil|number The bounds of the selection. The @caretPosition is the opposite bounds of the selection. If this is equal to @see caretPosition the user has no text selected.
 --- @field password nil|boolean If set to true, this input will not display the text that is being typed on-screen to keep it secret and safe.
+--- @field consumeTab nil|boolean (default=false) If set to true, pressing Tab while editing will fire the 'tab' event but will not insert a tab character or remove focus from the input.
 --- @field restoreOriginalTextOnEscape nil|boolean If set to true, all edits will be canceled, and the text will be restored if the user presses escape while editing.
 --- @field blockChangesWhenEditing nil|boolean If set to true, setting @see text in code will fail if the user is editing the text.
 --- @field placeholderAlpha nil|number The alpha value of placeholder text. (default=0.6)

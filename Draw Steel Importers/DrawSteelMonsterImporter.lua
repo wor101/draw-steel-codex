@@ -148,6 +148,9 @@ MCDMImporter = {
         local featuresTable = dmhub.GetTable("importerStandardFeatures")
         for key,feature in pairs(featuresTable) do
             if string.lower(feature.name) == name then
+                if getmetatable(feature) == nil then
+                    print("ERROR:: NO META on standard feature from table:", feature.name, "key:", key)
+                end
                 return feature
             end
         end

@@ -1527,7 +1527,7 @@ local CreateMonsterEntry = function(nodeid)
             {
                 valign = 'top',
                 bgcolor = '#ffffff00',
-                width = 300,
+                width = "100%",
                 height = BestiaryPanelHeight,
                 borderWidth = 0,
                 borderColor = 'black',
@@ -1551,6 +1551,7 @@ local CreateMonsterEntry = function(nodeid)
             {
                 selectors = { "monsterEntry", 'hover' },
                 bgcolor = Styles.textColor,
+                brightness = 0.8,
             },
 
         },
@@ -1846,7 +1847,9 @@ local CreateBestiaryFolder = function(nodeid)
 
         local addBestiaryEntryButton = gui.AddButton {
             id = "AddBestiaryEntryButton",
+            floating = true,
             halign = "right",
+            valign = "center",
             width = 24,
             height = 24,
             hover = gui.Tooltip("Create a bestiary entry"),
@@ -1935,10 +1938,9 @@ local CreateBestiaryFolder = function(nodeid)
                         children = {
                             searchInput,
                             clearSearchButton,
+                            addBestiaryEntryButton,
                         },
                     },
-
-                    addBestiaryEntryButton,
                 },
             }
     end
@@ -2072,6 +2074,7 @@ local CreateBestiaryFolder = function(nodeid)
             gui.Label({
                 text = 'Bestiary',
                 classes = { "bestiaryLabel" },
+                x = 4,
                 editableOnDoubleClick = (nodeid ~= ''), --all folders except the root Bestiary folder can be renamed.
                 characterLimit = 24,
                 events = {
@@ -2346,7 +2349,7 @@ CreateBestiaryNode = function(node)
 end
 
 --similar to a bestiary entry but is an entry for a live character.
-CharacterPanel.CreateCharacterEntry = function(charid)
+CharacterPanel.CreateCharacterEntry = function(charid, party)
     local token = dmhub.GetCharacterById(charid)
     local creature = token.properties
 
@@ -2387,7 +2390,7 @@ CharacterPanel.CreateCharacterEntry = function(charid)
                 color = '#ccccccff',
                 valign = 'top',
                 bgcolor = '#ffffff00',
-                width = 300,
+                width = "100%",
                 height = BestiaryPanelHeight,
                 borderWidth = 0,
                 borderColor = 'black',
@@ -2417,6 +2420,7 @@ CharacterPanel.CreateCharacterEntry = function(charid)
             {
                 selectors = { 'hover' },
                 bgcolor = Styles.textColor,
+                brightness = 0.8,
             },
 
         },
@@ -2578,6 +2582,19 @@ CharacterPanel.CreateCharacterEntry = function(charid)
                 }
 
 
+                --party settings.
+                local tok = dmhub.GetCharacterById(charid)
+                local tokenPartyId = tok ~= nil and tok.partyId
+                if tokenPartyId then
+                    menuItems[#menuItems + 1] = {
+                        text = "Party Settings",
+                        click = function(element)
+                            Compendium.ShowModalEditDialog(Party, tokenPartyId)
+                            parentElement.popup = nil
+                        end,
+                    }
+                end
+
                 --delete the token.
                 menuItems[#menuItems + 1] = {
                     text = "Delete Character",
@@ -2681,7 +2698,7 @@ CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, mem
     local newMemberPanes = {}
 
     for _, charid in ipairs(partyMembers) do
-        local child = memberPanes[charid] or CharacterPanel.CreateCharacterEntry(charid)
+        local child = memberPanes[charid] or CharacterPanel.CreateCharacterEntry(charid, party)
         newMemberPanes[charid] = child
         child:FireEventTree("prepareRefresh")
         children[#children + 1] = child
@@ -2756,6 +2773,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
     RefreshParty()
 
     local folderPane
+    local selectAllPanel = nil
 
     local triangle = nil
     triangle = gui.Panel({
@@ -2795,10 +2813,17 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
                     return
                 end
 
+                if #partyMembers == 0 then
+                    return
+                end
+
                 isCollapsed = not isCollapsed
 
                 triangle:SetClass('expanded', not isCollapsed)
                 folderPane:FireEvent("refreshCollapsed")
+                if selectAllPanel ~= nil then
+                    selectAllPanel:FireEvent("refreshCollapsed")
+                end
 
                 if not isCollapsed then
                     folderPane:FireEvent('expand')
@@ -2857,41 +2882,31 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             end,
 
             press = function(element)
-                if partyid == nil then
-                    return
-                end
-
-                local setFocus = false
-                element:FireEventOnParents("ClearCharacterPanelSelection")
-                for k, p in pairs(memberPanes) do
-                    if not setFocus then
-                        gui.SetFocus(p)
-                        setFocus = true
-                    else
-                        element:FireEventOnParents("AddCharacterPanelToSelection", p)
-                    end
-                end
-
-                if isCollapsed then
-                    triangle:FireEvent("press")
-                end
+                triangle:FireEvent("press")
             end,
 
             rightClick = function(element)
-                if #memberPanes == 0 and party ~= nil then
-                    element.popup = gui.ContextMenu {
-                        entries = {
-                            {
-                                text = "Delete Party",
-                                click = function()
-                                    party.hidden = true
-                                    dmhub.SetAndUploadTableItem(Party.tableName, party)
-                                    element.popup = nil
-                                end,
-
-                            }
+                if party ~= nil then
+                    local entries = {
+                        {
+                            text = "Party Settings",
+                            click = function()
+                                Compendium.ShowModalEditDialog(Party, party.id)
+                                element.popup = nil
+                            end,
                         },
                     }
+                    if #memberPanes == 0 then
+                        entries[#entries + 1] = {
+                            text = "Delete Party",
+                            click = function()
+                                party.hidden = true
+                                dmhub.SetAndUploadTableItem(Party.tableName, party)
+                                element.popup = nil
+                            end,
+                        }
+                    end
+                    element.popup = gui.ContextMenu { entries = entries }
                 elseif partyid == "graveyard" then
                     element.popup = gui.ContextMenu{
                         entries = {
@@ -2926,7 +2941,7 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             gui.Label {
                 text = partyName,
                 classes = { "bestiaryLabel" },
-                editableOnDoubleClick = party ~= nil,
+                editableOnDoubleClick = false,
                 characterLimit = 24,
                 events = {
                     change = function(element)
@@ -2939,15 +2954,6 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
                 },
             },
 
-            gui.SettingsButton {
-                classes = { cond(party == nil, "hidden") },
-                width = 16,
-                height = 16,
-                swallowPress = true,
-                press = function(element)
-                    Compendium.ShowModalEditDialog(Party, party.id)
-                end,
-            }
         },
     }
 
@@ -2972,6 +2978,9 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
             end
 
             memberPanes = CharacterPanel.PopulatePartyMembers(element, party, partyMembers, memberPanes)
+            if selectAllPanel ~= nil then
+                selectAllPanel:FireEvent("refreshCollapsed")
+            end
         end,
 
         expand = function(element)
@@ -2979,6 +2988,8 @@ CharacterPanel.CreatePartyCharacters = function(partyid)
         end,
 
     }
+
+
 
     resultPanel = gui.Panel {
         flow = "vertical",
@@ -3061,6 +3072,7 @@ local CreateBestiaryAndPartyPanel = function(noBestiary)
                 height = "auto",
                 flow = "horizontal",
                 halign = "right",
+                rmargin = 8,
 
                 gui.AddButton {
                     bgimage = "icons/icon_app/icon_app_18.png",

@@ -20,7 +20,7 @@ setting{
     id = "lookup",
     description = "Creature is Lookiong Up",
     storage = "transient",
-    default = false,
+    default = 0,
 }
 
 setting{

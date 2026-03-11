@@ -15,6 +15,7 @@
 --- @field occludesLight any 
 --- @field renderParallax any 
 --- @field blocksMovement any 
+--- @field blocksForcedMovement any 
 --- @field blocksFlying any 
 --- @field cover any 
 --- @field soundOcclusion any 

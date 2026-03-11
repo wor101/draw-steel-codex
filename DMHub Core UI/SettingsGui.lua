@@ -248,6 +248,32 @@ local SettingsEditors = {
 		}
 	end,
 
+    enumslider = function(var, args)
+		local value = dmhub.GetSettingValue(var.id)
+
+        local editor = gui.EnumeratedSliderControl{
+            options = GetSettingEnum(var),
+            value = value,
+
+            monitor = var.id,
+            events = {
+				monitor = function(element)
+					value = dmhub.GetSettingValue(var.id)
+                    element.SetValue(element, value, false)
+				end,
+
+                change = function(element)
+                    dmhub.SetSettingValue(var.id, element.data.value)
+                    if var.onchange then
+                        var.onchange()
+                    end
+                end,
+            }
+        }
+
+        return editor
+    end,
+
 	dropdown = function(var, args)
 		local value = dmhub.GetSettingValue(var.id)
 

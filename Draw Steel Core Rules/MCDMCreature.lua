@@ -9,6 +9,15 @@ creature.minionDead = false
 --- @field creature.initiativeGrouping false|string
 creature.initiativeGrouping = false
 
+--- @field creature.skipTurnInitiativeId string The initiative id for which this creature's turn was skipped.
+creature.skipTurnInitiativeId = ""
+
+--- @field creature.skipTurnRoundId string The round ID in which this creature's turn was skipped.
+creature.skipTurnRoundId = ""
+
+--- @field creature.skipTurnTurnsTaken number The turnsTaken value for the entry at the time of the skip.
+creature.skipTurnTurnsTaken = 0
+
 --- @alias SquadInfo table
 
 
@@ -453,11 +462,41 @@ function creature:RefreshToken(token)
     end
 end
 
+function creature:MarkTurnSkipped(initiativeid)
+    if dmhub.initiativeQueue == nil then return end
+    local q = dmhub.initiativeQueue
+    self.skipTurnInitiativeId = initiativeid or ""
+    self.skipTurnRoundId = q:GetRoundId() or ""
+    local entry = q.entries[initiativeid]
+    self.skipTurnTurnsTaken = (entry ~= nil) and (entry.turnsTaken or 0) or 0
+end
+
+function creature:IsTurnSkipped(token)
+    if dmhub.initiativeQueue == nil then return false end
+    local q = dmhub.initiativeQueue
+    if self:try_get("skipTurnRoundId", "") ~= (q:GetRoundId() or "") then return false end
+    local myInitiativeId = InitiativeQueue.GetInitiativeId(token)
+    if self:try_get("skipTurnInitiativeId", "") ~= myInitiativeId then return false end
+    local entry = q.entries[myInitiativeId]
+    if entry ~= nil then
+        if (entry.turnsTaken or 0) > self:try_get("skipTurnTurnsTaken", 0) then
+            return false  -- multi-turn boss used another turn; skip has expired
+        end
+    end
+    return true
+end
+
 function creature:RefreshInitiativeInfo(token)
     local q = dmhub.initiativeQueue
     if q == nil or q.hidden then
         self._tmp_initiativeStatus = nil
     else
+        -- Check if this creature's turn was skipped. Show as "Done" even during
+        -- a grouped turn where other creatures still have their turns available.
+        if self:IsTurnSkipped(token) then
+            self._tmp_initiativeStatus = "Done"
+            return
+        end
         local initiativeid = InitiativeQueue.GetInitiativeId(token)
         local initiativeEntry = q:GetFirstInitiativeEntry()
         if initiativeEntry ~= nil and initiativeEntry.initiativeid == initiativeid then
@@ -640,6 +679,7 @@ function creature:RefreshSquadInfo(token)
         }
 
         local liveMinions = 0
+        local activeMinions = 0
         local damage_taken_charid = self._tmp_minionSquad.damage_taken_charid or nil
         local damage_taken = self._tmp_minionSquad.damage_taken or 0
         local damage_taken_seq = self._tmp_minionSquad.damage_taken_seq or 0
@@ -654,6 +694,9 @@ function creature:RefreshSquadInfo(token)
                     self._tmp_minionSquad.tokens[#self._tmp_minionSquad.tokens + 1] = tok
                     if (not tok.properties.minionDead) and tok.properties.minion then
                         liveMinions = liveMinions + 1
+                        if not tok.properties:IsTurnSkipped(tok) then
+                            activeMinions = activeMinions + 1
+                        end
                     end
 
                     if tok.properties:has_key("squadpos") then
@@ -710,6 +753,7 @@ function creature:RefreshSquadInfo(token)
 
         self._tmp_minionSquad.hasCaptain = newHasCaptain
         self._tmp_minionSquad.liveMinions = liveMinions
+        self._tmp_minionSquad.activeMinions = activeMinions
         self._tmp_minionSquad.health_single = health_single
         self._tmp_minionSquad.maximum_health = health_single * liveMinions
         self._tmp_minionSquad.damage_taken = damage_taken
@@ -849,6 +893,9 @@ end
 creature.RegisterSymbol {
     symbol = "object",
     lookup = function(c)
+        if c:try_get("treatAsObject", false) then
+            return true
+        end
         local token = dmhub.LookupToken(c)
         if token ~= nil and token.valid then
             return token.isObject
@@ -2066,6 +2113,19 @@ function character:GetHeroicResourceName()
     return "Heroic Resource"
 end
 
+function creature:GetEpicResourceName()
+    return "Epic Resource"
+end
+
+function character:GetEpicResourceName()
+    local classInfo = self:GetClass()
+    if classInfo ~= nil then
+        return classInfo.epicResourceName
+    end
+
+    return "Epic Resource"
+end
+
 function creature:GetHeroicOrMaliceId()
     return CharacterResource.heroicResourceId
 end
@@ -2161,7 +2221,7 @@ function creature:GetActivatedAbilities(options)
     if options.manualTriggers then
         local triggeredAbilities = self:GetTriggeredAbilities()
         for i, trigger in ipairs(triggeredAbilities) do
-            if trigger.ability:try_get("hasManualVersion", false) then
+            if trigger.ability:try_get("hasManualVersion", false) and not trigger.ability:IsLocalOnly() then
                 --- @type TriggeredAbility
                 local ability = trigger.ability:GenerateManualVersion()
                 result[#result + 1] = ability
@@ -2484,6 +2544,7 @@ creature.RegisterSymbol {
 --- Inflict a condition on a creature. (Or purge the condition using the 'purge' argument.)
 --- @param conditionid string
 --- @param args {duration:string, force: nil|boolean, purge: nil|boolean, riders: nil|(string[]), sourceDescription: string, casterInfo:nil|{tokenid:string, timestamp: string|number|nil}, cast: ActivatedAbilityCast}
+--- When purge=true and casterInfo is provided, only removes the condition if it was inflicted by that caster.
 function creature:InflictCondition(conditionid, args)
     local immunities = self:GetConditionImmunities()
 
@@ -2570,6 +2631,13 @@ function creature:InflictCondition(conditionid, args)
                     entry.duration = "eoe"
                     return
                 end
+            end
+        end
+        --if a caster filter is provided, only purge if the condition was inflicted by that caster.
+        if args.casterInfo ~= nil then
+            local entryCasterInfo = entry and entry.casterInfo
+            if entryCasterInfo == nil or entryCasterInfo.tokenid ~= args.casterInfo.tokenid then
+                return
             end
         end
         if inflictedConditions[conditionid] ~= nil then
@@ -2859,6 +2927,63 @@ function creature:ConditionDuration(conditionid)
 
     return entry.duration
 end
+
+creature.RegisterSymbol {
+    symbol = "effectcaster",
+    lookup = function(c)
+        return function(condName, caster)
+            if caster == nil then
+                return 0
+            end
+            
+            -- Get the caster's token ID for comparison
+            local casterTokenId = dmhub.LookupTokenId(caster)
+            if casterTokenId == nil then
+                return 0
+            end
+            
+            local result = 0
+            
+            -- Check inflicted conditions
+            local inflictedConditions = c:try_get("inflictedConditions", {})
+            local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
+            for k, v in pairs(conditionsTable) do
+                if not v:try_get("hidden", false) and string.lower(v.name) == string.lower(condName) then
+                    local entry = inflictedConditions[k]
+                    if entry ~= nil and entry.casterInfo ~= nil then
+                        if entry.casterInfo.tokenid == casterTokenId then
+                            result = result + (entry.stacks or 1)
+                        end
+                    end
+                end
+            end
+
+            -- Check ongoing effects
+            local ongoingEffectsTable = dmhub.GetTable("characterOngoingEffects") or {}
+            local ongoingEffects = c:ActiveOngoingEffects()
+            for _, effect in ipairs(ongoingEffects) do
+                local effectInfo = ongoingEffectsTable[effect.ongoingEffectid]
+                if effectInfo ~= nil and string.lower(effectInfo.name) == string.lower(condName) then
+                    if effect.casterInfo ~= nil and effect.casterInfo.tokenid == casterTokenId then
+                        result = result + (effect.stacks or 1)
+                    end
+                end
+            end
+
+            return result > 0
+        end
+    end,
+
+    help = {
+        name = "Effect Caster",
+        type = "function",
+        desc = "Given the name of a condition or ongoing effect and a creature, returns the total stacks of that effect/condition that were cast by the given caster.",
+        seealso = {},
+        examples = {
+            'Effect Caster("Carefully Observed", Caster)',
+        },
+    },
+}
 
 creature.RegisterSymbol {
     symbol = "conditionstacks",
@@ -3230,6 +3355,7 @@ function creature.TakeDamage(self, amount, note, info)
                 banes = eventArg.banes,
                 hasability = eventArg.hasability,
                 ability = eventArg.ability,
+                usedability = eventArg.ability,
             }
             attacker:DispatchEvent("dealdamage", args)
         end
@@ -3334,6 +3460,7 @@ function creature.TakeDamage(self, amount, note, info)
             banes = eventArg.banes,
             hasability = eventArg.hasability,
             ability = eventArg.ability,
+            usedability = eventArg.ability,
         }
         attacker:DispatchEvent("dealdamage", args)
     end
@@ -3402,11 +3529,6 @@ function creature.Heal(self, amount, note)
     if not canHeal then
         self:FloatLabel("Cannot Regain Stamina", "#ff0000")
         return
-    end
-
-    local half = (self:CalculateNamedCustomAttribute("Stamina Regain Halved") > 0)
-    if half then
-        amount = math.floor(amount / 2)
     end
 
     if type(amount) == 'string' then
@@ -3562,16 +3684,31 @@ function creature:DispatchEventAndWait(eventName, info)
     --wait for event to complete or trigger to be dismissed
     local triggerStillExists = true
     while not eventComplete and triggerStillExists do
-        -- Check if trigger still exists in available triggers
-        triggerStillExists = false
+        
         if triggerId then
+            -- We have a trigger ID, check if it still exists
+            triggerStillExists = false
             for _, triggerInfo in pairs(self:GetAvailableTriggers() or {}) do
                 if triggerInfo.id == triggerId then
                     triggerStillExists = true
                     break
                 end
             end
+        else
+            -- We don't have a trigger ID yet, try to find it
+            for _, triggerInfo in pairs(self:GetAvailableTriggers() or {}) do
+                if triggerInfo.text == modName then
+                    triggerId = triggerInfo.id
+                    triggerStillExists = true
+                    break
+                end
+            end
+            -- If we still haven't found it, keep waiting
+            if not triggerId then
+                triggerStillExists = true
+            end
         end
+        
         coroutine.yield(0.1)
     end
 end

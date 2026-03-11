@@ -40,6 +40,10 @@ TriggeredAbility.mandatoryTriggerSettings = {
         text = "Occurs Automatically",
     },
     {
+        id = "local",
+        text = "Automatic/Locally",
+    },
+    {
         id = false,
         text = "Prompt",
     },
@@ -52,7 +56,7 @@ TriggeredAbility.mandatoryTriggerSettings = {
 --- Returns true if this triggered ability should fire automatically without prompting the player.
 --- @return boolean
 function TriggeredAbility:IsMandatory()
-    if self.mandatory == true then
+    if self.mandatory == true or self.mandatory == "local" then
         return true
     elseif self.mandatory == false then
         return false
@@ -63,9 +67,15 @@ function TriggeredAbility:IsMandatory()
     return mandatory
 end
 
+--- Returns true if this triggered ability fires locally and should never be dispatched to a remote controller.
+--- @return boolean
+function TriggeredAbility:IsLocalOnly()
+    return self.mandatory == "local"
+end
+
 --- @return boolean
 function TriggeredAbility:MayBePrompted()
-    if self.mandatory == true then
+    if self.mandatory == true or self.mandatory == "local" then
         return false
     end
 
@@ -554,6 +564,18 @@ TriggeredAbility.RegisterTrigger{
     }
 }
 
+TriggeredAbility.RegisterTrigger{
+    id = "endrespite",
+    text = "End Respite",
+    symbols = {
+        {
+            name = "XP Gained",
+            type = "number",
+            desc = "The amount of experience gained from this respite.",
+        },
+    }
+}
+
 table.sort(TriggeredAbility.triggers, function(a,b) return a.text < b.text end)
 
 function TriggeredAbility.GetTriggerDropdownOptions(includeNone)
@@ -634,7 +656,6 @@ end
 function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraControllerToken, modContext, argOptions)
 
     argOptions = argOptions or {}
-
 
 	local casterToken = dmhub.LookupToken(creature)
 	if casterToken == nil then
@@ -927,10 +948,10 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 
 	local executeTrigger = function()
 
-		local options = { symbols = symbols }
+		local options = { symbols = symbols, alreadyPaid = argOptions.alreadyPaid }
 		local needCoroutine = self:CastInstantPortion(casterToken, targets, options)
 		if not needCoroutine then
-			if options.pay then
+			if options.pay and not options.alreadyPaid then
 				self:ConsumeResources(casterToken, {
 					costOverride = options.costOverride,
 				})
@@ -960,6 +981,13 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 	end
 
 	if self:IsMandatory() or (self:try_get("mandatoryDifferentPlayer", false) and casterToken.activeControllerId == nil) then
+		-- For mandatory triggers with a usage limit, pay the full cost upfront
+		-- before entering the coroutine. This prevents the same trigger from
+		-- firing multiple times in a single movement loop.
+		if self.usageLimitOptions.resourceRefreshType ~= 'none' then
+			self:ConsumeResources(casterToken, {})
+			argOptions.alreadyPaid = true
+		end
 		executeTrigger()
 	else
 		dmhub.Coroutine(function()
@@ -1167,6 +1195,7 @@ function TriggeredAbility:TriggerCo(targets, characterModifier, casterToken, cre
 		symbols = symbols,
         targetArea = targetArea,
 		alreadyInCoroutine = true,
+		alreadyPaid = argOptions.alreadyPaid,
         OnFinishCastHandlers = {
             function()
                 if argOptions.complete then

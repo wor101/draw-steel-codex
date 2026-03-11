@@ -29,6 +29,7 @@ local g_classArrays1 = {
 Class.numKits = 1
 
 Class.heroicResourceName = "Heroic Resource"
+Class.epicResourceName = "Epic Resource"
 
 --calculate the base attributes of the class.
 function Class:CalculateBaseAttributes(targetCreature)
@@ -330,6 +331,29 @@ function Class:CustomEditor(UploadFn, children)
                 text = self.heroicResourceName,
                 change = function(element)
                     self.heroicResourceName = element.text
+                    UploadFn()
+                end,
+            },
+        }
+
+        children[#children+1] = gui.Panel{
+            width = "auto",
+            height = "auto",
+            flow = "horizontal",
+            gui.Label{
+                fontSize = 22,
+                text = "Epic Resource:",
+                minWidth = 240,
+            },
+
+            gui.Input{
+                fontSize = 18,
+                width = 180,
+                height = 22,
+                characterLimit = 32,
+                text = self.epicResourceName,
+                change = function(element)
+                    self.epicResourceName = element.text
                     UploadFn()
                 end,
             },

@@ -869,6 +869,7 @@ function CharacterBuilder.ProgressPip(index, opts)
     local options = {
         classes = {"builder-base", "panel-base", "progress-pip"},
         rotate = 45,
+        interactable = false,
         data = {
             index = index,
         },

@@ -4,6 +4,72 @@ CharacterPanel.CreateConditionsPanel = function(token)
     return nil
 end
 
+function CharacterPanel.CreateLookupPanel()
+    local m_slider = nil
+    local m_maxLookup = -1
+
+    return gui.Panel{
+        width = "80%",
+        height = "auto",
+        halign = "center",
+        tmargin = 4,
+        monitor = "lookup",
+
+        events = {
+            monitor = function(element)
+                if m_slider ~= nil then
+                    local cur = dmhub.GetSettingValue("lookup")
+                    if m_slider.value ~= cur then
+                        m_slider:SetValue(cur)
+                    end
+                end
+            end,
+        },
+
+        refresh = function(element)
+            local tok = dmhub.currentToken
+            if tok == nil or (dmhub.isDM and dmhub.tokenVision == nil) then
+                element:SetClass("collapsed", true)
+                m_maxLookup = -1
+                m_slider = nil
+                return
+            end
+
+            local maxLookup = tok.countFloorsWithVisionAbove
+
+            if maxLookup ~= m_maxLookup then
+                m_maxLookup = maxLookup
+                element:SetClass("collapsed", maxLookup <= 0)
+
+                if maxLookup <= 0 then
+                    m_slider = nil
+                    element.children = {}
+                else
+                    local options
+                    if maxLookup == 1 then
+                        options = {{id = 0, text = "Look Forward"}, {id = 1, text = "Look Up"}}
+                    else
+                        options = {{id = 0, text = "Fwd"}}
+                        for i = 1, maxLookup do
+                            options[#options+1] = {id = i, text = "Up " .. tostring(i)}
+                        end
+                    end
+
+                    m_slider = gui.EnumeratedSliderControl{
+                        width = "100%",
+                        options = options,
+                        value = dmhub.GetSettingValue("lookup"),
+                        change = function(el)
+                            dmhub.SetSettingValue("lookup", el.value)
+                        end,
+                    }
+                    element.children = {m_slider}
+                end
+            end
+        end,
+    }
+end
+
 function CharacterPanel.AddConditionMenu(args)
     local m_tokens = args.tokens
     local m_button = args.button
@@ -3624,6 +3690,7 @@ CharacterPanel.CreateMultiEdit = function()
 	return resultPanel
 end
 
+
 CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, memberPanes)
 
 	local m_folderPanels = element.data.folderPanels or {}
@@ -3645,7 +3712,7 @@ CharacterPanel.PopulatePartyMembers = function(element, party, partyMembers, mem
 			local folder = nil
 			local squadid = creature:MinionSquad()
 
-			if squadid ~= nil then
+			if type(squadid) == "string" then
 				key = squadid .. '-' .. charid
 
 				folder = newFolderPanels[squadid]
@@ -4351,6 +4418,7 @@ function CharacterPanel.SingleCharacterDisplaySidePanel(token)
 
 				CharacterPanel.ShowHitpoints(),
 				conditionsPanel,
+				CharacterPanel.CreateLookupPanel(),
                 gui.Panel {
 
                     bgimage = true,

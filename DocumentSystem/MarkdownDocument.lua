@@ -1874,7 +1874,7 @@ function MarkdownDocument:EditPanel(args)
         multiline = true,
         textAlignment = "topleft",
         text = self:GetTextContent(),
-        vscroll = true,
+        verticalScrollbar = true,
         selectAllOnFocus = false,
         characterLimit = CustomDocument.MaxLength,
 

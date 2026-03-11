@@ -1180,6 +1180,7 @@ function ActivatedAbility:Render(options, params)
 
                             width = "auto",
                             id = "spellName",
+                            classes = {"abilityName"},
                             fontSize = 24,
                             fontFace = "Newzald",
                             fontWeight = "Light",
@@ -1187,9 +1188,6 @@ function ActivatedAbility:Render(options, params)
                             text = string.format("<b>%s</b>%s <size=18>%s</size>", self.name, meleeOrRangedVariantText, costString),
                             height = "auto",
                             markdown = true,
-
-
-
                         },
 
                         --Type of ability
@@ -1220,6 +1218,18 @@ function ActivatedAbility:Render(options, params)
 
                                 flow = "horizontal",
                                 lmargin = 10,
+
+                                hover = function(element)
+                                    if self:try_get("implementationDetails") ~= nil and self:try_get("implementationDetails") ~= "" then
+                                        element.tooltip = gui.TooltipFrame(gui.Label {
+                                            text = self:try_get("implementationDetails"),
+                                            width = 300,
+                                            height = "auto",
+                                            wrap = true,
+                                            fontSize = 14,
+                                        }, {})
+                                    end
+                                end,
 
                                 gui.Panel {
 
@@ -1270,18 +1280,7 @@ function ActivatedAbility:Render(options, params)
                                         else
                                             element:SetClass("unimplemented", true)
                                         end
-                                    end,
-                                    hover = function(element)
-                                        if self:try_get("implementationDetails") ~= nil and self:try_get("implementationDetails") ~= "" then
-                                            element.tooltip = gui.TooltipFrame(gui.Label {
-                                                text = self:try_get("implementationDetails"),
-                                                width = 300,
-                                                height = "auto",
-                                                wrap = true,
-                                                fontSize = 14,
-                                            }, {})
-                                        end
-                                    end,
+                                    end
                                 },
 
                             },
@@ -2276,8 +2275,9 @@ function ActivatedAbility:GetNumTargets(casterToken, symbols)
     local result = g_numTargetsFunction(self, casterToken, symbols)
 
     if (not mod.unloaded) and casterToken ~= nil and casterToken.properties.minion and self.categorization == "Signature Ability" and result == 1 and casterToken.properties:has_key("_tmp_minionSquad") then
-        --minion signature abilities can target one target for each member of the squad.
-        return casterToken.properties._tmp_minionSquad.liveMinions
+        --minion signature abilities can target one target for each active (non-skipped) member.
+        return casterToken.properties._tmp_minionSquad.activeMinions
+            or casterToken.properties._tmp_minionSquad.liveMinions
     end
 
     return result

@@ -967,10 +967,13 @@ function GameHud.CreateInitiativeBar(self, info)
 
 	local mainInitiativeBar = nil
 	local choiceInitiativeBar = nil
+	local respiteBar = nil
 
 	choiceInitiativeBar = self:CreateInitiativeBarChoicePanel(info)
 	self.choiceInitiativeBar = choiceInitiativeBar
 
+	respiteBar = self:CreateRespiteBar(info)
+	self.respiteBar = respiteBar
 
     local resetTurnButton = nil
 
@@ -1354,6 +1357,7 @@ function GameHud.CreateInitiativeBar(self, info)
 
 			mainInitiativeBar,
 			choiceInitiativeBar,
+			respiteBar,
 
 			--button to close the initiative queue.
 			--[[gui.CloseButton({
@@ -1823,7 +1827,47 @@ function GameHud.CreateInitiativeBarChoicePanel(self, info)
 	}
 
 	return choicePanel
-end 
+end
+
+function GameHud.CreateRespiteBar(self, info)
+	return gui.Panel{
+		classes = { "hidden" },
+		width = 400,
+		height = 60,
+		y = 40,
+		halign = "center",
+		valign = "top",
+
+		refresh = function(element)
+			local isRespite = info.initiativeQueue ~= nil
+				and info.initiativeQueue.hidden
+				and info.initiativeQueue.gameMode == "respite"
+			element:SetClass("hidden", not isRespite)
+		end,
+
+		gui.Button{
+			text = "End Respite",
+			halign = "Center",
+			valign = "Bottom",
+			fontSize = 22,
+			press = function(element)
+				if not CanControlInitiative() then return end
+				if info.initiativeQueue ~= nil then
+					info.initiativeQueue.gameMode = "exploration"
+					info.UploadInitiative()
+					for _, token in pairs(dmhub.GetTokens({playerControlled = true})) do
+						local currentXp = token.properties:try_get("xp", 0)
+						token.properties:Rest("long")
+						local newXp = token.properties:try_get("xp", 0)
+
+						token.properties:DispatchEvent("endrespite", {xpgained = newXp - currentXp})
+						
+					end
+				end
+			end,
+		}
+	}
+end
 
 function GameHud:NextInitiative(oncomplete)
 	local info = self.initiativeInterface
@@ -1840,7 +1884,11 @@ function GameHud:NextInitiative(oncomplete)
         --damage is done in the end turn event it still shouldn't take damage.
 		for i,tok in ipairs(tokens) do
 			if tok.properties ~= nil then
-				tok.properties:EndTurn(tok)
+                if tok.properties:IsTurnSkipped(tok) then
+                    -- Suppress EndTurn: save-ends and end-of-turn effects do not trigger.
+                else
+				    tok.properties:EndTurn(tok)
+                end
 			end
 		end
 

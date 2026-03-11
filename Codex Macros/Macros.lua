@@ -1321,6 +1321,86 @@ end
 
 
 
+
+
+--award renown to any heroes on the map.
+Commands.awardrenown = function(str)
+    if str == "help" then
+        dmhub.Log("Usage: /awardrenown <number>\n Awards renown to any heroes on the map (given number or 1).")
+        return
+    end
+
+    if not dmhub.isDM then
+        return
+    end
+
+    local points = tonumber(str) or 1
+    for _, token in ipairs(dmhub.allTokens) do
+        if token.properties:IsHero() then
+            token:ModifyProperties {
+                description = "Award Renown",
+                execute = function()
+                    local feature = DeepCopy(MCDMImporter.GetStandardFeature("Renown Modification"))
+                    if feature ~= nil then
+                        feature.guid = dmhub.GenerateGuid()
+                        feature.modifiers[1].sourceguid = feature.guid
+                        feature.name = "Custom Modification"
+                        feature.modifiers[1].name = "Custom Modification"
+                        if feature.modifiers[1].behavior == "resource" then
+                            feature.modifiers[1].num = points
+                        else
+                            feature.modifiers[1].value = points
+                        end
+                        feature.source = "Custom"
+                        feature.modifiers[1].source = "Custom"
+                        local features = token.properties:get_or_add("characterFeatures", {})
+                        features[#features + 1] = feature
+                    end
+                end,
+            }
+        end
+    end
+end
+
+--award wealth to any heroes on the map.
+Commands.awardwealth = function(str)
+    if str == "help" then
+        dmhub.Log("Usage: /awardwealth <number>\n Awards wealth to any heroes on the map (given number or 1).")
+        return
+    end
+
+    if not dmhub.isDM then
+        return
+    end
+
+    local points = tonumber(str) or 1
+    for _, token in ipairs(dmhub.allTokens) do
+        if token.properties:IsHero() then
+            token:ModifyProperties {
+                description = "Award Wealth",
+                execute = function()
+                    local feature = DeepCopy(MCDMImporter.GetStandardFeature("Wealth Modification"))
+                    if feature ~= nil then
+                        feature.guid = dmhub.GenerateGuid()
+                        feature.modifiers[1].sourceguid = feature.guid
+                        feature.name = "Custom Modification"
+                        feature.modifiers[1].name = "Custom Modification"
+                        if feature.modifiers[1].behavior == "resource" then
+                            feature.modifiers[1].num = points
+                        else
+                            feature.modifiers[1].value = points
+                        end
+                        feature.source = "Custom"
+                        feature.modifiers[1].source = "Custom"
+                        local features = token.properties:get_or_add("characterFeatures", {})
+                        features[#features + 1] = feature
+                    end
+                end,
+            }
+        end
+    end
+end
+
 Commands.languagesknown = function(str)
     local languagesTable = dmhub.GetTable(Language.tableName)
     local languagesKnown = creature.g_languagesKnownLocally

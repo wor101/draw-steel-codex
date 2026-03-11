@@ -1172,15 +1172,26 @@ function ActivatedAbility:TargetPassesFilter(casterToken, targetToken, symbols, 
             return false
         end
 
-        if self.targetAllegiance == "none" and (not targetToken.isObject) then
+        ---Treat creature as an object
+        local treatAsObject = (not targetToken.isObject) and targetToken.properties ~= nil and targetToken.properties:try_get("treatAsObject", false)
+
+        -- Block creature-objects from non-objectTarget abilities.
+        if self.objectTarget ~= true and treatAsObject then
             return false
         end
 
-        if self.targetAllegiance == 'enemy' and casterToken:IsFriend(targetToken) and (not targetToken.isObject) then
+        -- Allegiance checks: objects and creature-objects bypass allegiance filters.
+        local isAnyObject = targetToken.isObject or treatAsObject
+
+        if self.targetAllegiance == "none" and (not isAnyObject) then
             return false
         end
 
-        if self.targetAllegiance == 'ally' and (not casterToken:IsFriend(targetToken)) and (not targetToken.isObject) then
+        if self.targetAllegiance == 'enemy' and casterToken:IsFriend(targetToken) and (not isAnyObject) then
+            return false
+        end
+
+        if self.targetAllegiance == 'ally' and (not casterToken:IsFriend(targetToken)) and (not isAnyObject) then
             return false
         end
     end
@@ -1632,35 +1643,63 @@ function ActivatedAbility:GetCost(casterToken, options)
 		--look for any resources of this type in the level progression and spend the first one we find.
 		--the common case is for the progression to just be one resource.
 		local resourceLevels = CharacterResource.GetLevelProgression(self.resourceCost)
-		for levelNum,resourceCost in ipairs(resourceLevels) do
-			local resourceInfo = resourcesTable[resourceCost]
-			if resourceInfo ~= nil then
-				local max = resourcesAvailable[resourceCost] or 0
-				local usage = creature:GetResourceUsage(resourceCost, resourceInfo.usageLimit)
-				local available = (max - usage) + resourceInfo:AllowResourceBelowZero(casterToken.properties)
 
-				local mode = options.mode or 1
-                local resourceNum = ExecuteGoblinScript(self.resourceNumber, casterToken.properties:LookupSymbol{mode = mode}, 0, "Determine resource number for " .. self.name)
+		local mode = options.mode or 1
+		local resourceNum = ExecuteGoblinScript(self.resourceNumber, casterToken.properties:LookupSymbol{mode = mode}, 0, "Determine resource number for " .. self.name)
 
-				if resourceNum == 0 then
-					resourceDetails = nil
-					break
-				end
-				local canAfford = available >= resourceNum
-
-				--note that we set resourceDetails to the first found, but prefer to
-				--set to the highest resource we have, and being affordable we short-circuit immediately.
-				if resourceDetails == nil or max > 0 or canAfford then
-					resourceDetails = {
-						cost = self.resourceCost,
-						quantity = resourceNum,
-						canAfford = canAfford,
-						paymentOptions = cond(canAfford, {{resourceid = resourceCost, quantity = resourceNum}}, {}),
-						expendedOptions = cond(not canAfford, {resourceid = resourceCost, quantity = resourceNum}, {}),
-					}
-
-					if canAfford then
+		if resourceNum == 0 then
+			-- zero cost, no payment needed
+		elseif #resourceLevels > 1 and self.resourceCost == CharacterResource.heroicResourceId then
+			-- Heroic/epic split: spend base resource first, supplement with epic for the remainder.
+			local paymentOptions = {}
+			local remaining = resourceNum
+			for _, levelResourceId in ipairs(resourceLevels) do
+				local resourceInfo = resourcesTable[levelResourceId]
+				if resourceInfo ~= nil then
+					local max = resourcesAvailable[levelResourceId] or 0
+					local usage = creature:GetResourceUsage(levelResourceId, resourceInfo.usageLimit)
+					local available = (max - usage) + resourceInfo:AllowResourceBelowZero(casterToken.properties)
+					local use = math.min(available, remaining)
+					if use > 0 then
+						paymentOptions[#paymentOptions+1] = {resourceid = levelResourceId, quantity = use}
+						remaining = remaining - use
+					end
+					if remaining <= 0 then
 						break
+					end
+				end
+			end
+			local canAfford = remaining <= 0
+			resourceDetails = {
+				cost = self.resourceCost,
+				quantity = resourceNum,
+				canAfford = canAfford,
+				paymentOptions = cond(canAfford, paymentOptions, {}),
+				expendedOptions = cond(not canAfford, {resourceid = self.resourceCost, quantity = resourceNum}, {}),
+			}
+		else
+			for levelNum,resourceCost in ipairs(resourceLevels) do
+				local resourceInfo = resourcesTable[resourceCost]
+				if resourceInfo ~= nil then
+					local max = resourcesAvailable[resourceCost] or 0
+					local usage = creature:GetResourceUsage(resourceCost, resourceInfo.usageLimit)
+					local available = (max - usage) + resourceInfo:AllowResourceBelowZero(casterToken.properties)
+					local canAfford = available >= resourceNum
+
+					--note that we set resourceDetails to the first found, but prefer to
+					--set to the highest resource we have, and being affordable we short-circuit immediately.
+					if resourceDetails == nil or max > 0 or canAfford then
+						resourceDetails = {
+							cost = self.resourceCost,
+							quantity = resourceNum,
+							canAfford = canAfford,
+							paymentOptions = cond(canAfford, {{resourceid = resourceCost, quantity = resourceNum}}, {}),
+							expendedOptions = cond(not canAfford, {resourceid = resourceCost, quantity = resourceNum}, {}),
+						}
+
+						if canAfford then
+							break
+						end
 					end
 				end
 			end
@@ -1695,10 +1734,8 @@ function ActivatedAbility.ExpectedResourceConsumptionFromCurrentCast()
     local result = {}
     local cost = info.options.costOverride or info.ability:GetCost(info.casterToken)
 	for i,entry in ipairs(cost.details) do
-		if #entry.paymentOptions > 0 then
-			local resourceid = entry.paymentOptions[1].resourceid
-            local quantity = entry.paymentOptions[1].quantity or 1
-            result[resourceid] = (result[resourceid] or 0) + quantity
+		for _,payment in ipairs(entry.paymentOptions) do
+            result[payment.resourceid] = (result[payment.resourceid] or 0) + (payment.quantity or 1)
         end
     end
 
@@ -1709,11 +1746,9 @@ function ActivatedAbility:WillBecomeStrained(casterToken, options)
     local totalCost = 0
 	local cost = options.costOverride or self:GetCost(casterToken)
 	for i,entry in ipairs(cost.details) do
-		if #entry.paymentOptions > 0 then
-			local resourceid = entry.paymentOptions[1].resourceid
-            if resourceid == CharacterResource.heroicResourceId then
-                local quantity = entry.paymentOptions[1].quantity or 1
-                totalCost = totalCost + quantity
+		for _,payment in ipairs(entry.paymentOptions) do
+            if payment.resourceid == CharacterResource.heroicResourceId then
+                totalCost = totalCost + (payment.quantity or 1)
             end
         end
     end
@@ -1760,8 +1795,8 @@ function ActivatedAbility:ConsumeResources(casterToken, options)
                 end
 
                 for i,entry in ipairs(cost.details) do
-                    if #entry.paymentOptions > 0 then
-                        local resourceid = entry.paymentOptions[1].resourceid
+                    for _,payment in ipairs(entry.paymentOptions) do
+                        local resourceid = payment.resourceid
                         local refreshType = entry.refreshType
                         if refreshType == nil then
                             local resourceInfo = resourceTable[resourceid]
@@ -1771,7 +1806,7 @@ function ActivatedAbility:ConsumeResources(casterToken, options)
                         end
 
                         if refreshType ~= nil then
-                            tok.properties:ConsumeResource(resourceid, refreshType, entry.paymentOptions[1].quantity or 1, self.name)
+                            tok.properties:ConsumeResource(resourceid, refreshType, payment.quantity or 1, self.name)
                         end
                     end
                 end

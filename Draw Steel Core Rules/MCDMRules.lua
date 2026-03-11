@@ -1362,6 +1362,12 @@ TriggeredAbility.RegisterTrigger{
             name = "Ability",
             type = "ability",
             desc = "The ability used to deal the damage. Only valid if HasAbility is true.",
+        },
+        {
+            name = "Used Ability",
+            type = "ability",
+            desc = "The ability used to deal the damage. Only valid if HasAbility is true.",
+            seealso = {"Ability"},
         }
     }
 }
@@ -2817,6 +2823,12 @@ TriggeredAbility.RegisterTrigger{
             name = "Ability",
             type = "ability",
             desc = "The ability used to deal the damage. Only valid if HasAbility is true.",
+        },
+        {
+            name = "Used Ability",
+            type = "ability",
+            desc = "The ability used to deal the damage. Only valid if HasAbility is true.",
+            seealso = {"Ability"},
         }
     }
 }

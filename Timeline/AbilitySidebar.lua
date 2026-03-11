@@ -43,6 +43,9 @@ local function ShouldShareAbility(token)
     if not token.canControl then
         return false
     end
+    if dmhub.GetSettingValue("privaterolls") == "dm" then
+        return false
+    end
     return IsTokenOnCurrentTurn(token)
 end
 
@@ -978,8 +981,12 @@ local function RefreshRemoteAbilityDisplay(displayPanel, shareData)
     end
 
     -- Full rebuild: build the ability tooltip card.
+    if ability.typeName ~= "ActivatedAbility" then
+        return
+    end
+
     local tooltipAbility = ability
-    if casterToken ~= nil and casterToken.valid and ability.typeName == "ActivatedAbility" then
+    if casterToken ~= nil and casterToken.valid then
         tooltipAbility = ability:GetActiveVariation(casterToken) or ability
     end
 
@@ -1140,7 +1147,9 @@ function GameHud:InitAbilityDisplayPanel(abilityDisplayPanel)
                     needParent = false
                     panel = CreateAbilityTooltip(ability:GetActiveVariation(token),
                         { token = token, symbols = symbols, width = 346, bgcolor = "#222222e9", })
-                    panel:MakeNonInteractiveRecursive()
+                    --Shwayguy: Entire panel cannot be made non-interactive
+                    --Implementation chip hover requires it                    
+                    --panel:MakeNonInteractiveRecursive()
                 end
             end
 
@@ -1154,6 +1163,52 @@ function GameHud:InitAbilityDisplayPanel(abilityDisplayPanel)
                     blurBackground = true,
                     panel,
                 }
+            end
+
+            if dmhub.isDM then
+                local abilityNamePanel = panel:FindChildRecursive(function(p)
+                    return p:HasClass("abilityName")
+                end)
+                if abilityNamePanel ~= nil then
+                    local rollVisibilityEye = gui.VisibilityPanel{
+                        visible = dmhub.GetSettingValue("privaterolls") ~= "dm",
+                        floating = true,
+                        halign = "right",
+                        valign = "top",
+                        x = 20,
+                        width = 20,
+                        height = 20,
+                        interactable = true,
+
+                        press = function(el)
+                            local isVisible = el:HasClass("visible")
+                            el:FireEventTree("visible", not isVisible)
+                            dmhub.SetSettingValue("privaterolls", cond(isVisible, "dm", "visible"))
+                            dmhub.SetSettingValue("privaterolls:save", true)
+                            if isVisible then
+                                -- Toggled to hidden: clear any active share.
+                                ClearAbilityShare()
+                            else
+                                -- Toggled to visible: begin sharing if mid-ability.
+                                if g_displayedAbility ~= nil and token ~= nil and token.valid then
+                                    BeginAbilitySharing(token, g_displayedAbility)
+                                end
+                            end
+                        end,
+
+                        hover = function(el)
+                            local text
+                            if el:HasClass("visible") then
+                                text = "Ability visible to everyone"
+                            else
+                                text = "Ability hidden from players"
+                            end
+                            gui.Tooltip(text)(el)
+                        end,
+                    }
+
+                    abilityNamePanel.children = {rollVisibilityEye}
+                end
             end
 
             element.children = {panel}
@@ -1189,6 +1244,18 @@ end
 
 if GameHud.instance and rawget(GameHud.instance, "abilityDisplayPanel") ~= nil then
     GameHud.instance:InitAbilityDisplayPanel(GameHud.instance.abilityDisplayPanel)
+end
+
+function CharacterPanel.FindEmbeddedRollDialog()
+    if (not GameHud.instance) or (not GameHud.instance.abilityDisplay) then
+        return nil
+    end
+
+    local panel = GameHud.instance.abilityDisplay
+    local embedded = panel:FindChildRecursive(function(p)
+        return p:HasClass("embeddedRollDialog")
+    end)
+    return embedded
 end
 
 function CharacterPanel.EmbedDialogInAbility()

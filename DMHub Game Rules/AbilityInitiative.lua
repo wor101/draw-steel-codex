@@ -82,6 +82,48 @@ function ActivatedAbilityInitiativeBehavior:Cast(ability, casterToken, targets, 
         if changes then
             dmhub:UploadInitiativeQueue()
         end
+
+    elseif mode == "skip_turn" then
+        if #targets > 0 then
+            local token = targets[1].token
+            if token ~= nil then
+                local q = dmhub.initiativeQueue
+                if q == nil or q.hidden then return end
+                local initiativeid = InitiativeQueue.GetInitiativeId(token)
+                local allTokens = InitiativeQueue.GetTokensForInitiativeId(initiativeid)
+
+                if token.valid and token.properties ~= nil then
+                    token:ModifyProperties{
+                        description = "Skip Turn",
+                        execute = function()
+                            token.properties:MarkTurnSkipped(initiativeid)
+                            token.properties:ConsumeResource(
+                                CharacterResource.actionResourceId, "turn", 1)
+                            token.properties:ConsumeResource(
+                                CharacterResource.maneuverResourceId, "turn", 1)
+                            local speed = token.properties:CurrentMovementSpeed()
+                            if speed > 0 then
+                                token.properties.moveDistance = speed
+                                token.properties.moveDistanceRoundId = q:GetRoundId()
+                            end
+                        end,
+                    }
+                end
+
+                -- Only auto-advance when this creature is the sole entry in initiative.
+                -- If others share the entry, they still need to act.
+                if #allTokens <= 1 then
+                    dmhub.Schedule(0.1, function()
+                        if mod.unloaded then return end
+                        GameHud.instance:NextInitiative(function()
+                            dmhub:UploadInitiativeQueue()
+                        end)
+                    end)
+                end
+
+                ability:CommitToPaying(casterToken, options)
+            end
+        end
     end
 end
 
@@ -110,7 +152,11 @@ function ActivatedAbilityInitiativeBehavior:EditorItems(parentPanel)
                 {
                     id = "add_to_initiative",
                     text = "Add to Combat as Caster Ally",
-                }
+                },
+                {
+                    id = "skip_turn",
+                    text = "Skip Turn",
+                },
             },
             idChosen = self:try_get("mode", "begin_turn"),
             change = function(element)

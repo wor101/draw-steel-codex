@@ -468,7 +468,14 @@ ImportClass = function(import, classInfo)
         import:Log("No recovers value found for class " .. newClass.name)
         print("CLASS:: Recoveries not found")
     else
-        local newFeature = DeepCopy(MCDMImporter.GetStandardFeature("Recoveries"))
+        local recoveriesTemplate = MCDMImporter.GetStandardFeature("Recoveries")
+        if recoveriesTemplate ~= nil and getmetatable(recoveriesTemplate) == nil then
+            print("ERROR:: NO META on recoveriesTemplate from GetStandardFeature('Recoveries'):", json(recoveriesTemplate))
+        end
+        local newFeature = DeepCopy(recoveriesTemplate)
+        if getmetatable(newFeature) == nil then
+            print("ERROR:: NO META on DeepCopy of recoveriesTemplate:", json(newFeature))
+        end
         newFeature.imported = importGuid
         MCDMUtils.DeepReplace(newFeature, "<<quantity>>", recoversValue)
 
@@ -534,6 +541,9 @@ ImportClass = function(import, classInfo)
     print("CLASS:: parse abilities", classInfo.name, "parse abilities", #signatureAbilityLines, #heroicAbilityByCostInfo)
 
     local abilityTemplate = MCDMImporter.GetStandardFeature("Ability")
+    if abilityTemplate ~= nil and getmetatable(abilityTemplate) == nil then
+        print("ERROR:: NO META on abilityTemplate from GetStandardFeature('Ability'):", json(abilityTemplate))
+    end
 
     local signatureAbilities = {}
     local heroicAbilities = {}
@@ -565,6 +575,9 @@ ImportClass = function(import, classInfo)
 
             for _,ability in ipairs(newAbilities) do
                 local feature = DeepCopy(abilityTemplate)
+                if getmetatable(feature) == nil then
+                    print("ERROR:: NO META on DeepCopy of abilityTemplate (heroic):", ability.name, json(feature))
+                end
 
                 ability.categorization = "Heroic Ability"
 
@@ -631,6 +644,9 @@ ImportClass = function(import, classInfo)
 
         for _,ability in ipairs(signatureAbilities) do
             local feature = DeepCopy(abilityTemplate)
+            if getmetatable(feature) == nil then
+                print("ERROR:: NO META on DeepCopy of abilityTemplate (signature):", ability.name, json(feature))
+            end
 
             feature.id = dmhub.GenerateGuid()
             feature.guid = feature.id

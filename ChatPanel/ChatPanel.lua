@@ -786,11 +786,13 @@ CreateChatPanel = function()
 		height = "auto",
 		lineType = "MultiLineSubmit",
 		characterLimit = 4096,
+        consumeTab = true,
 		events = {
 			deselect = function(element)
 				--UpdateCompletions('')
 			end,
 			tab = function(element)
+                print("TAB:: DONE")
 				local items = chat.GetCommandCompletions(inputPanel.text)
 				if #items == 1 then
 					inputPanel.text = items[1] .. ' '

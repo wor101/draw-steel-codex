@@ -209,6 +209,7 @@ creature.sizes = {
 creature.sizeToNumber = {}
 
 creature.proficientWithAllWeapons = false
+creature.treatAsObject = false
 
 dmhub.SetTokenSize = function(tok, sizeid)
 	if tok.properties == nil then
@@ -460,10 +461,10 @@ function creature:CanTeleport()
     return false
 end
 
---- If the creature has climbing.
+--- If the creature can climb at all. (Don't have to have a climb movement type)
 --- @return boolean
 function creature:CanClimb()
-    return self:GetSpeed("climb") >= self:WalkingSpeed()
+    return not self:try_get("_tmp_prone")
 end
 
 
@@ -4546,7 +4547,8 @@ function creature:RefreshToken(token)
                         info = deserializedInfo
                     end
 
-					self:TriggerEvent(eventInfo.eventName, info, true)
+					--Skip local-only triggers since they already fired on the originating machine.
+					self:TriggerEvent(eventInfo.eventName, info, true, "skipLocal")
 				end
 			end
 
@@ -5834,6 +5836,14 @@ function creature:OnMove(path)
     local ourCharid = dmhub.LookupTokenId(self)
 
     local previousAdjacent = {}
+    
+    --Create temp table of creatures we move through
+    if not rawget(self, "_tmp_movedThroughTokens") or self:try_get("_tmp_movedThroughRoundId") ~= (dmhub.initiativeQueue and dmhub.initiativeQueue:GetRoundId() or "") then
+        self._tmp_movedThroughTokens = {}
+        self._tmp_movedThroughRoundId = dmhub.initiativeQueue and dmhub.initiativeQueue:GetRoundId() or ""
+    end
+    
+    local movedThroughTokens = rawget(self, "_tmp_movedThroughTokens")
 
     for i,step in ipairs(steps) do
         local adjacentTokens = {}
@@ -5847,14 +5857,25 @@ function creature:OnMove(path)
 
                 --see if we move through a token.
                 if otherToken.charid ~= ourToken.charid then
+					--make sure that we're not still overlapping this token
+                    local overlapping = false
                     local occupying = occupyingLocationMap[j]
                     for _,adjLoc in ipairs(occupying) do
                         for _,loc in ipairs(locs) do
                             if adjLoc.x == loc.x and adjLoc.y == loc.y and adjLoc.floor == loc.floor then
-                                --we moved through this token.
-                                ourToken.properties:DispatchEvent("movethrough", { target = otherToken.properties })
+                                overlapping = true
+                                break
                             end
                         end
+                        if overlapping then
+                            break
+                        end
+                    end
+                    
+                    if overlapping and not movedThroughTokens[otherToken.charid] then
+                        --we moved through this token for the first time this turn.
+                        ourToken.properties:DispatchEvent("movethrough", { target = otherToken.properties })
+                        movedThroughTokens[otherToken.charid] = true
                     end
                 end
 
@@ -5892,6 +5913,35 @@ function creature:OnMove(path)
         end
 
         previousAdjacent = adjacentTokens
+    end
+    
+    -- Check what tokens we're overlapping at our final position
+    local finalOverlapping = {}
+    if #steps > 0 then
+        local finalLocs = ourToken:LocsOccupyingWhenAt(steps[#steps])
+        for j,otherToken in ipairs(allTokens) do
+            if otherToken.charid ~= ourToken.charid then
+                local occupying = occupyingLocationMap[j]
+                for _,adjLoc in ipairs(occupying) do
+                    for _,loc in ipairs(finalLocs) do
+                        if adjLoc.x == loc.x and adjLoc.y == loc.y and adjLoc.floor == loc.floor then
+                            finalOverlapping[otherToken.charid] = true
+                            break
+                        end
+                    end
+                    if finalOverlapping[otherToken.charid] then
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Clear tracking for any tokens we're no longer overlapping, so we can retrigger if we move back through them
+    for charid,_ in pairs(movedThroughTokens) do
+        if not finalOverlapping[charid] then
+            movedThroughTokens[charid] = nil
+        end
     end
 end
 
@@ -6191,7 +6241,30 @@ function creature:ApplyOngoingEffect(ongoingEffectid, duration, casterInfo, opti
 	end
 
 	local found = false
-	if not ongoingEffect.stackable then
+	if ongoingEffect.casterTracking == "multiple" then
+		--each caster gets their own independent instance; replace if the same caster already has one.
+		if casterInfo ~= nil and type(casterInfo.tokenid) == "string" then
+			for i,cond in ipairs(ongoingEffects) do
+				if found == false and cond.ongoingEffectid == ongoingEffectid then
+					local condCasterInfo = cond:try_get("casterInfo")
+					if condCasterInfo ~= nil and condCasterInfo.tokenid == casterInfo.tokenid then
+						cond.stolenAbility = stolenAbility
+						cond.endAbility = ongoingEffect:GetEndAbility()
+						cond.casterInfo = casterInfo
+						cond.seq = highestSeq + 1
+						if options.stacks == nil then
+							cond.stacks = 1
+						else
+							cond.stacks = options.stacks
+						end
+						cond:Refresh(duration)
+						result = cond
+						found = true
+					end
+				end
+			end
+		end
+	elseif not ongoingEffect.stackable then
 		for i,cond in ipairs(ongoingEffects) do
 			if found == false and cond.ongoingEffectid == ongoingEffectid then
 
@@ -6217,7 +6290,7 @@ function creature:ApplyOngoingEffect(ongoingEffectid, duration, casterInfo, opti
 				found = true
 			end
 		end
-	else
+	else --stackable
 		for i,cond in ipairs(ongoingEffects) do
 			if found == false and cond.ongoingEffectid == ongoingEffectid then
                 if casterSet ~= nil and cond:has_key("casterInfo") and type(cond.casterInfo.tokenid) == "string" then
@@ -6343,6 +6416,19 @@ function creature:RemoveOngoingEffect(ongoingEffectid, numStacks)
 	self.ongoingEffects = newOngoingEffects
 
 	return numStacks
+end
+
+--- Removes the specific ongoing effect instance identified by seq.
+--- @param seq number
+function creature:RemoveOngoingEffectBySeq(seq)
+	local ongoingEffects = self:get_or_add('ongoingEffects', {})
+	local newOngoingEffects = {}
+	for i,cond in ipairs(ongoingEffects) do
+		if cond.seq ~= seq then
+			newOngoingEffects[#newOngoingEffects+1] = cond
+		end
+	end
+	self.ongoingEffects = newOngoingEffects
 end
 
 --- @param excluteTemporary nil|boolean
@@ -8301,7 +8387,8 @@ end
 creature.debugTriggerHandler = false
 
 --an event is triggered which could cause triggered abilities to go off.
-function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
+--localFilter: nil = all triggers, "localOnly" = only local-only triggers, "skipLocal" = skip local-only triggers
+function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers, localFilter)
 
     if (not alreadyTriggeredOnOthers) and (info == nil or info.subject == nil) then
         self:TriggerEventOnOthers(eventName, info)
@@ -8316,7 +8403,7 @@ function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
     end
 
 	for i,mod in ipairs(mods) do
-		local triggered = mod.mod:TriggerEvent(self, eventName, info, mod, debugLog)
+		local triggered = mod.mod:TriggerEvent(self, eventName, info, mod, debugLog, localFilter)
 		if triggered then
 			result = true
 		end
@@ -8335,7 +8422,7 @@ function creature:TriggerEvent(eventName, info, alreadyTriggeredOnOthers)
 	return true
 end
 
-function creature:DispatchEvent(eventName, info, onCompleteCallback)
+function creature:DispatchEvent(eventName, info)
 
     local triggeredOnOthers = false
     if info == nil or info.subject == nil then
@@ -8344,9 +8431,26 @@ function creature:DispatchEvent(eventName, info, onCompleteCallback)
     end
 
 	local mods = self:GetActiveModifiers()
+	local targetsOther = info ~= nil and info.subject ~= nil
+
+	-- Check for local-only triggers that must fire on this machine regardless of controller.
+	local hasLocalOnlyTrigger = false
+	for i,mod in ipairs(mods) do
+		if mod.mod:HasTriggeredEvent(self, eventName, targetsOther, "localOnly") then
+			hasLocalOnlyTrigger = true
+			break
+		end
+	end
+
+	-- Fire local-only triggers immediately on this machine.
+	if hasLocalOnlyTrigger then
+		self:TriggerEvent(eventName, info, triggeredOnOthers, "localOnly")
+	end
+
+	-- Check for non-local triggers that need normal dispatch.
 	local hasTrigger = false
 	for i,mod in ipairs(mods) do
-		if mod.mod:HasTriggeredEvent(self, eventName, info ~= nil and info.subject ~= nil) then
+		if mod.mod:HasTriggeredEvent(self, eventName, targetsOther, "skipLocal") then
 			hasTrigger = true
 			break
 		end
@@ -8354,7 +8458,9 @@ function creature:DispatchEvent(eventName, info, onCompleteCallback)
 
 	if hasTrigger == false then
 		--still remove any ongoing effects.
-		self:RemoveOngoingEffectsOnTrigger(eventName, info)
+		if not hasLocalOnlyTrigger then
+			self:RemoveOngoingEffectsOnTrigger(eventName, info)
+		end
         if creature.debugTriggerHandler then
             creature.debugTriggerHandler(self, eventName, info, false)
         end
@@ -8366,7 +8472,7 @@ function creature:DispatchEvent(eventName, info, onCompleteCallback)
 
 	--we are the best choice to handle this event.
 	if activecontroller == nil then
-		self:TriggerEvent(eventName, info, triggeredOnOthers)
+		self:TriggerEvent(eventName, info, triggeredOnOthers, "skipLocal")
 		return
 	end
 
@@ -8715,7 +8821,7 @@ function creature:Rest(restType)
 
 	if restType == 'long' then
 		if self.damage_taken > 0 then
-			self:Heal(self.damage_taken, "Long rest")
+			self:Heal(self.damage_taken, "Respite")
 		end
 
 		local victories = self:try_get("victories", 0)
@@ -9611,7 +9717,7 @@ function creature:Render(args, options)
 				maxWidth = 128,
 				maxHeight = 128,
 				bgcolor = "white",
-				bgimage = token.portrait,
+				bgimage = (token.offTokenPortrait ~= nil and token.offTokenPortrait ~= "") and token.offTokenPortrait or token.portrait,
 
 				loadingImage = function(element)
 					element:AddChild(gui.LoadingIndicator{})
@@ -9672,7 +9778,7 @@ function creature:Render(args, options)
 					local skillMod = self:SkillModStr(skillInfo)
 					local attrMod = ModStr(self:GetAttribute(skillInfo.attribute):Modifier())
 					if skillMod ~= attrMod then
-						items[#items+1] = string.format("%s %s", skillInfo.name, skillMod)
+						items[#items+1] = skillInfo.name
 					end
 				end
 
