@@ -2641,8 +2641,12 @@ function GameHud.CreateEmbeddedRollDialog()
 
         press = function(element)
             print("REROLL:: DOING REROLL...", g_activeRoll)
+            print("REROLL:: g_activeRollArgs =", g_activeRollArgs)
             if g_activeRoll == nil then
+                print("REROLL:: g_activeRoll is nil, checking OnReroll hook")
+                print("REROLL:: OnReroll registered =", RollDialog.OnReroll ~= false)
                 if RollDialog.OnReroll then
+                    print("REROLL:: Calling RollDialog.OnReroll")
                     RollDialog.OnReroll({
                         rollArgs = g_activeRollArgs,
                     })
@@ -2650,6 +2654,7 @@ function GameHud.CreateEmbeddedRollDialog()
                 return
             end
 
+            print("REROLL:: g_activeRoll exists, calling Amend")
             local guid = dmhub.GenerateGuid()
 
             g_activeRoll = g_activeRoll:Amend {
@@ -3702,6 +3707,7 @@ function GameHud.CreateEmbeddedRollDialog()
                         BroadcastDialogState()
                     end,
                     pending = function(rollInfo)
+                        print("ROLL:: PENDING CALLBACK FIRED, g_activeRoll =", g_activeRoll)
                         m_rollInfo = rollInfo
                         m_rollTotalLabel.text = tostring(rollInfo.total or 0)
                         if showingDialog then
@@ -3718,6 +3724,7 @@ function GameHud.CreateEmbeddedRollDialog()
                         end
                     end,
                     complete = function(rollInfo)
+                        print("ROLL:: COMPLETE CALLBACK FIRED, g_activeRoll =", g_activeRoll)
                         print("ROLL:: COMPLETE")
                         m_rollInfo = rollInfo
                         m_rollTotalLabel.text = tostring(rollInfo.total or 0)
@@ -3776,6 +3783,13 @@ function GameHud.CreateEmbeddedRollDialog()
                         modifiers = modifiersUsed,
                         multitargets = multitargetsUsed,
                         boons = m_boons,
+                        setActiveRoll = function(roll)
+                            activeRoll = roll
+                            g_activeRoll = roll
+                            if activeRollFn ~= nil then
+                                activeRollFn(roll)
+                            end
+                        end,
                     })
                 end
 
@@ -3783,6 +3797,7 @@ function GameHud.CreateEmbeddedRollDialog()
                     return
                 end
 
+                print("ROLL:: ABOUT TO CALL dmhub.Roll")
                 activeRoll = dmhub.Roll(rollArgs)
                 print("ROLL:: ACTIVE ROLL FROM", rollArgs, "HAVE", activeRoll)
 
@@ -3817,4 +3832,3 @@ if GameHud.instance and rawget(GameHud.instance, "rollDialog") then
         GameHud.instance.parentPanel.children = children
     end
 end
-

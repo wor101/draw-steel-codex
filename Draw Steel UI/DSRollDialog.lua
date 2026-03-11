@@ -2148,8 +2148,12 @@ function GameHud.CreateRollDialog(self)
 
         press = function(element)
             print("REROLL:: DOING REROLL...", g_activeRoll)
+            print("REROLL:: g_activeRollArgs =", g_activeRollArgs)
             if g_activeRoll == nil then
+                print("REROLL:: g_activeRoll is nil, checking OnReroll hook")
+                print("REROLL:: OnReroll registered =", RollDialog.OnReroll ~= false)
                 if RollDialog.OnReroll then
+                    print("REROLL:: Calling RollDialog.OnReroll")
                     RollDialog.OnReroll({
                         rollArgs = g_activeRollArgs,
                     })
@@ -2157,6 +2161,7 @@ function GameHud.CreateRollDialog(self)
                 return
             end
 
+            print("REROLL:: g_activeRoll exists, calling Amend")
             local guid = dmhub.GenerateGuid()
 
             g_activeRoll = g_activeRoll:Amend {
@@ -3211,6 +3216,7 @@ function GameHud.CreateRollDialog(self)
                         resultPanel:FireEventTree("beginRoll", rollInfo, resultPanel.data.rollid)
                     end,
                     complete = function(rollInfo)
+                        print("ROLL:: COMPLETE CALLBACK FIRED, g_activeRoll =", g_activeRoll)
                         print("ROLL:: COMPLETE")
                         m_rollInfo = rollInfo
 
@@ -3266,6 +3272,13 @@ function GameHud.CreateRollDialog(self)
                         modifiers = modifiersUsed,
                         multitargets = multitargetsUsed,
                         boons = m_boons,
+                        setActiveRoll = function(roll)
+                            activeRoll = roll
+                            g_activeRoll = roll
+                            if activeRollFn ~= nil then
+                                activeRollFn(roll)
+                            end
+                        end,
                     })
                 end
 
@@ -3273,6 +3286,7 @@ function GameHud.CreateRollDialog(self)
                     return
                 end
 
+                print("ROLL:: ABOUT TO CALL dmhub.Roll")
                 activeRoll = dmhub.Roll(rollArgs)
                 print("ROLL:: ACTIVE ROLL FROM", rollArgs, "HAVE", activeRoll)
 
