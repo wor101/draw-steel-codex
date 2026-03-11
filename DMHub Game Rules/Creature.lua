@@ -710,6 +710,7 @@ function RegisterGoblinScriptSymbol(targetType, info)
 		name = info.name,
 		type = info.type,
 		desc = info.desc,
+		deprecated = info.deprecated,
 		seealso = info.seealso,
 		examples = info.examples,
 	}
@@ -6756,6 +6757,7 @@ creature.helpSymbols = {
 		name = "Hitpoints",
 		type = "number",
 		desc = "The current hitpoints of the creature.",
+		deprecated = true,
 		seealso = {"Maximum Hitpoints", "Temporary Hitpoints"},
 		examples = {"OBJ.Hitpoints > 10", "OBJ.Hitpoints < OBJ.Maximum Hitpoints"},
 	},
@@ -6764,6 +6766,7 @@ creature.helpSymbols = {
 		name = "Maximum Hitpoints",
 		type = "number",
 		desc = "The maximum hitpoints of the creature.",
+		deprecated = true,
 		seealso = {"Hitpoints", "Temporary Hitpoints"},
 		examples = {"OBJ.Maximum Hitpoints > 10", "OBJ.Hitpoints < OBJ.Maximum Hitpoints"},
 	},
@@ -6772,6 +6775,7 @@ creature.helpSymbols = {
 		name = "Weapons Wielded",
 		type = "number",
 		desc = "The number of weapons the creature is currently wielding in its hands.",
+		deprecated = true,
 		examples = {"Weapons Wielded = 1"},
 	},
 
@@ -6779,24 +6783,28 @@ creature.helpSymbols = {
 		name = "Two Handed",
 		type = "boolean",
 		desc = "True if the creature is currently wielding a two-handed weapon.",
+		deprecated = true,
 	},
 
 	hasmainhanditem = {
 		name = "Has Main Hand Item",
 		type = "boolean",
 		desc = "True if the creature is wielding an item in its primary hand.",
+		deprecated = true,
 	},
 
 	hasoffhanditem = {
 		name = "Has Off Hand Item",
 		type = "boolean",
 		desc = "True if the creature is wielding an item in its off hand.",
+		deprecated = true,
 	},
 
 	mainhanditem = {
 		name = "Main Hand Item",
 		type = "equipment",
 		desc = "The item the creature is wielding in its main hand, if any. Only valid if Has Main Hand Item is true.",
+		deprecated = true,
 		seealso = {"Has Main Hand Item", "Off Hand Item"},
 	},
 
@@ -6804,6 +6812,7 @@ creature.helpSymbols = {
 		name = "Off Hand Item",
 		type = "equipment",
 		desc = "The item the creature is wielding in its off hand, if any. Only valid if Has Off Hand Item is true.",
+		deprecated = true,
 		seealso = {"Has Off Hand Item", "Main Hand Item"},
 	},
 
@@ -6811,6 +6820,7 @@ creature.helpSymbols = {
 		name = "Has Shield",
 		type = "boolean",
 		desc = "True if the creature has a shield, false otherwise.",
+		deprecated = true,
 		seealso = {"Light Armor", "Medium Armor", "Heavy Armor", "Unarmored"},
 	},
 
@@ -6818,6 +6828,7 @@ creature.helpSymbols = {
 		name = "Shield",
 		type = "equipment",
 		desc = "The shield the creature is wielding, if any. Only valid if Has Shield is true.",
+		deprecated = true,
 		seealso = {"Has Shield"},
 	},
 
@@ -6826,6 +6837,7 @@ creature.helpSymbols = {
 		name = "Shield Bonus",
 		type = "number",
 		desc = "The armor class increase afforded by the shield the creature is currently wielding. Zero if the creature is not using a shield.",
+		deprecated = true,
 		seealso = {"Shield", "Has Shield"},
 	},
 
@@ -6833,6 +6845,7 @@ creature.helpSymbols = {
 		name = "Has Armor",
 		type = "boolean",
 		desc = "True if the creature is wearing armor, false otherwise.",
+		deprecated = true,
 		seealso = {"Has Shield", "Light Armor", "Medium Armor", "Heavy Armor", "Unarmored"},
 	},
 
@@ -6840,6 +6853,7 @@ creature.helpSymbols = {
 		name = "Armor",
 		type = "equipment",
 		desc = "The armor the creature is wearing, if any. Only valid if Has Armor is true.",
+		deprecated = true,
 		seealso = {"Has Armor"},
 	},
 
@@ -6876,6 +6890,7 @@ creature.helpSymbols = {
 		name = "Armor Class",
 		type = "number",
 		desc = "The Armor Class of the creature.",
+		deprecated = true,
 		seealso = {},
 		examples = {"OBJ.Armor Class > 10"},
 	},
@@ -6884,6 +6899,7 @@ creature.helpSymbols = {
 		name = "Proficiency Bonus",
 		type = "number",
 		desc = "The Proficiency Bonus of the creature.",
+		deprecated = true,
 		seealso = {},
 		examples = {"OBJ.Strength Modifier + OBJ.Proficiency Bonus"},
 	},
@@ -6892,6 +6908,7 @@ creature.helpSymbols = {
 		name = "Proficiency Modifier",
 		type = "number",
 		desc = "Synonym of Proficiency Bonus",
+		deprecated = true,
 		seealso = {},
 		examples = {"OBJ.Strength Modifier + OBJ.Proficiency Modifier"},
 	},
@@ -6922,6 +6939,7 @@ creature.helpSymbols = {
 		name = "Inventory Weight",
 		type = "number",
 		desc = "The total weight of the creature's inventory items.",
+		deprecated = true,
 		examples = {"Inventory Weight >= Carrying Capacity"},
 	},
 
@@ -7012,6 +7030,7 @@ creature.helpSymbols = {
 		name = "Spell Save DC",
 		type = "number",
 		desc = "The creature's Spellcasting Save DC. For multi-class characters this is the highest spellcasting ability modifier of any class they can cast spells in.",
+		deprecated = true,
 		seealso = {"Spellcasting Ability Modifier"},
 	},
 
@@ -7019,6 +7038,7 @@ creature.helpSymbols = {
 		name = "Spellcasting Ability Modifier",
 		type = "number",
 		desc = "The creature's Spellcasting Ability Modifier. For multi-class characters this is the highest spellcasting ability modifier of any class they can cast spells in.",
+		deprecated = true,
 		seealso = {"Proficiency Bonus"},
 		examples = {"8 + OBJ.Proficiency Bonus + OBJ.Spellcasting Ability Modifier"},
 	},
@@ -7027,12 +7047,14 @@ creature.helpSymbols = {
 		name = "Spellcasting Classes",
 		type = "number",
 		desc = "The number of classes from which the creature has spellcasting abilities from. For instance, a Paladin 4/Wizard 2 would have a value of 2. This is generally used to ensure rules regarding multiclass spellcasting work correctly.",
+		deprecated = true,
 	},
 
 	multiclass = {
 		name = "Multiclass",
 		type = "boolean",
 		desc = "True for characters that have levels in multiple different classes.",
+		deprecated = true,
 		seealso = {"Monoclass"},
 	},
 
@@ -7104,6 +7126,7 @@ creature.helpSymbols = {
 		name = "Proficient",
 		type = "function",
 		desc = "Given the name of a skill, an item, or item category will be true if the creature has proficiency with it, and false otherwise.",
+		deprecated = true,
 		examples = {'Proficient("Acrobatics")', 'Proficient("Heavy Armor")', 'Proficient("Longsword")', 'Proficient("Lyre")'},
 	},
 
@@ -7111,6 +7134,7 @@ creature.helpSymbols = {
 		name = "Skill Modifier",
 		type = "function",
 		desc = "Given the name of a skill, will return the creature's modifier for checks made using that skill.",
+		deprecated = true,
 		examples = {'Skill Modifier("Acrobatics")'},
 	},
 
@@ -7118,6 +7142,7 @@ creature.helpSymbols = {
 		name = "Save Modifier",
 		type = "function",
 		desc = "Given the name of an attribute, will return the creature's modifier for saving throws made using that attribute.",
+		deprecated = true,
 		examples = {'Save Modifier("dex")'},
 	},
 
@@ -7164,6 +7189,7 @@ creature.helpSymbols = {
 		name = "Ongoing DC",
 		type = "text",
 		desc = "The DC of the creatures current ongoing effect",
+		deprecated = true,
 		examples = {"ongoingDC('Stealth') > target.passive(\"perception\")" },
 	},
 
@@ -7171,6 +7197,7 @@ creature.helpSymbols = {
 		name = "Passive",
 		type = "text",
 		desc = "Get a passive mod of a creature",
+		deprecated = true,
 		examples = {"target.passive(\"perception\") > 25"},
 	},
 
