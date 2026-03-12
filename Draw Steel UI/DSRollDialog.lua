@@ -2149,15 +2149,44 @@ function GameHud.CreateRollDialog(self)
         press = function(element)
             print("REROLL:: DOING REROLL...", g_activeRoll)
             print("REROLL:: g_activeRollArgs =", g_activeRollArgs)
-            if g_activeRoll == nil then
-                print("REROLL:: g_activeRoll is nil, checking OnReroll hook")
-                print("REROLL:: OnReroll registered =", RollDialog.OnReroll ~= false)
-                if RollDialog.OnReroll then
-                    print("REROLL:: Calling RollDialog.OnReroll")
-                    RollDialog.OnReroll({
-                        rollArgs = g_activeRollArgs,
-                    })
+
+            -- Check OnReroll hook first (for external mods like DiceVision)
+            if RollDialog.OnReroll then
+                print("REROLL:: Calling RollDialog.OnReroll")
+                local guid = dmhub.GenerateGuid()
+                local rerollResult = RollDialog.OnReroll({
+                    rollArgs = g_activeRollArgs,
+                    activeRoll = g_activeRoll,
+                    setActiveRoll = function(roll)
+                        g_activeRoll = roll
+                    end,
+                    amendWithResult = function(rollFormula)
+                        if g_activeRoll == nil then return end
+                        g_activeRoll = g_activeRoll:Amend {
+                            guid = guid,
+                            roll = tostring(rollFormula),
+                            amendmentRerolls = true,
+                            description = g_activeRollArgs.description .. " -- Re-rolled!",
+                            amendable = g_activeRollArgs.amendable,
+                            tokenid = g_activeRollArgs.tokenid,
+                            silent = g_activeRollArgs.rollIsSilent,
+                            instant = g_activeRollArgs.instant,
+                            creature = g_activeRollArgs.creature,
+                            properties = g_activeRollArgs.properties,
+                            begin = function(rollInfo)
+                                m_rollInfo = rollInfo
+                                resultPanel:FireEventTree("beginRoll", rollInfo, guid)
+                            end,
+                        }
+                    end,
+                })
+                if rerollResult == "intercept" then
+                    return
                 end
+            end
+
+            -- Normal path (no hook, or hook didn't intercept)
+            if g_activeRoll == nil then
                 return
             end
 
