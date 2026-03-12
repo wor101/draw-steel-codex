@@ -2649,6 +2649,7 @@ function GameHud.CreateEmbeddedRollDialog()
                 local guid = dmhub.GenerateGuid()
                 local rerollResult = RollDialog.OnReroll({
                     rollArgs = g_activeRollArgs,
+                    originalRoll = g_activeRollArgs.originalRoll or g_activeRollArgs.roll,
                     activeRoll = g_activeRoll,
                     setActiveRoll = function(roll)
                         g_activeRoll = roll
@@ -2688,7 +2689,7 @@ function GameHud.CreateEmbeddedRollDialog()
 
             g_activeRoll = g_activeRoll:Amend {
                 guid = guid,
-                roll = g_activeRollArgs.roll,
+                roll = g_activeRollArgs.originalRoll or g_activeRollArgs.roll,
                 amendmentRerolls = true,
                 description = g_activeRollArgs.description .. " -- Re-rolled!",
                 amendable = g_activeRollArgs.amendable,
@@ -3793,6 +3794,7 @@ function GameHud.CreateEmbeddedRollDialog()
                 }
 
                 g_activeRollArgs = rollArgs
+                g_activeRollArgs.originalRoll = rollArgs.roll  -- Preserve before hook can modify
 
                 -- Hook for external mods to intercept rolls
                 local hookResult = nil
