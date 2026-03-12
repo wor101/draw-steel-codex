@@ -2640,13 +2640,33 @@ function GameHud.CreateEmbeddedRollDialog()
         },
 
         press = function(element)
-            print("REROLL:: DOING REROLL...", g_activeRoll)
-            print("REROLL:: g_activeRollArgs =", g_activeRollArgs)
+            if g_activeRoll == nil then
+                return
+            end
+
+            local function doRerollAmend(rollFormula)
+                if g_activeRoll == nil then return end
+                local guid = dmhub.GenerateGuid()
+                g_activeRoll = g_activeRoll:Amend {
+                    guid = guid,
+                    roll = tostring(rollFormula),
+                    amendmentRerolls = true,
+                    description = g_activeRollArgs.description .. " -- Re-rolled!",
+                    amendable = g_activeRollArgs.amendable,
+                    tokenid = g_activeRollArgs.tokenid,
+                    silent = g_activeRollArgs.silent,
+                    instant = g_activeRollArgs.instant,
+                    creature = g_activeRollArgs.creature,
+                    properties = g_activeRollArgs.properties,
+                    begin = function(rollInfo)
+                        m_rollInfo = rollInfo
+                        resultPanel:FireEventTree("beginRoll", rollInfo, guid)
+                    end,
+                }
+            end
 
             -- Check OnReroll hook first (for external mods like DiceVision)
             if RollDialog.OnReroll then
-                print("REROLL:: Calling RollDialog.OnReroll")
-                local guid = dmhub.GenerateGuid()
                 local rerollResult = RollDialog.OnReroll({
                     rollArgs = g_activeRollArgs,
                     originalRoll = g_activeRollArgs.originalRoll or g_activeRollArgs.roll,
@@ -2654,25 +2674,7 @@ function GameHud.CreateEmbeddedRollDialog()
                     setActiveRoll = function(roll)
                         g_activeRoll = roll
                     end,
-                    amendWithResult = function(rollFormula)
-                        if g_activeRoll == nil then return end
-                        g_activeRoll = g_activeRoll:Amend {
-                            guid = guid,
-                            roll = tostring(rollFormula),
-                            amendmentRerolls = true,
-                            description = g_activeRollArgs.description .. " -- Re-rolled!",
-                            amendable = g_activeRollArgs.amendable,
-                            tokenid = g_activeRollArgs.tokenid,
-                            silent = g_activeRollArgs.rollIsSilent,
-                            instant = g_activeRollArgs.instant,
-                            creature = g_activeRollArgs.creature,
-                            properties = g_activeRollArgs.properties,
-                            begin = function(rollInfo)
-                                m_rollInfo = rollInfo
-                                resultPanel:FireEventTree("beginRoll", rollInfo, guid)
-                            end,
-                        }
-                    end,
+                    amendWithResult = doRerollAmend,
                 })
                 if rerollResult == "intercept" then
                     return
@@ -2680,29 +2682,7 @@ function GameHud.CreateEmbeddedRollDialog()
             end
 
             -- Normal path (no hook, or hook didn't intercept)
-            if g_activeRoll == nil then
-                return
-            end
-
-            print("REROLL:: g_activeRoll exists, calling Amend")
-            local guid = dmhub.GenerateGuid()
-
-            g_activeRoll = g_activeRoll:Amend {
-                guid = guid,
-                roll = g_activeRollArgs.originalRoll or g_activeRollArgs.roll,
-                amendmentRerolls = true,
-                description = g_activeRollArgs.description .. " -- Re-rolled!",
-                amendable = g_activeRollArgs.amendable,
-                tokenid = g_activeRollArgs.tokenid,
-                silent = g_activeRollArgs.rollIsSilent,
-                instant = g_activeRollArgs.instant,
-                creature = g_activeRollArgs.creature,
-                properties = g_activeRollArgs.properties,
-                begin = function(rollInfo)
-                    m_rollInfo = rollInfo
-                    resultPanel:FireEventTree("beginRoll", rollInfo, guid)
-                end,
-            }
+            doRerollAmend(g_activeRollArgs.originalRoll or g_activeRollArgs.roll)
         end,
     }
 
@@ -3708,8 +3688,6 @@ function GameHud.CreateEmbeddedRollDialog()
                     m_options.rollProperties.castid = m_symbols.castid
                 end
 
-                print("ROLL:: SET CASTID", m_symbols ~= nil, m_symbols and m_symbols.castid)
-
                 local activeRoll
                 local rollArgs = {
                     guid = resultPanel.data.rollid,
@@ -3724,7 +3702,6 @@ function GameHud.CreateEmbeddedRollDialog()
                     creature = creature,
                     properties = rollProperties,
                     begin = function(rollInfo)
-                        print("ROLL:: BEGIN", rollInfo, rollIsSilent, instant)
                         m_rollInfo = rollInfo
                         if beginRollFn ~= nil then
                             beginRollFn(rollInfo)
@@ -3737,7 +3714,6 @@ function GameHud.CreateEmbeddedRollDialog()
                         BroadcastDialogState()
                     end,
                     pending = function(rollInfo)
-                        print("ROLL:: PENDING CALLBACK FIRED, g_activeRoll =", g_activeRoll)
                         m_rollInfo = rollInfo
                         m_rollTotalLabel.text = tostring(rollInfo.total or 0)
                         if showingDialog then
@@ -3754,8 +3730,6 @@ function GameHud.CreateEmbeddedRollDialog()
                         end
                     end,
                     complete = function(rollInfo)
-                        print("ROLL:: COMPLETE CALLBACK FIRED, g_activeRoll =", g_activeRoll)
-                        print("ROLL:: COMPLETE")
                         m_rollInfo = rollInfo
                         m_rollTotalLabel.text = tostring(rollInfo.total or 0)
 
@@ -3764,19 +3738,15 @@ function GameHud.CreateEmbeddedRollDialog()
                         resultPanel:SetClassTree("finishedRolling", true)
                         BroadcastDialogState()
 
-                            print("AI:: IS COMPLETE, SHOWING DIALOG:", showingDialog)
                         if showingDialog then
                             proceedAfterRollButton.events.press = function()
-                                print("AI:: PRESSED PROCEED AFTER ROLL")
                                 resultPanel:SetClass('hidden', true)
                                 RelinquishPanel()
 
                                 completeFunction(rollInfo)
                             end
 
-                            print("AI:: ROLL COMPLETE...")
                             if creature ~= nil and creature._tmp_aicontrol > 0 then
-                            print("AI:: ROLL PRESS PROCEED...")
                                 proceedAfterRollButton:FireEvent("press")
                             end
 
@@ -3788,7 +3758,6 @@ function GameHud.CreateEmbeddedRollDialog()
 
                         if g_activeRoll == activeRoll then
                             g_activeRoll = nil
-                print("ROLL:: ACTIVE ROLL CANCEL")
                         end
                     end
                 }
@@ -3828,9 +3797,7 @@ function GameHud.CreateEmbeddedRollDialog()
                     return
                 end
 
-                print("ROLL:: ABOUT TO CALL dmhub.Roll")
                 activeRoll = dmhub.Roll(rollArgs)
-                print("ROLL:: ACTIVE ROLL FROM", rollArgs, "HAVE", activeRoll)
 
                 g_activeRoll = activeRoll
 
