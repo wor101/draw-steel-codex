@@ -4256,6 +4256,28 @@ creature.RegisterSymbol {
     }
 }
 
+creature.RegisterSymbol {
+    symbol = "numberofplayers",
+    lookup = function(c)
+        local partyid = GetDefaultPartyID()
+        local charids = dmhub.GetCharacterIdsInParty(partyid) or {}
+        local count = 0
+        for _, charid in ipairs(charids) do
+            local ch = dmhub.GetCharacterById(charid)
+            if ch ~= nil and ch.followerType == nil then
+                count = count + 1
+            end
+        end
+        return count
+    end,
+    help = {
+        name = "NumberOfPlayers",
+        type = "number",
+        desc = "The number of players in the game, not counting followers.",
+        seealso = {},
+    }
+}
+
 function creature:StartOnDying()
     self:RemoveMatchingOngoingEffects(function(ongoingEffect)
         return ongoingEffect.removeOnEoEOrDying
