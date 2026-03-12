@@ -3571,6 +3571,42 @@ function creature.Heal(self, amount, note)
     self:DispatchEvent("regainhitpoints", {})
 end
 
+function creature.SetStaminaDirect(self, amount, note)
+    local isWindedAtStart = self:IsWinded()
+    local isBelowZeroAtStart = self:CurrentHitpoints() <= 0
+    local isDeadAtStart = self:IsDead()
+
+    self:SetCurrentHitpoints(amount, note)
+
+    local isWindedNow = self:IsWinded()
+    local isBelowZeroNow = self:CurrentHitpoints() <= 0
+    local isDeadNow = self:IsDead()
+
+    if isWindedNow and not isWindedAtStart then
+        self:DispatchEvent("winded", {})
+        audio.DispatchSoundEvent("Condition.Winded", {})
+    end
+
+    if isBelowZeroNow and not isBelowZeroAtStart then
+        audio.DispatchSoundEvent("Notify.Status_Dying_Hero", {})
+        self:DispatchEvent("dying", {})
+    end
+
+    if (not isDeadAtStart) and isDeadNow then
+        self:RemoveAurasOnDeath()
+        if self:IsDead() then
+            self:ResetDeathSavingThrowStatus()
+        end
+        self:DispatchEvent("zerohitpoints", {})
+        self:DispatchEvent("creaturedeath", {})
+        self:CancelConcentration()
+    end
+
+    if (not isBelowZeroAtStart) and isBelowZeroNow then
+        self:StartOnDying()
+    end
+end
+
 --this is called by the engine to tell the 'cost' of moving through
 --another token. We can return "difficult" to signal difficult terrain.
 --return true to mean we can move through with no cost. false means

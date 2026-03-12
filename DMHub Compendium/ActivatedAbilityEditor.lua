@@ -3074,11 +3074,13 @@ end
 
 ActivatedAbilityBehavior.rollName = "Roll"
 ActivatedAbilityAttackBehavior.rollName = "Damage"
+ActivatedAbilitySetStaminaBehavior.rollName = "Value"
 
 ActivatedAbilityBehavior.rollHelp = "the roll for this ability"
 ActivatedAbilityAttackBehavior.rollHelp = "the damage for this ability"
 ActivatedAbilityDamageBehavior.rollHelp = "the damage for this ability"
 ActivatedAbilityHealBehavior.rollHelp = "the healing for this ability"
+ActivatedAbilitySetStaminaBehavior.rollHelp = "the stamina value to set the target to"
 
 function ActivatedAbilityBehavior:FilterEditor(parentPanel, list)
 

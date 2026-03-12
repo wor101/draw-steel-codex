@@ -64,6 +64,9 @@ ActivatedAbilityDamageBehavior = RegisterGameType("ActivatedAbilityDamageBehavio
 --- @class ActivatedAbilityHealBehavior:ActivatedAbilityBehavior
 ActivatedAbilityHealBehavior = RegisterGameType("ActivatedAbilityHealBehavior", "ActivatedAbilityBehavior")
 
+--- @class ActivatedAbilitySetStaminaBehavior:ActivatedAbilityBehavior
+ActivatedAbilitySetStaminaBehavior = RegisterGameType("ActivatedAbilitySetStaminaBehavior", "ActivatedAbilityBehavior")
+
 --- @class ActivatedAbilityAugmentedAbilityBehavior:ActivatedAbilityBehavior
 ActivatedAbilityAugmentedAbilityBehavior = RegisterGameType("ActivatedAbilityAugmentedAbilityBehavior", "ActivatedAbilityBehavior")
 
@@ -520,6 +523,19 @@ ActivatedAbility.RegisterType
 		}
 	end
 }
+
+ActivatedAbility.RegisterType
+{
+	id = 'setstamina',
+	text = 'Set Stamina',
+	createBehavior = function()
+		return ActivatedAbilitySetStaminaBehavior.new{
+			roll = "1",
+		}
+	end
+}
+
+ActivatedAbilitySetStaminaBehavior.summary = 'Set Stamina'
 
 ActivatedAbility.RegisterType
 {
@@ -3256,6 +3272,10 @@ function ActivatedAbilityHealBehavior:SummarizeBehavior(ability, creatureLookup)
 	return string.format("%s Healing", dmhub.NormalizeRoll(dmhub.EvalGoblinScript(self.roll, creatureLookup, string.format("Heal roll for %s", ability.name))))
 end
 
+function ActivatedAbilitySetStaminaBehavior:SummarizeBehavior(ability, creatureLookup)
+	return string.format("Set Stamina to %s", dmhub.NormalizeRoll(dmhub.EvalGoblinScript(self.roll, creatureLookup, string.format("Set Stamina for %s", ability.name))))
+end
+
 function ActivatedAbilityApplyOngoingEffectBehavior:SummarizeBehavior(ability, creatureLookup)
 	return "Apply Effect"
 end
@@ -3482,6 +3502,41 @@ function ActivatedAbilityHealBehavior:Cast(ability, casterToken, targets, option
 
 	while not finished do
 		coroutine.yield(0.1)
+	end
+end
+
+function ActivatedAbilitySetStaminaBehavior:Cast(ability, casterToken, targets, options)
+	if #targets == 0 then
+		return
+	end
+
+	local casterName = creature.GetTokenDescription(casterToken)
+
+	for i, target in ipairs(targets) do
+		if target.token ~= nil and target.token.valid then
+			local targetCreature = target.token.properties
+
+			local symbols = DeepCopy(options.symbols or {})
+			symbols.target = targetCreature:LookupSymbol()
+
+			local newStamina = dmhub.EvalGoblinScript(self.roll, casterToken.properties:LookupSymbol(symbols), string.format("Set Stamina for %s", ability.name))
+			newStamina = math.floor(tonumber(newStamina) or 0)
+
+			ability.RecordTokenMessage(target.token, options, string.format("Set Stamina to %d", newStamina))
+
+			target.token:ModifyProperties{
+				description = "Set Stamina",
+				execute = function()
+					targetCreature:SetStaminaDirect(newStamina, string.format("%s's %s", casterName, ability.name))
+				end,
+			}
+		end
+	end
+
+	ability:CommitToPaying(casterToken, options)
+
+	if options ~= nil and options.complete ~= nil then
+		options.complete()
 	end
 end
 

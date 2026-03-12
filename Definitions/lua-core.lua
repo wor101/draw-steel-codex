@@ -799,6 +799,7 @@ end
 --RegisterGameType("ActivatedAbilityAttackBehavior", "ActivatedAbilityBehavior")
 RegisterGameType("ActivatedAbilityDamageBehavior", "ActivatedAbilityBehavior")
 RegisterGameType("ActivatedAbilityHealBehavior", "ActivatedAbilityBehavior")
+RegisterGameType("ActivatedAbilitySetStaminaBehavior", "ActivatedAbilityBehavior")
 RegisterGameType("ActivatedAbilityAugmentedAbilityBehavior", "ActivatedAbilityBehavior")
 RegisterGameType("ActivatedAbilityApplyOngoingEffectBehavior", "ActivatedAbilityBehavior")
 RegisterGameType("ActivatedAbilityRemoveOngoingEffectBehavior", "ActivatedAbilityBehavior")
