@@ -947,6 +947,19 @@ creature.RegisterSymbol {
 }
 
 creature.RegisterSymbol{
+    symbol = "herotokens",
+    lookup = function(c)
+        return c:GetHeroTokens()
+    end,
+    help = {
+        name = "HeroTokens",
+        type = "number",
+        desc = "The number of hero tokens the party has available.",
+        seealso = {},
+    }
+}
+
+creature.RegisterSymbol{
     symbol = "malice",
     lookup = function(c)
         return CharacterResource.GetMalice()

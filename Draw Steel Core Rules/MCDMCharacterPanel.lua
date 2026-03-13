@@ -3238,7 +3238,11 @@ function CharacterPanel.CreateLookupPanel()
                 return
             end
 
+            local maxLookupSetting = dmhub.GetSettingValue("maxlookup")
             local maxLookup = tok.countFloorsWithVisionAbove
+            if maxLookupSetting >= 0 then
+                maxLookup = math.min(maxLookup, maxLookupSetting)
+            end
 
             if maxLookup ~= m_maxLookup then
                 m_maxLookup = maxLookup

@@ -1629,7 +1629,11 @@ local function ShowCombatSetupDialog(selectedTokens)
     GameHud.instance:ShowModal(dialog)
 end
 
-Commands.rollinitiative = function(str)
+Commands.RegisterMacro{
+    name = "rollinitiative",
+    summary = "start combat",
+    doc = "Usage: /rollinitiative [x1 y1 x2 y2]\nStarts combat with selected tokens, or tokens in a rectangular area if coordinates are given.",
+    command = function(str)
     local args = string.split(str or "", " ")
 
     local tokens = dmhub.selectedTokens
@@ -1729,7 +1733,8 @@ Commands.rollinitiative = function(str)
     CharacterResource.SetVillainActions(1)
 
     info.UploadInitiative()
-end
+    end,
+}
 
 LaunchablePanel.Register{
 	name = "DrawSteel",

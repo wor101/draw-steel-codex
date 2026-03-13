@@ -2921,13 +2921,18 @@ function creature:GetOrAddAnimation(anim)
 end
 
 
-Commands.tokeneffect = function(str)
-    local selectedTokens = dmhub.selectedTokens
-    if selectedTokens == nil or #selectedTokens == 0 then
-        return
-    end
+Commands.RegisterMacro{
+    name = "tokeneffect",
+    summary = "play token effect",
+    doc = "Usage: /tokeneffect <effect name>\nPlays a visual effect on selected tokens.",
+    command = function(str)
+        local selectedTokens = dmhub.selectedTokens
+        if selectedTokens == nil or #selectedTokens == 0 then
+            return
+        end
 
-    for _,tok in ipairs(selectedTokens) do
-	    tok.sheet.data.PlayEffect(str, false)
-    end
-end
+        for _,tok in ipairs(selectedTokens) do
+            tok.sheet.data.PlayEffect(str, false)
+        end
+    end,
+}

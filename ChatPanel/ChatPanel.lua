@@ -415,7 +415,7 @@ CreateChatPanel = function()
 		},
 
 		style = {
-			width = 200,
+			width = 'auto',
 			height = 'auto',
 			flow = 'vertical',
 		},
@@ -429,67 +429,299 @@ CreateChatPanel = function()
 		},
 	}
 
-	local completionChildrenStyles = {
-		gui.Style{
-			bgcolor = '#82231DFF',
-			width = '100%',
-			height = 20,
-			fontSize = '40%',
-			color = 'white',
-			halign = 'left',
-			valign = 'top',
-			flow = 'none',
-		},
-		gui.Style{
-			selectors = 'hover',
-			transitionTime = 0.1,
-			brightness = 1.5,
-		},
-		gui.Style{
-			selectors = 'pressed',
-			transitionTime = 0.1,
-			brightness = 1.2,
-		},
-		gui.Style{
-			selectors = 'selected',
-			transitionTime = 0.1,
-			brightness = 1.5,
-		},
-	}
-
 	local previewPanel = nil
     local speakerPanel = nil
 	local inputPanel = nil
 
-	local UpdateCompletions = nil
-	UpdateCompletions = function(txt)
-		local items = chat.GetCommandCompletions(txt or inputPanel.text) or {}
-		while #completionChildren < #items do
-			completionChildren[#completionChildren+1] = gui.Label{
-				bgimage = 'panels/square.png',
-				text = '',
-				styles = completionChildrenStyles,
-				events = {
-					click = function(element)
-						inputPanel.text = element.text .. ' '
-						inputPanel.caretPosition = string.len(inputPanel.text)
-						inputPanel.hasFocus = true
-					end,
+	local maxCompletions = 8
+
+	local function BuildCompletionRow(commandText, macroInfo)
+		local summary = macroInfo and macroInfo.summary or nil
+		local doc = macroInfo and macroInfo.doc or nil
+
+		return gui.Panel{
+			bgimage = "panels/square.png",
+			width = "100%-20",
+			height = "auto",
+			flow = "horizontal",
+			halign = "center",
+			hpad = 10,
+			vpad = 5,
+			data = {
+				commandText = commandText,
+			},
+			styles = {
+				{
+					bgcolor = "clear",
+				},
+				{
+					selectors = {"hover"},
+					bgcolor = Styles.textColor,
+				},
+				{
+					selectors = {"selected"},
+					bgcolor = Styles.textColor,
+				},
+			},
+			hover = doc ~= nil and gui.Tooltip(doc) or nil,
+			press = function(element)
+				inputPanel.text = element.data.commandText .. ' '
+				inputPanel.caretPosition = string.len(inputPanel.text)
+				inputPanel.hasFocus = true
+			end,
+			gui.Label{
+				text = commandText,
+				fontSize = 14,
+				width = "auto",
+				height = "auto",
+				textAlignment = "left",
+				valign = "center",
+				styles = {
+					{
+						color = Styles.textColor,
+					},
+					{
+						selectors = {"parent:hover"},
+						color = "black",
+					},
+					{
+						selectors = {"parent:selected"},
+						color = "black",
+					},
+				},
+			},
+			gui.Label{
+				text = summary or "",
+				fontSize = 12,
+				width = "auto",
+				height = "auto",
+				textAlignment = "left",
+				valign = "center",
+				lmargin = 8,
+				classes = cond(summary == nil, {"collapsed"}, {}),
+				styles = {
+					{
+						color = "#888888",
+					},
+					{
+						selectors = {"parent:hover"},
+						color = "#333333",
+					},
+					{
+						selectors = {"parent:selected"},
+						color = "#333333",
+					},
+				},
+			},
+		}
+	end
+
+	-- Parse a doc string's Usage line into {usage, args, description}
+	local function ParseUsageLine(doc)
+		if doc == nil then
+			return nil
+		end
+		local usageLine, rest = string.match(doc, "^Usage:%s*([^\n]+)\n?(.*)")
+		if usageLine == nil then
+			return nil
+		end
+		-- Parse <required> and [optional] args in order of appearance
+		local args = {}
+		for arg in string.gmatch(usageLine, "([<%[][^>%]]+[>%]])") do
+			args[#args + 1] = arg
+		end
+		return {
+			usage = usageLine,
+			args = args,
+			description = rest ~= "" and rest or nil,
+		}
+	end
+
+	-- Build a usage hint panel showing the command's arguments with the current one highlighted
+	local function BuildUsageHintPanel(macroName, macroInfo, argIndex)
+		local parsed = ParseUsageLine(macroInfo.doc)
+		if parsed == nil then
+			return nil
+		end
+
+		local argLabels = {}
+		for i, arg in ipairs(parsed.args) do
+			local isActive = (i == argIndex)
+			argLabels[#argLabels + 1] = gui.Label{
+				text = arg,
+				fontSize = 13,
+				width = "auto",
+				height = "auto",
+				valign = "center",
+				lmargin = 4,
+				bold = isActive,
+				styles = {
+					{
+						color = cond(isActive, Styles.textColor, "#888888"),
+					},
 				},
 			}
 		end
 
-		for i,element in ipairs(completionChildren) do
-			element:SetClass('selected', false)
-			if i <= #items then
-				element.text = items[i]
-				element:SetClass('collapsed', false)
-			else
-				element:SetClass('collapsed', true)
-			end
+		local children = {
+			gui.Label{
+				text = "/" .. macroName,
+				fontSize = 13,
+				width = "auto",
+				height = "auto",
+				valign = "center",
+				bold = true,
+				styles = {
+					{
+						color = Styles.textColor,
+					},
+				},
+			},
+		}
+
+		for _, label in ipairs(argLabels) do
+			children[#children + 1] = label
 		end
 
-		completionsPanel.children = completionChildren
+		local descPanel = nil
+		if parsed.description ~= nil and parsed.description ~= "" then
+			descPanel = gui.Label{
+				text = parsed.description,
+				fontSize = 11,
+				width = "100%-20",
+				height = "auto",
+				halign = "center",
+				textAlignment = "left",
+				styles = {
+					{
+						color = "#888888",
+					},
+				},
+			}
+		end
+
+		return gui.Panel{
+			bgimage = "panels/square.png",
+			bgcolor = Styles.backgroundColor,
+			width = 400,
+			height = "auto",
+			border = 2,
+			borderColor = Styles.textColor,
+			flow = "vertical",
+			vpad = 6,
+
+			gui.Panel{
+				width = "100%-20",
+				height = "auto",
+				halign = "center",
+				flow = "horizontal",
+				children = children,
+			},
+			descPanel,
+		}
+	end
+
+	-- Count how many arguments the user has typed after the command name
+	local function CountTypedArgs(text)
+		-- Remove the /command part
+		local afterCommand = string.match(text, "^/%S+%s(.*)$")
+		if afterCommand == nil then
+			return 0
+		end
+		-- Count arguments using SplitArgs if available, otherwise simple space split
+		local count = 0
+		local inQuote = false
+		local hasContent = false
+		for i = 1, #afterCommand do
+			local c = string.sub(afterCommand, i, i)
+			if c == '"' then
+				inQuote = not inQuote
+				hasContent = true
+			elseif c == ' ' and not inQuote then
+				if hasContent then
+					count = count + 1
+					hasContent = false
+				end
+			else
+				hasContent = true
+			end
+		end
+		-- If we have content that wasn't followed by a space, that's the arg we're typing
+		-- If text ends with space, we're about to type the next arg
+		if hasContent then
+			count = count + 1
+		elseif string.sub(text, -1) == " " then
+			count = count + 1
+		end
+		return count
+	end
+
+	local UpdateCompletions = nil
+	UpdateCompletions = function(txt)
+		local text = txt or inputPanel.text
+		local items = chat.GetCommandCompletions(text) or {}
+
+		if #items == 0 then
+			-- Check if we have a complete command and should show usage hints
+			local commandName = string.match(text, "^(/[%w_]+)%s")
+			if commandName ~= nil then
+				local macroName = string.sub(commandName, 2)
+				local macroInfo = Commands.GetMacroInfo(macroName)
+				if macroInfo ~= nil and macroInfo.doc ~= nil then
+					local argIndex = CountTypedArgs(text)
+					local hintPanel = BuildUsageHintPanel(macroName, macroInfo, argIndex)
+					if hintPanel ~= nil then
+						completionChildren = {}
+						completionsPanel.children = {hintPanel}
+						return
+					end
+				end
+			end
+			completionChildren = {}
+			completionsPanel.children = {}
+			return
+		end
+
+		completionChildren = {}
+		local allChildren = {}
+		for i = 1, math.min(#items, maxCompletions) do
+			local commandName = items[i]
+			local macroName = commandName
+			if string.starts_with(macroName, "/") then
+				macroName = string.sub(macroName, 2)
+			end
+			local macroInfo = Commands.GetMacroInfo(macroName)
+			local row = BuildCompletionRow(commandName, macroInfo)
+			completionChildren[#completionChildren + 1] = row
+			allChildren[#allChildren + 1] = row
+		end
+
+		if #items > maxCompletions then
+			allChildren[#allChildren + 1] = gui.Label{
+				text = string.format("... and %d more", #items - maxCompletions),
+				fontSize = 11,
+				width = "100%",
+				height = "auto",
+				color = "#666666",
+				textAlignment = "center",
+				vpad = 4,
+			}
+		end
+
+		completionsPanel.children = {
+			gui.Panel{
+				bgimage = "panels/square.png",
+				bgcolor = Styles.backgroundColor,
+				width = 400,
+				height = "auto",
+				maxHeight = 300,
+				border = 2,
+				borderColor = Styles.textColor,
+				flow = "vertical",
+				vscroll = #allChildren > maxCompletions,
+				children = allChildren,
+			},
+		}
 	end
 
 	local CompletionsArrow = function(arrow)
@@ -506,10 +738,10 @@ CreateChatPanel = function()
 		local stop = false
 		for i = startIndex, endIndex, delta do
 			local child = completionChildren[i]
-			if child:HasClass('selected') and child:HasClass('collapsed') == false then
+			if child:HasClass('selected') then
 				child:SetClass('selected', false)
 				stop = true
-			elseif child:HasClass('collapsed') == false and stop == false then
+			elseif not stop then
 				ntarget = i
 			end
 		end
@@ -524,9 +756,9 @@ CreateChatPanel = function()
 
 	local GetAndClearCompletionSelected = function()
 		for i,child in ipairs(completionChildren) do
-			if child:HasClass('selected') and child:HasClass('collapsed') == false then
+			if child:HasClass('selected') then
 				child:SetClass('selected', false)
-				return child.text
+				return child.data.commandText
 			end
 		end
 
@@ -790,6 +1022,7 @@ CreateChatPanel = function()
 		events = {
 			deselect = function(element)
 				--UpdateCompletions('')
+                print("INPUT:: DESELECT")
 			end,
 			tab = function(element)
                 print("TAB:: DONE")

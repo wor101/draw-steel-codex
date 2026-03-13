@@ -266,7 +266,8 @@ ActivatedAbilityPowerRollBehavior.GetPowerTablePopulateCustom = function(rollPro
 
     local m_fullyImplemented = false
     if (options ~= nil and options.ability ~= nil) then
-        m_fullyImplemented = options.ability:try_get("implementation", 1) == 3
+        local implLevel = options.ability:try_get("implementation", 1)
+        m_fullyImplemented = implLevel == 3 or implLevel == 4 --if silver or gold then fully implemented. Maybe this should only be gold? Not sure.
     end
 
     if rollProperties ~= nil and rawget(rollProperties, "fullyImplemented") then
@@ -538,8 +539,10 @@ ActivatedAbilityPowerRollBehavior.GetPowerTablePopulateCustom = function(rollPro
 
                 gui.Panel{
                     vpad = 0,
-                    width = "17%",
+                    width = "24%",
                     height = "auto",
+                    maxHeight = 80,
+                    vscroll = true,
                     halign = "right",
                     valign = "center",
                     flow = "horizontal",

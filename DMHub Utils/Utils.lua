@@ -1,5 +1,41 @@
 local mod = dmhub.GetModLoading()
 
+-- Macro registration infrastructure. Defined here in Utils so it is available
+-- to every module (Utils loads first in main.lua).
+Commands._macros = Commands._macros or {}
+
+function Commands.RegisterMacro(args)
+    local name = args.name
+    local fn = args.command
+    local doc = args.doc
+    local summary = args.summary
+
+    if doc ~= nil then
+        Commands[name] = function(str)
+            if str == "help" then
+                dmhub.Log(doc)
+                return
+            end
+            return fn(str)
+        end
+    else
+        Commands[name] = fn
+    end
+
+    Commands._macros[name] = {
+        doc = doc,
+        summary = summary,
+    }
+end
+
+function Commands.GetMacroInfo(name)
+    return Commands._macros[name]
+end
+
+function Commands.GetAllMacros()
+    return Commands._macros
+end
+
 --- @param table table
 --- @param element any
 --- @return boolean
@@ -663,44 +699,49 @@ function FindAbilityParentByGuid(guid)
     return nil, nil
 end
 
-Commands.updateimplementationvalues = function(str)
-    local function UpdateInObject(obj, visited)
-        if type(obj) ~= "table" then
-            return
-        end
-        
-        -- Avoid infinite loops
-        if visited[obj] then
-            return
-        end
-        visited[obj] = true
-        
-        -- Check if this object has implementation field with value 4
-        if rawget(obj, "implementation") == 4 then
-            print("Updating implementation for object:", json(obj))
-            obj.implementation = 0
-        end
-        
-        -- Recursively search in child objects
-        for k, v in pairs(obj) do
-            if type(v) == "table" and not string.starts_with(tostring(k), "_tmp") then
-                UpdateInObject(v, visited)
+Commands.RegisterMacro{
+    name = "updateimplementationvalues",
+    summary = "fix implementation flags",
+    doc = "Usage: /updateimplementationvalues\nScans all data tables and resets implementation=4 fields to 0.",
+    command = function(str)
+        local function UpdateInObject(obj, visited)
+            if type(obj) ~= "table" then
+                return
+            end
+
+            -- Avoid infinite loops
+            if visited[obj] then
+                return
+            end
+            visited[obj] = true
+
+            -- Check if this object has implementation field with value 4
+            if rawget(obj, "implementation") == 4 then
+                print("Updating implementation for object:", json(obj))
+                obj.implementation = 0
+            end
+
+            -- Recursively search in child objects
+            for k, v in pairs(obj) do
+                if type(v) == "table" and not string.starts_with(tostring(k), "_tmp") then
+                    UpdateInObject(v, visited)
+                end
             end
         end
-    end
-    
-    -- Search through all tables in the system
-    local tables = dmhub.GetTableTypes()
-    for _, tableid in ipairs(tables) do
-        local t = dmhub.GetTable(tableid) or {}
-        for key, obj in unhidden_pairs(t) do
-            if type(obj) == "table" and not string.starts_with(tostring(key), "_tmp") then
-                local visited = {}
-                UpdateInObject(obj, visited)
+
+        -- Search through all tables in the system
+        local tables = dmhub.GetTableTypes()
+        for _, tableid in ipairs(tables) do
+            local t = dmhub.GetTable(tableid) or {}
+            for key, obj in unhidden_pairs(t) do
+                if type(obj) == "table" and not string.starts_with(tostring(key), "_tmp") then
+                    local visited = {}
+                    UpdateInObject(obj, visited)
+                end
             end
         end
-    end
-end
+    end,
+}
 
 local function DeepCopyInternal(t)
     local t_type = type(t)

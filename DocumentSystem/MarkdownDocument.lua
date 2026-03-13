@@ -1864,6 +1864,959 @@ function MarkdownDocument:EditPanel(args)
         end,
     }
 
+    -- Link autocomplete helpers
+    local autocompleteState = {
+        results = {},
+        selectedIndex = 1,
+    }
+
+    -- Find an unclosed [ or [[ before the caret, returning the search text,
+    -- bracket position, and context type ("link" or "richTag").
+    -- Returns nil if the caret is not inside an open bracket.
+    local function FindLinkContext(text, caretPos)
+        local beforeCaret = string.sub(text, 1, caretPos)
+        local afterCaret = string.sub(text, caretPos + 1)
+
+        -- Search backwards for an unclosed [ or [[
+        local bracketPos = nil
+        local depth = 0
+        local isRichTag = false
+        for i = #beforeCaret, 1, -1 do
+            local ch = string.sub(beforeCaret, i, i)
+            if ch == ']' then
+                depth = depth + 1
+            elseif ch == '[' then
+                if depth > 0 then
+                    depth = depth - 1
+                else
+                    if i > 1 and string.sub(beforeCaret, i - 1, i - 1) == '[' then
+                        -- [[ rich tag opener
+                        isRichTag = true
+                        bracketPos = i - 1
+                    else
+                        bracketPos = i
+                    end
+                    break
+                end
+            elseif ch == '\n' then
+                return nil
+            end
+        end
+
+        if bracketPos == nil then
+            return nil
+        end
+
+        -- If the bracket is already closed after the cursor, no autocomplete needed
+        if isRichTag then
+            -- Check for ]] after caret
+            local found = string.find(afterCaret, "]]", 1, true)
+            if found ~= nil then
+                -- Make sure there's no newline before the ]]
+                local nl = string.find(afterCaret, "\n", 1, true)
+                if nl == nil or nl > found then
+                    return nil
+                end
+            end
+        else
+            for i = 1, #afterCaret do
+                local ch = string.sub(afterCaret, i, i)
+                if ch == ']' then
+                    return nil
+                elseif ch == '[' or ch == '\n' then
+                    break
+                end
+            end
+        end
+
+        if isRichTag then
+            -- Return text after [[
+            return string.sub(beforeCaret, bracketPos + 2), bracketPos, "richTag"
+        else
+            return string.sub(beforeCaret, bracketPos + 1), bracketPos, "link"
+        end
+    end
+
+    -- Find a completed [[ ]] rich tag around the caret.
+    -- Returns tagText, bracketOpen or nil.
+    local function FindCompletedRichTagAtCaret(text, caretPos)
+        local beforeCaret = string.sub(text, 1, caretPos)
+
+        -- Search backwards for [[ (not preceded by another [)
+        local openPos = nil
+        for i = #beforeCaret, 2, -1 do
+            local ch = string.sub(beforeCaret, i, i)
+            if ch == '[' and string.sub(beforeCaret, i - 1, i - 1) == '[' then
+                openPos = i - 1
+                break
+            elseif ch == ']' or ch == '\n' then
+                return nil
+            end
+        end
+
+        if openPos == nil then
+            return nil
+        end
+
+        -- Find matching ]] after the opening [[
+        local closePos = string.find(text, "]]", openPos + 2, true)
+        if closePos == nil then
+            return nil
+        end
+
+        -- Make sure there's no newline between [[ and ]]
+        local inner = string.sub(text, openPos + 2, closePos - 1)
+        if string.find(inner, "\n", 1, true) then
+            return nil
+        end
+
+        -- Caret must be within the [[ ... ]] range (inclusive of brackets)
+        if caretPos < openPos or caretPos > closePos + 1 then
+            return nil
+        end
+
+        return inner, openPos
+    end
+
+    -- Find a completed link around the caret. Returns linkText, displayName, bracketOpen or nil.
+    -- Handles both [link] and [display](link) forms. Skips [[ ]] rich tags.
+    local function FindCompletedLinkAtCaret(text, caretPos)
+        -- First check if we're inside a rich tag -- if so, not a link.
+        if FindCompletedRichTagAtCaret(text, caretPos) ~= nil then
+            return nil
+        end
+
+        -- Search backwards from caret for the nearest [ that has a matching ]
+        local beforeCaret = string.sub(text, 1, caretPos)
+
+        -- Find the [ before or at the caret. Stop at ] or newline.
+        local bracketOpen = nil
+        for i = #beforeCaret, 1, -1 do
+            local ch = string.sub(beforeCaret, i, i)
+            if ch == '[' then
+                -- Skip [[ (check both directions)
+                if i > 1 and string.sub(beforeCaret, i - 1, i - 1) == '[' then
+                    return nil
+                end
+                if i < #beforeCaret and string.sub(beforeCaret, i + 1, i + 1) == '[' then
+                    return nil
+                end
+                bracketOpen = i
+                break
+            elseif ch == ']' or ch == '\n' then
+                return nil
+            end
+        end
+
+        if bracketOpen == nil then
+            return nil
+        end
+
+        -- Find the matching ] after the open bracket
+        local bracketClose = nil
+        for i = bracketOpen + 1, #text do
+            local ch = string.sub(text, i, i)
+            if ch == ']' then
+                bracketClose = i
+                break
+            elseif ch == '\n' then
+                return nil
+            end
+        end
+
+        if bracketClose == nil then
+            return nil
+        end
+
+        -- Caret must be between [ and ] (inclusive of edges)
+        if caretPos < bracketOpen or caretPos > bracketClose then
+            return nil
+        end
+
+        local innerText = string.sub(text, bracketOpen + 1, bracketClose - 1)
+
+        -- Check for [display](link) form
+        if bracketClose < #text and string.sub(text, bracketClose + 1, bracketClose + 1) == '(' then
+            local parenClose = string.find(text, ')', bracketClose + 2, true)
+            if parenClose ~= nil then
+                local linkTarget = string.sub(text, bracketClose + 2, parenClose - 1)
+                return linkTarget, innerText, bracketOpen
+            end
+        end
+
+        -- Plain [link] form
+        return innerText, innerText, bracketOpen
+    end
+
+    local autocompleteTypeColors = {
+        ["PDF Document"] = "#7799ff",
+        ["PDF Fragment"] = "#6688dd",
+        ["Document"] = "#77cc77",
+        ["Map"] = "#ddaa44",
+        ["item"] = "#dddd66",
+        ["title"] = "#cc88dd",
+        ["Rich Tag"] = "#dd8844",
+    }
+
+    -- Descriptions and metadata for rich tags used by autocomplete.
+    -- patternExample: if set, the tag is pattern-based and this is inserted as the
+    --   content between [[ and ]] (e.g. [[5]] for counter). The tag name is NOT used.
+    -- takesName: if true, the tag uses [[tagname]] or [[tagname:suffix]] syntax and
+    --   a unique name is auto-generated on insert.
+    local richTagDescriptions = {
+        dice = {desc = "Embeddable dice roll", takesName = true},
+        counter = {desc = "Editable numeric counter", patternExample = "0"},
+        checkbox = {desc = "Toggleable checkbox", patternExample = "[ ]"},
+        timer = {desc = "Countdown timer", takesName = true},
+        image = {desc = "Embedded image", takesName = true},
+        sound = {desc = "Audio player", takesName = true},
+        bar = {desc = "Progress or health bar", patternExample = "###--"},
+        macro = {desc = "Clickable command button", patternExample = "/roll 1d20|Roll"},
+        encounter = {desc = "Embedded encounter", takesName = true},
+        scene = {desc = "Scene reference", takesName = true},
+        party = {desc = "Party display", takesName = true},
+        reminder = {desc = "Reminder notification", takesName = true},
+        follower = {desc = "Companion or follower", takesName = true},
+        setting = {desc = "Game setting toggle", patternExample = "setting:settingid"},
+        fishing = {desc = "Fishing activity", takesName = true},
+    }
+
+    local linkInfoState = {
+        currentLink = nil,
+        suppressed = false,
+        lastCaretPos = nil,
+        lastText = nil,
+    }
+
+    local function DismissLinkInfo(inputElement)
+        if linkInfoState.currentLink ~= nil then
+            inputElement.popup = nil
+            linkInfoState.currentLink = nil
+        end
+    end
+
+    local function SuppressLinkInfo(inputElement)
+        inputElement.popup = nil
+        linkInfoState.currentLink = nil
+        linkInfoState.suppressed = true
+        linkInfoState.lastCaretPos = inputElement.caretPosition
+        linkInfoState.lastText = inputElement.text
+    end
+
+    local function ShowLinkInfo(inputElement, linkText, displayName, bracketPos)
+        if linkText == linkInfoState.currentLink then
+            return
+        end
+        linkInfoState.currentLink = linkText
+
+        local resolved = CustomDocument.ResolveLink(linkText)
+        local children = {}
+
+        if resolved ~= nil then
+            -- Valid link: show type and name, hoverable for preview, clickable to open
+            local resolvedName = nil
+            local resolvedType = nil
+            if type(resolved) == "string" then
+                resolvedName = resolved
+                resolvedType = "URL"
+            elseif type(resolved) == "table" then
+                resolvedName = rawget(resolved, "name") or rawget(resolved, "description") or rawget(resolved, "monster_type") or displayName
+                resolvedType = rawget(resolved, "typeName") or "Link"
+            end
+
+            local typeColor = autocompleteTypeColors[resolvedType] or "#88cc88"
+
+            children[#children + 1] = gui.Panel{
+                bgimage = "panels/square.png",
+                width = "100%-20",
+                height = "auto",
+                flow = "horizontal",
+                halign = "center",
+                hpad = 10,
+                vpad = 5,
+                styles = {
+                    {
+                        bgcolor = "clear",
+                    },
+                    {
+                        selectors = {"hover"},
+                        bgcolor = Styles.textColor,
+                    },
+                },
+                hover = function(element)
+                    CustomDocument.PreviewLink(element, linkText)
+                end,
+                press = function(element)
+                    SuppressLinkInfo(inputElement)
+                    inputElement.hasInputFocus = false
+                    CustomDocument.OpenContent(resolved)
+                end,
+                gui.Label{
+                    text = resolvedName or displayName,
+                    fontSize = 14,
+                    width = "100%-90",
+                    height = "auto",
+                    textAlignment = "left",
+                    valign = "center",
+                    styles = {
+                        {
+                            color = Styles.textColor,
+                        },
+                        {
+                            selectors = {"parent:hover"},
+                            color = "black",
+                        },
+                    },
+                },
+                gui.Label{
+                    text = resolvedType,
+                    fontSize = 11,
+                    width = 90,
+                    height = "auto",
+                    halign = "right",
+                    textAlignment = "right",
+                    valign = "center",
+                    styles = {
+                        {
+                            color = typeColor,
+                        },
+                        {
+                            selectors = {"parent:hover"},
+                            color = "black",
+                        },
+                    },
+                },
+            }
+        else
+            -- Invalid link
+            children[#children + 1] = gui.Panel{
+                width = "100%-20",
+                height = "auto",
+                flow = "horizontal",
+                halign = "center",
+                hpad = 10,
+                vpad = 5,
+                gui.Label{
+                    text = string.format("No link found for \"%s\"", displayName),
+                    fontSize = 13,
+                    width = "100%",
+                    height = "auto",
+                    textAlignment = "left",
+                    color = "#cc6666",
+                },
+            }
+
+            -- Offer suggestions
+            local suggestions = CustomDocument.SearchLinks(linkText)
+            table.sort(suggestions, function(a, b)
+                if (a.isPrefix and true or false) ~= (b.isPrefix and true or false) then
+                    return a.isPrefix and true or false
+                end
+                return a.name < b.name
+            end)
+
+            local maxSuggestions = 5
+            for i = 1, math.min(#suggestions, maxSuggestions) do
+                local result = suggestions[i]
+                local typeColor = autocompleteTypeColors[result.type] or "#888888"
+                children[#children + 1] = gui.Panel{
+                    bgimage = "panels/square.png",
+                    width = "100%-20",
+                    height = "auto",
+                    flow = "horizontal",
+                    halign = "center",
+                    hpad = 10,
+                    vpad = 4,
+                    styles = {
+                        {
+                            bgcolor = "clear",
+                        },
+                        {
+                            selectors = {"hover"},
+                            bgcolor = Styles.textColor,
+                        },
+                    },
+                    press = function(element)
+                        -- Replace the link text with the suggestion
+                        local text = inputElement.text
+                        local caret = inputElement.caretPosition
+                        local lt, dn = FindCompletedLinkAtCaret(text, caret)
+                        if lt ~= nil then
+                            -- Find the bracket positions again
+                            local openBracket = nil
+                            for j = caret, 1, -1 do
+                                if string.sub(text, j, j) == '[' then
+                                    openBracket = j
+                                    break
+                                end
+                            end
+                            if openBracket ~= nil then
+                                local closeBracket = string.find(text, ']', openBracket + 1, true)
+                                if closeBracket ~= nil then
+                                    local before = string.sub(text, 1, openBracket - 1)
+                                    -- Skip past ](link) if present
+                                    local afterClose = closeBracket
+                                    if closeBracket < #text and string.sub(text, closeBracket + 1, closeBracket + 1) == '(' then
+                                        local parenClose = string.find(text, ')', closeBracket + 2, true)
+                                        if parenClose ~= nil then
+                                            afterClose = parenClose
+                                        end
+                                    end
+                                    local after = string.sub(text, afterClose + 1)
+                                    local insertion
+                                    local linkPrefix = string.match(result.link, "^([^:]+):")
+                                    if linkPrefix ~= nil and MarkdownRender.FindTableFromPrefix(linkPrefix) ~= nil then
+                                        insertion = string.format("[%s]", result.link)
+                                    else
+                                        insertion = string.format("[%s](%s)", result.name, result.link)
+                                    end
+                                    local newText = before .. insertion .. after
+                                    local targetCaret = #before + #insertion
+                                    if resultPanel ~= nil then
+                                        resultPanel:FireEventTree("editDocument", newText)
+                                    end
+                                    charactersUsedLabel:FireEvent("refreshLength", newText)
+                                    DismissLinkInfo(inputElement)
+                                    inputElement:SetTextAndCaret(targetCaret, newText)
+                                end
+                            end
+                        end
+                    end,
+                    gui.Label{
+                        text = result.name,
+                        fontSize = 13,
+                        width = "100%-80",
+                        height = "auto",
+                        textAlignment = "left",
+                        valign = "center",
+                        styles = {
+                            {
+                                color = Styles.textColor,
+                            },
+                            {
+                                selectors = {"parent:hover"},
+                                color = "black",
+                            },
+                        },
+                    },
+                    gui.Label{
+                        text = result.type,
+                        fontSize = 11,
+                        width = 80,
+                        height = "auto",
+                        halign = "right",
+                        textAlignment = "right",
+                        valign = "center",
+                        styles = {
+                            {
+                                color = typeColor,
+                            },
+                            {
+                                selectors = {"parent:hover"},
+                                color = "black",
+                            },
+                        },
+                    },
+                }
+            end
+        end
+
+        local popup = gui.Panel{
+            width = "auto",
+            height = "auto",
+            valign = "bottom",
+            halign = "right",
+            gui.Panel{
+                bgimage = "panels/square.png",
+                bgcolor = Styles.backgroundColor,
+                width = 400,
+                height = "auto",
+                maxHeight = 300,
+                border = 2,
+                borderColor = Styles.textColor,
+                flow = "vertical",
+                children = children,
+            },
+        }
+        -- Position at the opening [ bracket
+        local anchorPos = bracketPos and inputElement:GetCharWorldPosition(bracketPos) or nil
+        if anchorPos ~= nil then
+            inputElement.popupPositioning = anchorPos
+        else
+            inputElement.popupPositioning = "panel"
+        end
+        inputElement.popup = popup
+    end
+
+    local function ShowRichTagInfo(inputElement, tagText, bracketPos)
+        -- Avoid re-showing the same tag
+        if tagText == linkInfoState.currentLink then
+            return
+        end
+        linkInfoState.currentLink = tagText
+
+        -- Parse tag name and look up description
+        local tagName = tagText
+        local colonPos = string.find(tagText, ":", 1, true)
+        if colonPos ~= nil then
+            tagName = string.sub(tagText, 1, colonPos - 1)
+        end
+        tagName = string.lower(tagName)
+
+        local meta = richTagDescriptions[tagName] or {}
+
+        local children = {}
+
+        if meta.desc then
+            children[#children + 1] = gui.Label{
+                text = meta.desc,
+                fontSize = 13,
+                width = "100%",
+                height = "auto",
+                color = Styles.textColor,
+                vpad = 4,
+            }
+        end
+
+        -- Render a mini preview of the tag, passing matching annotations
+        -- from the current document so tags like [[encounter]] render properly
+        local tagContent = string.format("[[%s]]", tagText)
+        local previewAnnotations = {}
+        if self.annotations ~= nil then
+            -- The tag key in annotations is the tagText itself (e.g. "encounter:Name")
+            -- Also check with disambiguation suffixes (-1, -2, etc.)
+            for k, v in pairs(self.annotations) do
+                if k == tagText or string.starts_with(k, tagText .. "-") then
+                    previewAnnotations[k] = v
+                end
+            end
+        end
+        local previewDoc = MarkdownDocument.new{
+            content = tagContent,
+            annotations = previewAnnotations,
+        }
+        children[#children + 1] = previewDoc:DisplayPanel{
+            width = "100%",
+            height = "auto",
+            vscroll = false,
+        }
+
+        local popup = gui.Panel{
+            width = "auto",
+            height = "auto",
+            valign = "bottom",
+            halign = "right",
+            gui.Panel{
+                bgimage = "panels/square.png",
+                bgcolor = Styles.backgroundColor,
+                width = 300,
+                height = "auto",
+                maxHeight = 300,
+                border = 2,
+                borderColor = Styles.textColor,
+                flow = "vertical",
+                children = children,
+            },
+        }
+
+        local anchorPos = bracketPos and inputElement:GetCharWorldPosition(bracketPos) or nil
+        if anchorPos ~= nil then
+            inputElement.popupPositioning = anchorPos
+        else
+            inputElement.popupPositioning = "panel"
+        end
+        inputElement.popup = popup
+    end
+
+    local function UpdateLinkInfo(inputElement)
+        local text = inputElement.text
+        local caretPos = inputElement.caretPosition
+
+        -- If suppressed, only clear suppression when caret or text changes
+        if linkInfoState.suppressed then
+            if caretPos ~= linkInfoState.lastCaretPos or text ~= linkInfoState.lastText then
+                linkInfoState.suppressed = false
+            else
+                return
+            end
+        end
+
+        -- Check for rich tag first
+        local richTagText, richBracketPos = FindCompletedRichTagAtCaret(text, caretPos)
+        if richTagText ~= nil and #richTagText > 0 then
+            ShowRichTagInfo(inputElement, richTagText, richBracketPos)
+            return
+        end
+
+        local linkText, displayName, bracketPos = FindCompletedLinkAtCaret(text, caretPos)
+        if linkText ~= nil and #linkText > 0 then
+            ShowLinkInfo(inputElement, linkText, displayName, bracketPos)
+        else
+            DismissLinkInfo(inputElement)
+        end
+    end
+
+    local UpdateAutocomplete -- forward declaration for use in AcceptAutocomplete
+
+    local function DismissAutocomplete(inputElement)
+        if #autocompleteState.results > 0 then
+            inputElement.popup = nil
+            autocompleteState.results = {}
+            autocompleteState.selectedIndex = 1
+            linkInfoState.currentLink = nil
+        end
+    end
+
+    local function AcceptAutocomplete(inputElement, result)
+        local text = inputElement.text
+        local caretPos = inputElement.caretPosition
+        local searchText, bracketPos, contextType = FindLinkContext(text, caretPos)
+        if searchText == nil or bracketPos == nil then
+            DismissAutocomplete(inputElement)
+            return
+        end
+
+        local before = string.sub(text, 1, bracketPos - 1)
+        local after = string.sub(text, caretPos + 1)
+
+        if result.isRichTagPrefix then
+            -- Insert [[ and re-trigger autocomplete for rich tag names.
+            DismissAutocomplete(inputElement)
+            local newText = before .. "[[" .. after
+            local targetCaretPos = #before + 2
+            if resultPanel ~= nil then
+                resultPanel:FireEventTree("editDocument", newText)
+            end
+            charactersUsedLabel:FireEvent("refreshLength", newText)
+            inputElement:SetTextAndCaret(targetCaretPos, newText)
+            return
+        end
+
+        if result.isRichTag then
+            -- Complete a rich tag name inside [[ ]]
+            DismissAutocomplete(inputElement)
+            local tagName = result.link
+            local insertion
+
+            if result.patternExample then
+                -- Pattern-based tag: insert the example content directly.
+                -- e.g. counter -> [[0]], bar -> [[###--]]
+                insertion = string.format("[[%s]]", result.patternExample)
+            elseif result.takesName then
+                -- Name-based tag: generate a unique name suffix.
+                -- Scan the rest of the document for existing tags to avoid dupes.
+                local docText = before .. after
+                local baseName = tagName
+                local candidate = baseName
+                local index = 2
+                while string.find(docText, "[[" .. candidate .. "]]", 1, true)
+                   or string.find(docText, "[[" .. candidate .. ":", 1, true) do
+                    candidate = baseName .. index
+                    index = index + 1
+                end
+                insertion = string.format("[[%s]]", candidate)
+            else
+                insertion = string.format("[[%s]]", tagName)
+            end
+
+            local newText = before .. insertion .. after
+            -- Place caret before ]] so the user can add or edit content
+            local targetCaretPos = #before + #insertion - 2
+            if resultPanel ~= nil then
+                resultPanel:FireEventTree("editDocument", newText)
+            end
+            charactersUsedLabel:FireEvent("refreshLength", newText)
+            inputElement:SetTextAndCaret(targetCaretPos, newText)
+            return
+        end
+
+        if result.isPrefix then
+            -- Prefix suggestion (e.g. "item:"): insert just the prefix,
+            -- keep the bracket open, and re-trigger autocomplete.
+            DismissAutocomplete(inputElement)
+            local newText = before .. "[" .. result.link .. after
+            local targetCaretPos = #before + 1 + #result.link
+            if resultPanel ~= nil then
+                resultPanel:FireEventTree("editDocument", newText)
+            end
+            charactersUsedLabel:FireEvent("refreshLength", newText)
+            -- Use engine-side SetTextAndCaret which defers the caret
+            -- positioning until after TMP's activation processing.
+            -- The 'caretReady' event fires once the caret is stable.
+            inputElement:SetTextAndCaret(targetCaretPos, newText)
+            return
+        end
+
+        -- For prefixed table entries (e.g. item:Bloodbound Band), the link
+        -- text is the full reference, so use [link] form directly.
+        -- For other types, use [name](link) form.
+        local insertion
+        local linkPrefix = string.match(result.link, "^([^:]+):")
+        if linkPrefix ~= nil and MarkdownRender.FindTableFromPrefix(linkPrefix) ~= nil then
+            insertion = string.format("[%s]", result.link)
+        else
+            insertion = string.format("[%s](%s)", result.name, result.link)
+        end
+        local newText = before .. insertion .. after
+        local targetCaretPos = #before + #insertion
+        if resultPanel ~= nil then
+            resultPanel:FireEventTree("editDocument", newText)
+        end
+        charactersUsedLabel:FireEvent("refreshLength", newText)
+        DismissAutocomplete(inputElement)
+        inputElement:SetTextAndCaret(targetCaretPos, newText)
+    end
+
+    local function BuildAutocompletePopup(inputElement, results)
+        local maxShow = 8
+        local children = {}
+
+        for i = 1, math.min(#results, maxShow) do
+            local result = results[i]
+            local typeColor = autocompleteTypeColors[result.type] or "#888888"
+            children[#children + 1] = gui.Panel{
+                bgimage = "panels/square.png",
+                -- width excludes padding, so subtract 2*hpad to stay within parent bounds
+                width = "100%-20",
+                height = "auto",
+                flow = "horizontal",
+                halign = "center",
+                hpad = 10,
+                vpad = 5,
+                styles = {
+                    {
+                        bgcolor = "clear",
+                    },
+                    {
+                        selectors = {"hover"},
+                        bgcolor = Styles.textColor,
+                    },
+                },
+                press = function(element)
+                    AcceptAutocomplete(inputElement, result)
+                end,
+                hover = function(element)
+                    if result.isRichTag or result.isRichTagPrefix then
+                        -- Render a mini document showing what the rich tag looks like.
+                        local tagContent
+                        if result.patternExample then
+                            tagContent = string.format("[[%s]]", result.patternExample)
+                        elseif result.isRichTag then
+                            tagContent = string.format("[[%s]]", result.link)
+                        end
+
+                        local tooltipChildren = {}
+                        if result.desc then
+                            tooltipChildren[#tooltipChildren + 1] = gui.Label{
+                                text = result.desc,
+                                fontSize = 13,
+                                width = "100%",
+                                height = "auto",
+                                color = Styles.textColor,
+                                vpad = 4,
+                            }
+                        end
+                        if tagContent then
+                            local previewAnnotations = {}
+                            if self.annotations ~= nil and result.link then
+                                for k, v in pairs(self.annotations) do
+                                    if k == result.link or string.starts_with(k, result.link .. "-") then
+                                        previewAnnotations[k] = v
+                                    end
+                                end
+                            end
+                            local previewDoc = MarkdownDocument.new{
+                                content = tagContent,
+                                annotations = previewAnnotations,
+                            }
+                            tooltipChildren[#tooltipChildren + 1] = previewDoc:DisplayPanel{
+                                width = "100%",
+                                height = "auto",
+                                vscroll = false,
+                            }
+                        end
+                        if #tooltipChildren > 0 then
+                            local panel = gui.Panel{
+                                width = 300,
+                                height = "auto",
+                                flow = "vertical",
+                                pad = 6,
+                                children = tooltipChildren,
+                            }
+                            element.tooltip = gui.TooltipFrame(panel, {
+                                interactable = false,
+                                halign = "right",
+                            })
+                            element.tooltip:MakeNonInteractiveRecursive()
+                        end
+                    else
+                        CustomDocument.PreviewLink(element, result.link)
+                    end
+                end,
+                gui.Label{
+                    text = result.name,
+                    fontSize = 14,
+                    width = "100%-90",
+                    height = "auto",
+                    textAlignment = "left",
+                    valign = "center",
+                    styles = {
+                        {
+                            color = Styles.textColor,
+                        },
+                        {
+                            selectors = {"parent:hover"},
+                            color = "black",
+                        },
+                    },
+                },
+                gui.Label{
+                    text = result.type,
+                    fontSize = 11,
+                    width = 90,
+                    height = "auto",
+                    halign = "right",
+                    textAlignment = "right",
+                    valign = "center",
+                    styles = {
+                        {
+                            color = typeColor,
+                        },
+                        {
+                            selectors = {"parent:hover"},
+                            color = "black",
+                        },
+                    },
+                },
+            }
+        end
+
+        if #results > maxShow then
+            children[#children + 1] = gui.Label{
+                text = string.format("... and %d more results", #results - maxShow),
+                fontSize = 11,
+                width = "100%",
+                height = "auto",
+                color = "#666666",
+                textAlignment = "center",
+                vpad = 4,
+            }
+        end
+
+        return gui.Panel{
+            width = "auto",
+            height = "auto",
+            valign = "bottom",
+            halign = "right",
+            gui.Panel{
+                bgimage = "panels/square.png",
+                bgcolor = Styles.backgroundColor,
+                width = 400,
+                height = "auto",
+                maxHeight = 300,
+                border = 2,
+                borderColor = Styles.textColor,
+                flow = "vertical",
+                children = children,
+            },
+        }
+    end
+
+    UpdateAutocomplete = function(inputElement)
+        local text = inputElement.text
+        local caretPos = inputElement.caretPosition
+        local searchText, bracketPos, contextType = FindLinkContext(text, caretPos)
+
+        if searchText == nil then
+            DismissAutocomplete(inputElement)
+            return
+        end
+
+        local results = {}
+
+        if contextType == "richTag" then
+            -- Inside [[ -- search for rich tag completions
+            local searchLower = string.lower(searchText)
+            -- Split on colon: tag name vs tag data
+            local tagName = searchLower
+            local colonPos = string.find(searchLower, ":", 1, true)
+            if colonPos ~= nil then
+                tagName = string.sub(searchLower, 1, colonPos - 1)
+            end
+
+            -- Only offer tag name completions if we haven't typed a colon yet
+            if colonPos == nil then
+                for name, richTag in pairs(MarkdownDocument.RichTagRegistry) do
+                    if string.find(name, tagName, 1, true) == 1 and #name > #tagName then
+                        local meta = richTagDescriptions[name] or {}
+                        local displayName = name
+                        if meta.patternExample then
+                            displayName = string.format("%s  e.g. [[%s]]", name, meta.patternExample)
+                        end
+                        results[#results + 1] = {
+                            name = displayName,
+                            link = name,
+                            type = "Rich Tag",
+                            isRichTag = true,
+                            desc = meta.desc,
+                            takesName = meta.takesName,
+                            patternExample = meta.patternExample,
+                        }
+                    end
+                end
+            end
+        else
+            -- Inside [ -- search for links
+            if #searchText < 1 then
+                DismissAutocomplete(inputElement)
+                return
+            end
+
+            results = CustomDocument.SearchLinks(searchText)
+
+            -- Offer [[ rich tag prefix when search text is short
+            if #searchText <= 1 then
+                table.insert(results, 1, {
+                    name = "[[  Rich Tag",
+                    link = "[[",
+                    type = "Rich Tag",
+                    isRichTagPrefix = true,
+                    desc = "Insert an interactive element (dice, image, counter, etc.)",
+                })
+            end
+        end
+
+        -- Sort prefix suggestions first, then alphabetically by name
+        table.sort(results, function(a, b)
+            -- Rich tag prefix always first
+            if (a.isRichTagPrefix and true or false) ~= (b.isRichTagPrefix and true or false) then
+                return a.isRichTagPrefix and true or false
+            end
+            if (a.isPrefix and true or false) ~= (b.isPrefix and true or false) then
+                return a.isPrefix and true or false
+            end
+            return a.name < b.name
+        end)
+
+        if #results == 0 then
+            DismissAutocomplete(inputElement)
+            return
+        end
+
+        autocompleteState.results = results
+        autocompleteState.selectedIndex = 1
+        local popup = BuildAutocompletePopup(inputElement, results)
+        -- Position the popup at the opening bracket so it stays stable
+        -- as the user types. bracketPos is 1-based from FindLinkContext.
+        local anchorPos = inputElement:GetCharWorldPosition(bracketPos)
+        if anchorPos ~= nil then
+            inputElement.popupPositioning = anchorPos
+        else
+            inputElement.popupPositioning = "panel"
+        end
+        inputElement.popup = popup
+    end
+
     editInput = gui.Input {
         id = "editorPanel",
         width = "100%",
@@ -1878,12 +2831,14 @@ function MarkdownDocument:EditPanel(args)
         selectAllOnFocus = false,
         characterLimit = CustomDocument.MaxLength,
 
+        thinkTime = 0.2,
         editlag = 0.3,
         edit = function(element)
             if resultPanel ~= nil then
                 resultPanel:FireEventTree("editDocument", element.text)
             end
             charactersUsedLabel:FireEvent("refreshLength", element.text)
+            UpdateAutocomplete(element)
         end,
         refreshDocument = function(element)
             element.text = self:GetTextContent()
@@ -1900,6 +2855,21 @@ function MarkdownDocument:EditPanel(args)
 
         checkChanges = function(element, baseDoc)
             resultPanel:SetClassTree("changes", element.text ~= baseDoc:GetTextContent())
+        end,
+
+        caretReady = function(element)
+            UpdateAutocomplete(element)
+        end,
+
+        think = function(element)
+            if #autocompleteState.results > 0 then
+                local searchText, bracketPos, contextType = FindLinkContext(element.text, element.caretPosition)
+                if searchText == nil or (contextType == "link" and #searchText < 1) then
+                    DismissAutocomplete(element)
+                end
+            else
+                UpdateLinkInfo(element)
+            end
         end,
     }
 

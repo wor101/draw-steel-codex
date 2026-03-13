@@ -19,6 +19,15 @@
 --- @field placeholderAlpha number The alpha value of placeholder text. (default=0.6)
 Input = {}
 
+--- Sets the text and moves the caret to the given position reliably, even when
+--- the input needs to be re-focused (e.g. after clicking a popup that stole
+--- focus). Survives TMP's deferred focus activation and pointer-up processing.
+--- Fires a 'caretReady' event on the input when the caret is stable.
+--- @param caretPos number The target caret position.
+--- @param newText string The new text content.
+function Input:SetTextAndCaret(caretPos, newText)
+end
+
 --- @class InputArgs:PanelArgs 
 --- @field text nil|string The text held in this input.
 --- @field textNoNotify nil|string An alias of @see text, but if set, no events will fire on the panel, such as the change event which normally fires when the text is changed.

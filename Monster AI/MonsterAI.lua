@@ -16,24 +16,29 @@ MonsterAI.activeTactics = {}
 
 creature._tmp_ai_aidAttack = false
 
-Commands.playai = function(str)
+Commands.RegisterMacro{
+    name = "playai",
+    summary = "play AI turn",
+    doc = "Usage: /playai\nPlays an AI turn for the current initiative entry. Requires an active initiative queue.",
+    command = function(str)
 
-    local queue = dmhub.initiativeQueue
-    if queue == nil or queue.hidden then
-        print("AI:: No initiative queue active.")
-        return
-    end
+        local queue = dmhub.initiativeQueue
+        if queue == nil or queue.hidden then
+            print("AI:: No initiative queue active.")
+            return
+        end
 
-    local initiativeid = dmhub.initiativeQueue:CurrentInitiativeId()
-    if not initiativeid then
-        print("AI:: No current initiative ID.")
-        return
-    end
+        local initiativeid = dmhub.initiativeQueue:CurrentInitiativeId()
+        if not initiativeid then
+            print("AI:: No current initiative ID.")
+            return
+        end
 
-    local ai = MonsterAI.new{}
+        local ai = MonsterAI.new{}
 
-    ai:PlayTurn(initiativeid)
-end
+        ai:PlayTurn(initiativeid)
+    end,
+}
 
 function MonsterAI.Sleep(seconds)
     if seconds <= 0 then

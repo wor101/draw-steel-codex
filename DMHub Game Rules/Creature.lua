@@ -3801,54 +3801,63 @@ creature.selectedLoadout = 0
 creature.numLoadouts = 4
 
 
---implement the 'loadout' command to set current loadout.
-Commands.loadout = function(str)
-	local loadout = toint(str, 0)
-	local tokens = dmhub.selectedTokens
-	for _,tok in ipairs(tokens) do
-		tok:ModifyProperties{
-			description = "Change Loadout",
-			execute = function()
-				tok.properties.selectedLoadout = loadout
-			end,
-		}
+Commands.RegisterMacro{
+    name = "loadout",
+    summary = "set equipment loadout",
+    doc = "Usage: /loadout <number>\nSets the equipment loadout for selected tokens to the given slot number.",
+    command = function(str)
+        local loadout = toint(str, 0)
+        local tokens = dmhub.selectedTokens
+        for _,tok in ipairs(tokens) do
+            tok:ModifyProperties{
+                description = "Change Loadout",
+                execute = function()
+                    tok.properties.selectedLoadout = loadout
+                end,
+            }
 
-		--instantly refresh the token.
-		game.Refresh{
-			tokens = {tok.charid},
-		}
-	end
-end
+            --instantly refresh the token.
+            game.Refresh{
+                tokens = {tok.charid},
+            }
+        end
+    end,
+}
 
-Commands.light = function(str)
-    local tokenids = {}
-    for _,tok in ipairs(dmhub.selectedTokens) do
-        tokenids[#tokenids+1] = tok.charid
-        tok:ModifyProperties{
-            description = "Change Loadout to Light",
-            execute = function()
-                if tok.properties.selectedLoadout == 1 then
-                    tok.properties.selectedLoadout = 0
-					audio.DispatchSoundEvent("Ability.Torch_Off")
-                else
-                    if not tok.properties:try_get("initLight") then
-                        --set to our preferred light if we've never made a different explicit choice.
-                        local equipment = tok.properties:Equipment()
-                        equipment.mainhand1 = tok.properties:GetDefaultLightSource()
+Commands.RegisterMacro{
+    name = "light",
+    summary = "toggle light source",
+    doc = "Usage: /light\nToggles the light source loadout on selected tokens.",
+    command = function(str)
+        local tokenids = {}
+        for _,tok in ipairs(dmhub.selectedTokens) do
+            tokenids[#tokenids+1] = tok.charid
+            tok:ModifyProperties{
+                description = "Change Loadout to Light",
+                execute = function()
+                    if tok.properties.selectedLoadout == 1 then
+                        tok.properties.selectedLoadout = 0
+                        audio.DispatchSoundEvent("Ability.Torch_Off")
+                    else
+                        if not tok.properties:try_get("initLight") then
+                            --set to our preferred light if we've never made a different explicit choice.
+                            local equipment = tok.properties:Equipment()
+                            equipment.mainhand1 = tok.properties:GetDefaultLightSource()
+                        end
+
+                        tok.properties.selectedLoadout = 1
+                        audio.DispatchSoundEvent("Ability.Torch_On")
                     end
+                end,
+            }
+        end
 
-                    tok.properties.selectedLoadout = 1
-					audio.DispatchSoundEvent("Ability.Torch_On")
-                end
-            end,
+        --instantly refresh the token.
+        game.Refresh{
+            tokens = tokenids
         }
-    end
-
-    --instantly refresh the token.
-    game.Refresh{
-        tokens = tokenids
-    }
-end
+    end,
+}
 
 function creature:GetEquippedLightSource()
     if self:try_get("initLight") then
