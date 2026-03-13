@@ -84,6 +84,8 @@ TacPanelSizes.Fonts = {
     growHRTitle = 14,
     grValue = 16,
     grText = 14,
+
+    skillsLangs = 14,
 }
 TacPanelSizes.VisionBtn = {
     size = 24,
@@ -1052,6 +1054,20 @@ TacPanelStyles.HeroicResources = {
         color = GOLD_LIGHT,
     }
 }
+TacPanelStyles.SkillsLanguages = {
+    {
+        selectors = {"label", "skillslangs"},
+        width = "94%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        tmargin = 4,
+        lmargin = 6,
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.skillsLangs,
+        color = CREAM,
+    },
+}
 
 -- Big text
 local HERO_TOKEN_TOOLTIP = [[**Hero Tokens**
@@ -1548,6 +1564,7 @@ function TacPanel.Summary()
             classes = {"container"},
             halign = "left",
             valign = "top",
+            lmargin = 4,
             pad = 4,
             bgimage = true,
             bgcolor = "clear",
@@ -1678,7 +1695,6 @@ function TacPanel.Summary()
                 width = TacPanelSizes.VisionBtn.size,
                 height = TacPanelSizes.VisionBtn.size,
                 bgcolor = RED,
-                hmargin = 8,
                 data = { token = nil },
                 refreshCharacter = function(element, token)
                     element.data.token = token
@@ -1727,9 +1743,8 @@ function TacPanel.Summary()
             outlineButton(gui.Panel{
                 classes = {"vision-btn", "collapsed"},
                 bgimage = "ui-icons/eye.png",
-                width = TacPanelSizes.VisionBtn.size,
-                height = TacPanelSizes.VisionBtn.size,
-                hmargin = 8,
+                width = TacPanelSizes.VisionBtn.size - 4,
+                height = TacPanelSizes.VisionBtn.size - 4,
                 data = { token = nil },
                 monitor = "lookup",
                 events = {
@@ -3112,6 +3127,79 @@ function TacPanel.HeroicResources()
             },
         },
         TacPanel.GrowingHRTable(),
+    }
+end
+
+--- Display the Skills & Languages panel
+--- @return Panel
+function TacPanel.SkillLanguages()
+    return gui.Panel{
+        styles = TacPanelStyles.TacPanel,
+        classes = {"tacpanel", "alt-bg"},
+        gui.Label{
+            classes = {"panel-title"},
+            text = "SKILLS AND LANGUAGES",
+        },
+        gui.Panel{
+            styles = TacPanelStyles.SkillsLanguages,
+            width = "100%",
+            height = "auto",
+            flow = "vertical",
+            refreshCharacter = function(element, token)
+                local creature = token.properties
+                local children = {}
+                -- Skill categories
+                for _, cat in ipairs(Skill.categories) do
+                    local proficiencyList = nil
+                    for _, skill in ipairs(Skill.SkillsInfo) do
+                        if skill.category == cat.id and creature:ProficientInSkill(skill) then
+                            if proficiencyList == nil then
+                                proficiencyList = skill.name
+                            else
+                                proficiencyList = proficiencyList .. ", " .. skill.name
+                            end
+                        end
+                    end
+                    if proficiencyList ~= nil then
+                        children[#children + 1] = gui.Label{
+                            classes = {"skillslangs"},
+                            textWrap = true,
+                            markdown = true,
+                            text = string.format("**<color=%s>%s:</color>** %s", MUTED, cat.text, proficiencyList)
+                        }
+                    end
+                end
+                -- Languages
+                local languagesTable = dmhub.GetTable(Language.tableName) or {}
+                local languages = {}
+                for langid, _ in pairs(creature:LanguagesKnown()) do
+                    local language = languagesTable[langid]
+                    if language then
+                        languages[#languages + 1] = language
+                    end
+                end
+                table.sort(languages, function(a, b) return a.name < b.name end)
+                local langText = nil
+                for _, language in ipairs(languages) do
+                    if langText == nil then
+                        langText = language.name
+                    else
+                        langText = langText .. ", " .. language.name
+                    end
+                end
+                if langText ~= nil then
+                    children[#children + 1] = gui.Label{
+                        classes = {"skillslangs"},
+                        textWrap = true,
+                        markdown = true,
+                        text = string.format("**<color=%s>Languages:</color>** %s", MUTED, langText)
+                    }
+                end
+                element.children = children
+            end,
+            refreshToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
+            setToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
+        },
     }
 end
 
@@ -4817,6 +4905,7 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
 
         newTacPanel and TacPanel.Statistics() or nil,
         newTacPanel and TacPanel.HeroicResources() or nil,
+        newTacPanel and TacPanel.SkillLanguages() or nil,
 
         --heroic resource panel.
         oldTacPanel and gui.Panel{
@@ -5591,8 +5680,8 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
 			end,
 		},
 
-		CharacterPanel.SkillsPanel(m_token),
-		CharacterPanel.LanguagesPanel(m_token),
+		oldTacPanel and CharacterPanel.SkillsPanel(m_token) or nil,
+		oldTacPanel and CharacterPanel.LanguagesPanel(m_token) or nil,
         CharacterPanel.AbilitiesPanel(m_token),
         CharacterPanel.NotesPanel(m_token),
     }
