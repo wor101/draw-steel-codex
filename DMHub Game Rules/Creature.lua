@@ -6420,14 +6420,21 @@ function creature:RemoveOngoingEffect(ongoingEffectid, numStacks)
 end
 
 --- Removes the specific ongoing effect instance identified by seq.
+--- When numStacks is provided and the instance has more stacks than that,
+--- only reduces the stack count rather than removing the instance entirely.
 --- @param seq number
-function creature:RemoveOngoingEffectBySeq(seq)
+--- @param numStacks number|nil
+function creature:RemoveOngoingEffectBySeq(seq, numStacks)
 	local ongoingEffects = self:get_or_add('ongoingEffects', {})
 	local newOngoingEffects = {}
 	for i,cond in ipairs(ongoingEffects) do
 		if cond.seq ~= seq then
 			newOngoingEffects[#newOngoingEffects+1] = cond
+		elseif numStacks ~= nil and cond.stacks ~= nil and numStacks < cond.stacks then
+			cond.stacks = cond.stacks - numStacks
+			newOngoingEffects[#newOngoingEffects+1] = cond
 		end
+		-- seq matches with no partial removal: drop entry (full removal)
 	end
 	self.ongoingEffects = newOngoingEffects
 end

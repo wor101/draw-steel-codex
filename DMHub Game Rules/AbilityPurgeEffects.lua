@@ -424,7 +424,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
                         end
                         targetCreature:InflictCondition(rawget(effect, "_condid"), purgeArgs)
                     else
-                        targetCreature:RemoveOngoingEffectBySeq(effect.seq)
+                        targetCreature:RemoveOngoingEffectBySeq(effect.seq, numStacks)
                         result[#result+1] = effect.ongoingEffectid
                     end
                 end
@@ -808,7 +808,7 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowSelectionDialog(casterToken, t
                         end
                         targetToken.properties:InflictCondition(option.condid, purgeArgs)
                     else
-                        targetToken.properties:RemoveOngoingEffectBySeq(option.seq)
+                        targetToken.properties:RemoveOngoingEffectBySeq(option.seq, numStacks)
                     end
                 end
             end,
