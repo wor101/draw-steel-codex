@@ -53,6 +53,7 @@ TacPanelSizes.Panels = {
     stamBoxNarrow = 28,
     stamBoxStam = 68,
     stamBoxRecoveries = 128,
+    condChipHeight = 16,
 }
 TacPanelSizes.Fonts = {
     panelTitle = 14,
@@ -86,9 +87,15 @@ TacPanelSizes.Fonts = {
     grText = 14,
 
     skillsLangs = 14,
+
+    condName = 11,              -- Conditions panel
+    condSetCaster = 10,
+    condRemove = 8,
+    condAdd = 14,
+    condInput = 14,
 }
 TacPanelSizes.VisionBtn = {
-    size = 24,
+    size = 20,
 }
 TacPanelSizes.HealthBar = {
     segmentHeight = 10,
@@ -1040,13 +1047,14 @@ TacPanelStyles.HeroicResources = {
     },
     {
         selectors = {"label", "gr-text"},
-        width = "auto",
+        width = "84%",
         height = "auto",
         halign = "left",
         valign = "center",
         lmargin = 4,
         fontFace = "Berling",
         fontSize = TacPanelSizes.Fonts.grText,
+        textWrap = true,
         color = DIM,
     },
     {
@@ -1066,6 +1074,172 @@ TacPanelStyles.SkillsLanguages = {
         fontFace = "Berling",
         fontSize = TacPanelSizes.Fonts.skillsLangs,
         color = CREAM,
+    },
+    {
+        selectors = {"input", "cond-custom-input"},
+        width = "94%",
+        height = "auto",
+        halign = "left",
+        lmargin = 6,
+        tmargin = 6,
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.condInput,
+        color = CREAM,
+        border = 1,
+        borderColor = DIM,
+        cornerRadius = 4,
+        hpad = 6,
+        vpad = 4,
+    },
+}
+TacPanelStyles.Conditions = {
+    {
+        selectors = {"panel", "conditions"},
+        height = "auto",
+        width = TacPanelSizes.Panels.fullWidth,
+        valign = "top",
+        halign = "center",
+        flow = "vertical",
+        pad = 6,
+    },
+    {   -- Horizontal wrap container for chips
+        selectors = {"panel", "cond-chips"},
+        width = "100%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        tmargin = 6,
+        flow = "horizontal",
+    },
+    {   -- Individual condition chip
+        selectors = {"panel", "cond-chip"},
+        height = "auto",
+        minHeight = TacPanelSizes.Panels.condChipHeight,
+        width = "auto",
+        halign = "left",
+        valign = "top",
+        hpad = 6,
+        vpad = 3,
+        margin = 2,
+        flow = "horizontal",
+        bgimage = true,
+        border = 1,
+        borderColor = GOLD,
+        bgcolor = GOLD .. "0F",
+        cornerRadius = 4,
+    },
+    {
+        selectors = {"panel", "cond-chip", "hover"},
+        brightness = 1.3,
+        transitionTime = 0.2,
+    },
+    {   -- Condition icon
+        selectors = {"panel", "cond-icon"},
+        width = 16,
+        height = 16,
+        valign = "center",
+        halign = "left",
+    },
+    {   -- Condition name + duration label
+        selectors = {"label", "cond-name"},
+        width = "auto",
+        height = "auto",
+        halign = "left",
+        valign = "center",
+        lmargin = 4,
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.condName,
+        color = CREAM,
+    },
+    {   -- Set caster button
+        selectors = {"panel", "cond-setCaster"},
+        height = 14,
+        width = 14,
+        halign = "left",
+        valign = "center",
+        lmargin = 4,
+        bgimage = true,
+        border = 1,
+        borderColor = GOLD,
+        color = GOLD,
+        cornerRadius = 2,
+    },
+    {
+        selectors = {"panel", "cond-setCaster", "hover"},
+        brightness = 1.5,
+        transitionTime = 0.2,
+    },
+    {
+        selectors = {"label", "cond-setCaster"},
+        width = "auto",
+        height = "auto",
+        halign = "center",
+        valign = "center",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.condSetCaster,
+        color = MUTED,
+    },
+    {   -- X remove button - hidden until parent hovered
+        selectors = {"panel", "cond-remove"},
+        width = 14,
+        height = 14,
+        halign = "left",
+        valign = "center",
+        lmargin = 4,
+        bgimage = true,
+        bgcolor = RED .. "0F",
+        border = 1,
+        borderColor = RED,
+        cornerRadius = 2,
+        hidden = 1,
+    },
+    {
+        selectors = {"panel", "cond-remove", "parent:hover"},
+        hidden = 0,
+    },
+    {
+        selectors = {"panel", "cond-remove", "hover"},
+        brightness = 1.5,
+    },
+    {
+        selectors = {"label", "cond-remove"},
+        width = "100%",
+        height = "100%",
+        halign = "center",
+        valign = "center",
+        textAlignment = "center",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.condRemove,
+        color = RED,
+    },
+    {   -- Add condition button
+        selectors = {"panel", "cond-add"},
+        width = 22,
+        height = 22,
+        halign = "left",
+        valign = "center",
+        margin = 2,
+        bgimage = true,
+        bgcolor = "clear",
+        border = 1,
+        borderColor = DIM,
+        cornerRadius = 4,
+    },
+    {
+        selectors = {"panel", "cond-add", "hover"},
+        brightness = 1.5,
+        transitionTime = 0.2,
+    },
+    {
+        selectors = {"label", "cond-add"},
+        width = "100%",
+        height = "100%",
+        halign = "center",
+        valign = "center",
+        textAlignment = "center",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.condAdd,
+        color = DIM,
     },
 }
 
@@ -1690,7 +1864,7 @@ function TacPanel.Summary()
             classes = {"container"},
             flow = "horizontal",
             outlineButton(gui.EnhIconButton{
-                classes = {"vision-btn", "collapsed"},
+                classes = {"vision-btn"},
                 bgimage = "panels/initiative/initiative-icon.png",
                 width = TacPanelSizes.VisionBtn.size,
                 height = TacPanelSizes.VisionBtn.size,
@@ -1700,10 +1874,10 @@ function TacPanel.Summary()
                     element.data.token = token
                     local q = dmhub.initiativeQueue
                     if q == nil or q.hidden then
-                        element:SetClass("collapsed", true)
+                        element.parent:SetClass("collapsed", true)
                         return
                     end
-                    element:SetClass("collapsed",
+                    element.parent:SetClass("collapsed",
                         token.properties:try_get("_tmp_initiativeStatus") ~= "NonCombatant")
                 end,
                 refreshToken = function(element, token)
@@ -1722,8 +1896,8 @@ function TacPanel.Summary()
             outlineButton(gui.Panel{
                 classes = {"vision-btn"},
                 bgimage = "icons/icon_weather/icon_weather_1.png",
-                width = TacPanelSizes.VisionBtn.size -4,
-                height = TacPanelSizes.VisionBtn.size -4,
+                width = TacPanelSizes.VisionBtn.size,
+                height = TacPanelSizes.VisionBtn.size,
                 refreshCharacter = function(element, token)
                     local bgcolor = (token.properties.selectedLoadout == 1)
                         and TEAL
@@ -1743,8 +1917,8 @@ function TacPanel.Summary()
             outlineButton(gui.Panel{
                 classes = {"vision-btn", "collapsed"},
                 bgimage = "ui-icons/eye.png",
-                width = TacPanelSizes.VisionBtn.size - 4,
-                height = TacPanelSizes.VisionBtn.size - 4,
+                width = TacPanelSizes.VisionBtn.size,
+                height = TacPanelSizes.VisionBtn.size,
                 data = { token = nil },
                 monitor = "lookup",
                 events = {
@@ -2849,7 +3023,7 @@ function TacPanel.Statistics()
             pad = 4,
             flow = "vertical",
             TacPanel.CharacteristicsPanel(),
-            gui.MCDMDivider{ width = "94%", bgcolor = SURGE_BORDER },
+            gui.MCDMDivider{ width = "96%", bgcolor = SURGE_BORDER },
             TacPanel.MovementPanel(),
         }
     }
@@ -3138,7 +3312,7 @@ function TacPanel.SkillLanguages()
         classes = {"tacpanel", "alt-bg"},
         gui.Label{
             classes = {"panel-title"},
-            text = "SKILLS AND LANGUAGES",
+            text = "SKILLS & LANGUAGES",
         },
         gui.Panel{
             styles = TacPanelStyles.SkillsLanguages,
@@ -3199,6 +3373,450 @@ function TacPanel.SkillLanguages()
             end,
             refreshToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
             setToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
+        },
+        gui.Input{
+            classes = {"input", "cond-custom-input"},
+            styles = TacPanelStyles.SkillsLanguages,
+            characterLimit = 60,
+            placeholderText = "Add Custom Condition...",
+            data = { token = nil },
+            refreshCharacter = function(element, token)
+                element.data.token = token
+            end,
+            refreshToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
+            setToken = function(element, token) element:FireEvent("refreshCharacter", token) end,
+            change = function(element)
+                local text = trim(element.text)
+                if text ~= "" and element.data.token ~= nil then
+                    element.data.token:ModifyProperties{
+                        description = "Add Custom Condition",
+                        execute = function()
+                            local cc = element.data.token.properties:get_or_add("customConditions", {})
+                            cc[dmhub.GenerateGuid()] = {
+                                text = text,
+                                timestamp = dmhub.serverTimeMilliseconds,
+                            }
+                        end,
+                    }
+                end
+                element.text = ""
+            end,
+        },
+    }
+end
+
+--- Format a condition's duration for display
+--- @param duration string raw duration value
+--- @return string formatted duration text
+function TacPanel.FormatConditionDuration(duration)
+    if duration == "eot" then return "EoT"
+    elseif duration == "eoe" then return "EoE"
+    elseif duration == "save" then return "Save"
+    elseif type(duration) == "string" then return string.upper(duration) .. " ends"
+    else return "EoT"
+    end
+end
+
+--- Build the display text for a condition chip
+--- @param condid string condition id
+--- @param cond table inflicted condition entry
+--- @param creature table token.properties
+--- @return string chip label text
+function TacPanel.ConditionChipText(condid, cond, creature)
+    local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
+    local info = conditionsTable[condid]
+    if info == nil then return "???" end
+
+    local text = info.name
+
+    -- Append rider names
+    local riderids = creature:GetConditionRiders(condid)
+    if riderids ~= nil then
+        local ridersTable = dmhub.GetTable(CharacterCondition.ridersTableName)
+        for _, riderid in ipairs(riderids) do
+            if ridersTable[riderid] then
+                text = string.format("%s %s", text, ridersTable[riderid].name)
+            end
+        end
+    end
+
+    -- Append duration
+    if not info.indefiniteDuration then
+        text = string.format("%s (%s)", text, TacPanel.FormatConditionDuration(cond.duration))
+    end
+
+    return text
+end
+
+--- Build a tooltip for a condition chip (matches old code tooltip format)
+--- @param condid string condition id
+--- @param cond table inflicted condition entry
+--- @param creature table token.properties
+--- @return string tooltip markup
+function TacPanel.ConditionTooltipText(condid, cond, creature)
+    local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
+    local info = conditionsTable[condid]
+    if info == nil then return "" end
+
+    local durationText = ""
+    if not info.indefiniteDuration then
+        durationText = string.format(" (%s)", TacPanel.FormatConditionDuration(cond.duration))
+    end
+
+    local ridersText = ""
+    local riderids = creature:GetConditionRiders(condid)
+    if riderids ~= nil then
+        local ridersTable = dmhub.GetTable(CharacterCondition.ridersTableName)
+        for _, riderid in ipairs(riderids) do
+            local riderInfo = ridersTable[riderid]
+            if riderInfo ~= nil then
+                ridersText = string.format("%s\n\n<b>%s</b>: %s", ridersText, riderInfo.name, riderInfo.description)
+            end
+        end
+    end
+
+    return string.format('<b>%s</b>%s: %s%s\n\n%s',
+        info.name, durationText, info.description, ridersText, cond.sourceDescription or "")
+end
+
+--- Create a single condition chip panel
+--- @param condid string condition id
+--- @param cond table inflicted condition entry
+--- @param token CharacterToken
+--- @return Panel
+function TacPanel.ConditionChip(condid, cond, token)
+    local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
+    local info = conditionsTable[condid]
+    local iconid = info and info.iconid or ""
+    local display = info and info.display or {}
+    local showSetCaster = info ~= nil and info.trackCaster and cond.casterInfo == nil
+
+    return gui.Panel{
+        classes = {"panel", "cond-chip"},
+        data = { condid = condid, targetingMarkers = {} },
+        linger = function(element)
+            -- Clear any previous markers
+            element:FireEvent("clearMarkers")
+            local creature = token.properties
+            local conditions = creature:try_get("inflictedConditions", {})
+            local c = conditions[condid]
+            if c == nil then return end
+
+            -- Show caster highlight line
+            local caster = c.casterInfo
+            if caster ~= nil and type(caster.tokenid) == "string" then
+                local casterToken = dmhub.GetTokenById(caster.tokenid)
+                if casterToken ~= nil then
+                    element.data.targetingMarkers[#element.data.targetingMarkers + 1] =
+                        dmhub.HighlightLine{ color = "red", a = casterToken.pos, b = token.pos }
+                end
+            end
+
+            element.popupPositioning = "panel"
+            gui.Tooltip{halign = "left", valign = "center",
+                text = TacPanel.ConditionTooltipText(condid, c, creature)}(element)
+        end,
+        dehover = function(element)
+            element:FireEvent("clearMarkers")
+        end,
+        clearMarkers = function(element)
+            for _, marker in ipairs(element.data.targetingMarkers) do
+                marker:Destroy()
+            end
+            element.data.targetingMarkers = {}
+        end,
+
+        -- Icon
+        gui.Panel{
+            classes = {"panel", "cond-icon"},
+            bgimage = iconid,
+            bgcolor = display.bgcolor or "white",
+            hueshift = display.hueshift or 0,
+        },
+        -- Name + duration
+        gui.Label{
+            classes = {"label", "cond-name"},
+            text = TacPanel.ConditionChipText(condid, cond, token.properties),
+        },
+        -- Set caster button (icon only)
+        gui.Panel{
+            classes = {"panel", "cond-setCaster", showSetCaster and "" or "collapsed"},
+            press = function(element)
+                local ability = DeepCopy(MCDMUtils.GetStandardAbility("SetConditionCaster"))
+                ability.behaviors[1].condid = condid
+                ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(token, ability, token, "prompt", {}, {})
+            end,
+            linger = function(element)
+                gui.Tooltip("Set Caster")(element)
+            end,
+            gui.Panel{
+                bgimage = "icons/icon_app/icon_app_4.png",
+                width = 10,
+                height = 10,
+                valign = "center",
+                halign = "center",
+                bgcolor = GOLD,
+            },
+        },
+        -- X remove button
+        gui.Panel{
+            classes = {"panel", "cond-remove"},
+            press = function(element)
+                token:ModifyProperties{
+                    description = "Remove Condition",
+                    execute = function()
+                        token.properties:InflictCondition(condid, {purge = true})
+                    end,
+                }
+            end,
+            linger = function(element)
+                gui.Tooltip("Remove")(element)
+            end,
+            gui.Label{
+                classes = {"label", "cond-remove"},
+                text = "X",
+            },
+        },
+    }
+end
+
+--- Build the display text for a status effect chip
+--- @param entry CharacterOngoingEffectInstance
+--- @param info CharacterOngoingEffect definition
+--- @return string chip label text
+function TacPanel.StatusEffectChipText(entry, info)
+    local text = info.name
+    if entry.stacks ~= nil and entry.stacks > 1 then
+        text = string.format("%s x%d", text, entry.stacks)
+    end
+    local timeText = entry:DescribeTimeRemaining()
+    if timeText ~= nil and timeText ~= "" then
+        text = string.format("%s (%s)", text, timeText)
+    end
+    return text
+end
+
+--- Build a tooltip for a status effect chip
+--- @param entry CharacterOngoingEffectInstance
+--- @param info CharacterOngoingEffect definition
+--- @param creature table token.properties
+--- @return string tooltip markup
+function TacPanel.StatusEffectTooltipText(entry, info, creature)
+    local stacksText = ""
+    if info.stackable and entry.stacks ~= nil and entry.stacks > 1 then
+        stacksText = string.format(" (%d stacks)", entry.stacks)
+    end
+    local casterText = ""
+    local caster = entry:DescribeCaster()
+    if caster ~= nil then
+        casterText = string.format("\nInflicted by %s", caster)
+    end
+    local timeText = entry:DescribeTimeRemaining()
+    if timeText ~= nil and timeText ~= "" then
+        timeText = "\n" .. timeText
+    else
+        timeText = ""
+    end
+    return string.format('<b>%s</b>%s: %s%s%s',
+        info.name, stacksText,
+        StringInterpolateGoblinScript(info.description, creature),
+        casterText, timeText)
+end
+
+--- Create a single status effect chip panel
+--- @param entry CharacterOngoingEffectInstance
+--- @param info CharacterOngoingEffect definition
+--- @param token CharacterToken
+--- @return Panel
+function TacPanel.StatusEffectChip(entry, info, token)
+    local iconid = info:GetDisplayIcon()
+    local display = info:GetDisplayDisplay() or {}
+
+    return gui.Panel{
+        classes = {"panel", "cond-chip"},
+        data = { entry = entry, targetingMarkers = {} },
+        linger = function(element)
+            element:FireEvent("clearMarkers")
+
+            element.popupPositioning = "panel"
+            gui.Tooltip{halign = "left", valign = "center",
+                text = TacPanel.StatusEffectTooltipText(entry, info, token.properties)}(element)
+
+            -- Bond highlight lines
+            if entry.bondid then
+                local tokens = creature.GetTokensWithBoundOngoingEffect(entry.bondid)
+                for i, _ in ipairs(tokens) do
+                    for j = i + 1, #tokens do
+                        element.data.targetingMarkers[#element.data.targetingMarkers + 1] =
+                            dmhub.HighlightLine{ color = "red", a = tokens[i].pos, b = tokens[j].pos }
+                    end
+                end
+            end
+        end,
+        dehover = function(element)
+            element:FireEvent("clearMarkers")
+        end,
+        clearMarkers = function(element)
+            for _, marker in ipairs(element.data.targetingMarkers) do
+                marker:Destroy()
+            end
+            element.data.targetingMarkers = {}
+        end,
+
+        -- Icon
+        gui.Panel{
+            classes = {"panel", "cond-icon"},
+            bgimage = iconid,
+            bgcolor = display.bgcolor or "white",
+            hueshift = display.hueshift or 0,
+        },
+        -- Name + stacks + duration
+        gui.Label{
+            classes = {"label", "cond-name"},
+            text = TacPanel.StatusEffectChipText(entry, info),
+        },
+        -- X remove button
+        gui.Panel{
+            classes = {"panel", "cond-remove"},
+            press = function(element)
+                token:ModifyProperties{
+                    description = "Remove Status Effect",
+                    execute = function()
+                        token.properties:RemoveOngoingEffect(entry.ongoingEffectid)
+                    end,
+                }
+            end,
+            linger = function(element)
+                gui.Tooltip("Remove")(element)
+            end,
+            gui.Label{
+                classes = {"label", "cond-remove"},
+                text = "X",
+            },
+        },
+    }
+end
+
+--- Create a single custom condition chip panel (text only, no icon)
+--- @param key string GUID key in customConditions
+--- @param entry table {text, timestamp}
+--- @param token CharacterToken
+--- @return Panel
+function TacPanel.CustomConditionChip(key, entry, token)
+    return gui.Panel{
+        classes = {"panel", "cond-chip"},
+        linger = function(element)
+            element.popupPositioning = "panel"
+            gui.Tooltip(entry.text)(element)
+        end,
+
+        gui.Label{
+            classes = {"label", "cond-name"},
+            text = entry.text,
+        },
+        -- X remove button
+        gui.Panel{
+            classes = {"panel", "cond-remove"},
+            press = function(element)
+                token:ModifyProperties{
+                    description = "Remove Custom Condition",
+                    execute = function()
+                        local cc = token.properties:get_or_add("customConditions", {})
+                        cc[key] = nil
+                    end,
+                }
+            end,
+            linger = function(element)
+                gui.Tooltip("Remove")(element)
+            end,
+            gui.Label{
+                classes = {"label", "cond-remove"},
+                text = "X",
+            },
+        },
+    }
+end
+
+--- Display the Conditions panel
+--- @return Panel
+function TacPanel.Conditions()
+    return gui.Panel{
+        styles = TacPanel.MergeStyles({TacPanelStyles.TacPanel, TacPanelStyles.Conditions}),
+        classes = {"tacpanel", "alt-bg"},
+        data = { token = nil },
+        refreshCharacter = function(element, token)
+            element.data.token = token
+            if token == nil or not token.valid then
+                element.children[2].children = {}
+                return
+            end
+
+            local creature = token.properties
+            local conditions = creature:try_get("inflictedConditions", {})
+
+            -- Gather status effects (ongoing effects with statusEffect flag)
+            local ongoingTable = dmhub.GetTable("characterOngoingEffects")
+            local activeEffects = creature:ActiveOngoingEffects()
+            local statusEffects = {}
+            for _, entry in ipairs(activeEffects) do
+                local effectInfo = ongoingTable[entry.ongoingEffectid]
+                if effectInfo ~= nil and effectInfo.statusEffect then
+                    statusEffects[#statusEffects + 1] = { entry = entry, info = effectInfo }
+                end
+            end
+
+            -- Rebuild chips each refresh (lists are small)
+            local children = {}
+
+            -- Add button first
+            children[#children + 1] = gui.Panel{
+                    classes = {"panel", "cond-add"},
+                    press = function(el)
+                        CharacterPanel.AddConditionMenu{
+                            tokens = {element.data.token},
+                            button = el,
+                        }
+                    end,
+                    linger = function(el)
+                        gui.Tooltip("Add a condition or effect")(el)
+                    end,
+                    gui.Label{
+                        classes = {"label", "cond-add"},
+                        text = "+",
+                    },
+                }
+
+            -- Condition chips
+            for condid, cond in pairs(conditions) do
+                children[#children + 1] = TacPanel.ConditionChip(condid, cond, token)
+            end
+
+            -- Status effect chips
+            for _, se in ipairs(statusEffects) do
+                children[#children + 1] = TacPanel.StatusEffectChip(se.entry, se.info, token)
+            end
+
+            -- Custom condition chips
+            local customConditions = creature:try_get("customConditions", {})
+            for key, entry in pairs(customConditions) do
+                children[#children + 1] = TacPanel.CustomConditionChip(key, entry, token)
+            end
+
+            element.children[2].children = children
+        end,
+        refreshToken = function(element, token)
+            element:FireEvent("refreshCharacter", token)
+        end,
+        setToken = function(element, token)
+            element:FireEvent("refreshCharacter", token)
+        end,
+        gui.Label{
+            classes = {"panel-title"},
+            text = "CONDITIONS & EFFECTS",
+        },
+        gui.Panel{
+            classes = {"panel", "cond-chips"},
+            wrap = true,
         },
     }
 end
@@ -4909,6 +5527,7 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
 
         newTacPanel and TacPanel.Statistics() or nil,
         newTacPanel and TacPanel.HeroicResources() or nil,
+        newTacPanel and TacPanel.Conditions() or nil,
         newTacPanel and TacPanel.SkillLanguages() or nil,
 
         --heroic resource panel.
@@ -5343,7 +5962,7 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
         PersistencePanel(m_token),
 
         --custom effects.
-        gui.Panel{
+        oldTacPanel and gui.Panel{
             width = "100%",
             height = "auto",
             flow = "vertical",
@@ -5456,13 +6075,13 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
                     element.children = children
                 end,
             }
-        },
+        } or nil,
 
         --auras.
         AurasEmittingPanel(m_token),
 
         --ongoing effects.
-        gui.Panel{
+        oldTacPanel and gui.Panel{
             width = "100%",
             height = "auto",
             flow = "vertical",
@@ -5634,12 +6253,12 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
 
             end,
 
-        },
+        } or nil,
 
         AurasAffectingPanel(m_token),
 
         --inflicted conditions.
-        InflictedConditionsPanel(m_token),
+        oldTacPanel and InflictedConditionsPanel(m_token) or nil,
 
 		oldTacPanel and CharacterPanel.CharacteristicsPanel(m_token) or nil,
 		oldTacPanel and CharacterPanel.ImportantAttributesPanel(m_token) or nil,
