@@ -93,6 +93,11 @@ TacPanelSizes.Fonts = {
     condRemove = 8,
     condAdd = 14,
     condInput = 14,
+
+    menuTitle = 14,             -- Add Condition menu
+    menuOption = 14,
+    menuSuboption = 11,
+    menuSearch = 14,
 }
 TacPanelSizes.VisionBtn = {
     size = 20,
@@ -1240,6 +1245,99 @@ TacPanelStyles.Conditions = {
         cornerRadius = 4,
         hpad = 6,
         vpad = 4,
+    },
+}
+TacPanelStyles.AddConditionMenu = {
+    {   -- Section headings
+        selectors = {"label", "menu-heading"},
+        width = "100%",
+        height = "auto",
+        halign = "left",
+        valign = "top",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.menuTitle,
+        color = DIM,
+        tmargin = 8,
+        bmargin = 4,
+        lmargin = 8,
+    },
+    {   -- Condition/effect option row
+        selectors = {"label", "menu-option"},
+        width = "95%",
+        height = 24,
+        halign = "center",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.menuOption,
+        color = CREAM,
+        bgcolor = "clear",
+        bgimage = "panels/square.png",
+        cornerRadius = 4,
+        hpad = 6,
+    },
+    {
+        selectors = {"label", "menu-option", "hover"},
+        bgcolor = GOLD_BORDER,
+        brightness = 1.2,
+        transitionTime = 0.15,
+    },
+    {
+        selectors = {"label", "menu-option", "searched"},
+        bgcolor = GOLD_BORDER,
+    },
+    {
+        selectors = {"label", "menu-option", "press"},
+        brightness = 1.4,
+    },
+    {   -- Duration/rider sub-buttons
+        selectors = {"label", "menu-suboption"},
+        height = 20,
+        minWidth = 36,
+        width = "auto",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.menuSuboption,
+        textAlignment = "center",
+        color = CREAM,
+        bgimage = true,
+        bgcolor = "clear",
+        border = 1,
+        borderColor = GOLD_BORDER,
+        cornerRadius = 8,
+        hpad = 6,
+        lmargin = 4,
+    },
+    {
+        selectors = {"label", "menu-suboption", "hover"},
+        bgcolor = GOLD_BORDER,
+        brightness = 1.2,
+        transitionTime = 0.15,
+    },
+    {
+        selectors = {"label", "menu-suboption", "press"},
+        brightness = 1.4,
+    },
+    {   -- Search input
+        selectors = {"input", "menu-search"},
+        width = "90%",
+        height = "auto",
+        halign = "center",
+        fontFace = "Berling",
+        fontSize = TacPanelSizes.Fonts.menuSearch,
+        color = CREAM,
+        border = 1,
+        borderColor = DIM,
+        cornerRadius = 4,
+        hpad = 6,
+        vpad = 4,
+        bmargin = 6,
+    },
+    {   -- Divider
+        selectors = {"panel", "menu-divider"},
+        width = "90%",
+        height = 1,
+        halign = "center",
+        bgimage = "panels/square.png",
+        bgcolor = DIM,
+        vmargin = 6,
     },
 }
 
@@ -3709,6 +3807,206 @@ function TacPanel.CustomConditionChip(key, entry, token)
     }
 end
 
+--- Show a styled popup to add conditions or status effects
+--- @param args table {tokens, button}
+function TacPanel.AddConditionMenu(args)
+    local m_tokens = args.tokens
+    local m_button = args.button
+
+    local options = {}
+    local conditionsTable = dmhub.GetTable(CharacterCondition.tableName) or {}
+
+    for k, effect in unhidden_pairs(conditionsTable) do
+        if effect.showInMenus then
+            local children = {}
+            if effect.indefiniteDuration then
+                local ridersTable = dmhub.GetTable(CharacterCondition.ridersTableName)
+                for riderid, rider in unhidden_pairs(ridersTable) do
+                    if rider.condition == k and rider.showAsMenuOption then
+                        children[#children + 1] = gui.Label{
+                            halign = "right",
+                            swallowPress = true,
+                            classes = {"menu-suboption"},
+                            text = rider.name,
+                            press = function(element)
+                                element.parent:FireEvent("press", "eoe", riderid)
+                            end,
+                        }
+                    end
+                end
+            else
+                children = {
+                    gui.Label{
+                        halign = "right",
+                        swallowPress = true,
+                        classes = {"menu-suboption"},
+                        text = "EoT",
+                        press = function(element)
+                            element.parent:FireEvent("press", "eot")
+                        end,
+                    },
+                    gui.Label{
+                        halign = "right",
+                        swallowPress = true,
+                        classes = {"menu-suboption"},
+                        text = "Save",
+                        press = function(element)
+                            element.parent:FireEvent("press", "save")
+                        end,
+                    },
+                    gui.Label{
+                        halign = "right",
+                        swallowPress = true,
+                        classes = {"menu-suboption"},
+                        text = "EoE",
+                        press = function(element)
+                            element.parent:FireEvent("press", "eoe")
+                        end,
+                    },
+                }
+            end
+
+            options[#options + 1] = gui.Label{
+                classes = {"menu-option"},
+                text = effect.name,
+                flow = "horizontal",
+                searchText = function(element, searchText)
+                    element:SetClass("collapsed", not string.starts_with(string.lower(element.text), searchText))
+                end,
+                press = function(element, durationOverride, riderid)
+                    if (not durationOverride) and effect.indefiniteDuration then
+                        durationOverride = "eoe"
+                    end
+                    for _, tok in ipairs(m_tokens) do
+                        tok:ModifyProperties{
+                            description = "Apply Condition",
+                            execute = function()
+                                tok.properties:InflictCondition(k, {
+                                    riders = {riderid},
+                                    duration = (durationOverride or "eot"),
+                                })
+                            end,
+                        }
+                    end
+                    m_button.popup = nil
+                end,
+                linger = function(element)
+                    gui.Tooltip(string.format("%s: %s", effect.name, effect.description))(element)
+                end,
+                children = children,
+            }
+        end
+    end
+
+    table.sort(options, function(a, b) return a.text < b.text end)
+
+    local ongoingEffectsTable = dmhub.GetTable("characterOngoingEffects") or {}
+    local statusEffectOptions = {}
+    for k, effect in unhidden_pairs(ongoingEffectsTable) do
+        if effect.statusEffect then
+            statusEffectOptions[#statusEffectOptions + 1] = gui.Label{
+                classes = {"menu-option"},
+                text = effect.name,
+                searchText = function(element, searchText)
+                    element:SetClass("collapsed", not string.starts_with(string.lower(element.text), searchText))
+                end,
+                linger = function(element)
+                    gui.Tooltip(string.format("%s: %s", effect.name, effect.description))(element)
+                end,
+                press = function(element)
+                    for _, tok in ipairs(m_tokens) do
+                        tok:ModifyProperties{
+                            description = "Apply Status Effect",
+                            combine = true,
+                            execute = function()
+                                if tok == nil or not tok.valid then return end
+                                tok.properties:ApplyOngoingEffect(k)
+                            end,
+                        }
+                    end
+                    m_button.popup = nil
+                end,
+            }
+        end
+    end
+
+    table.sort(statusEffectOptions, function(a, b) return a.text < b.text end)
+
+    m_button.popup = gui.Panel{
+            styles = {TacPanelStyles.AddConditionMenu},
+            floating = true,
+            vscroll = true,
+            flow = "vertical",
+            width = 300,
+            height = 800,
+            bgimage = "panels/square.png",
+            bgcolor = RICH_BLACK,
+            border = 1,
+            borderColor = GOLD_BORDER,
+            cornerRadius = 6,
+            pad = 6,
+
+            gui.Label{
+                classes = {"menu-heading"},
+                text = "ADD CONDITION",
+                halign = "center",
+                tmargin = 2,
+            },
+
+            gui.Panel{
+                classes = {"panel", "menu-divider"},
+            },
+
+            gui.Input{
+                classes = {"input", "menu-search"},
+                placeholderText = "Search...",
+                hasFocus = true,
+                data = { searchedOption = nil },
+                edit = function(element)
+                    element.parent:FireEventTree("searchText", string.lower(element.text))
+                    element.data.searchedOption = nil
+                    local found = element.text == ""
+                    for _, option in ipairs(options) do
+                        if found == false and option:HasClass("collapsed") == false then
+                            found = true
+                            option:SetClass("searched", true)
+                            element.data.searchedOption = option
+                        else
+                            option:SetClass("searched", false)
+                        end
+                    end
+                end,
+                submit = function(element)
+                    if element.data.searchedOption ~= nil then
+                        element.data.searchedOption:FireEvent("press")
+                    end
+                end,
+            },
+
+            gui.Label{
+                classes = {"menu-heading"},
+                text = "CONDITIONS",
+            },
+            gui.Panel{
+                width = "100%",
+                height = "auto",
+                flow = "vertical",
+                children = options,
+            },
+
+            gui.Label{
+                classes = {"menu-heading"},
+                text = "STATUS EFFECTS",
+            },
+            gui.Panel{
+                width = "100%",
+                height = "auto",
+                flow = "vertical",
+                children = statusEffectOptions,
+            },
+        }
+end
+
 --- Display the Conditions panel
 --- @return Panel
 function TacPanel.Conditions()
@@ -3744,7 +4042,7 @@ function TacPanel.Conditions()
             children[#children + 1] = gui.Panel{
                     classes = {"panel", "cond-add"},
                     press = function(el)
-                        CharacterPanel.AddConditionMenu{
+                        TacPanel.AddConditionMenu{
                             tokens = {element.data.token},
                             button = el,
                         }
