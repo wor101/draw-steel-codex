@@ -346,7 +346,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
             description = "Purge Effects",
             execute = function()
                 for _,effect in ipairs(filteredEffects) do
-                    targetCreature:RemoveOngoingEffectBySeq(effect.seq)
+                    targetCreature:RemoveOngoingEffectBySeq(effect.seq, numStacks)
                     result[#result+1] = effect.ongoingEffectid
                 end
             end,
@@ -632,7 +632,7 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowSelectionDialog(casterToken, t
             execute = function()
                 for i,option in ipairs(args.options) do
                     if option.selected then
-                        targetToken.properties:RemoveOngoingEffectBySeq(option.seq)
+                        targetToken.properties:RemoveOngoingEffectBySeq(option.seq, numStacks)
                     end
                 end
             end,
