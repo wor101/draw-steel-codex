@@ -170,6 +170,7 @@ ActivatedAbilityPurgeEffectsBehavior.damageToSelf = ""
 ActivatedAbilityPurgeEffectsBehavior.chatMessage = ""
 ActivatedAbilityPurgeEffectsBehavior.reminderText = ""
 ActivatedAbilityPurgeEffectsBehavior.includeOngoingEffects = false
+ActivatedAbilityPurgeEffectsBehavior.value = ""
 
 ActivatedAbilityPurgeEffectsBehavior.modeOptions = {
     {
@@ -268,8 +269,22 @@ function ActivatedAbilityPurgeEffectsBehavior:Cast(ability, casterToken, targets
             return
         end
 
+        -- Evaluate the optional GoblinScript value formula to cap how many
+        -- effects the player may choose (nil = unlimited).
+        local maxSelections = nil
+        local valueFormula = self:try_get("value", "")
+        if valueFormula ~= "" then
+            if options.symbols == nil then
+                options.symbols = {}
+            end
+            local val = ExecuteGoblinScript(valueFormula, casterToken.properties:LookupSymbol(options.symbols), nil, "Max effects to purge")
+            if type(val) == "number" then
+                maxSelections = math.floor(val)
+            end
+        end
+
         -- Phase 2: show the new unified selection panel.
-        local confirmed, selections = self:ShowPurgeDialog(targetDataList, ability, casterToken)
+        local confirmed, selections = self:ShowPurgeDialog(targetDataList, ability, casterToken, maxSelections)
         if not confirmed then
             return
         end
@@ -1003,7 +1018,7 @@ end
 -- Returns confirmed (bool), selections ({[tokenId] = {item, ...}}).
 -- Nothing is pre-selected (opt-in UX).  For purgeType "one", only one chip
 -- per token row can be selected at a time.
-function ActivatedAbilityPurgeEffectsBehavior:ShowPurgeDialog(targetDataList, ability, casterToken)
+function ActivatedAbilityPurgeEffectsBehavior:ShowPurgeDialog(targetDataList, ability, casterToken, maxSelections)
     local finished = false
     local canceled = false
     local multiSelect = self.purgeType ~= "one"
@@ -1044,16 +1059,19 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowPurgeDialog(targetDataList, ab
                     local tokenSelections = selections[tokenId]
                     if multiSelect then
                         local isSelected = element:HasClass("purge-chip-selected")
-                        element:SetClass("purge-chip-selected", not isSelected)
-                        if not isSelected then
-                            tokenSelections[#tokenSelections+1] = capturedItem
-                        else
+                        if isSelected then
+                            -- Always allow deselection.
+                            element:SetClass("purge-chip-selected", false)
                             for i, sel in ipairs(tokenSelections) do
                                 if sel == capturedItem then
                                     table.remove(tokenSelections, i)
                                     break
                                 end
                             end
+                        elseif maxSelections == nil or #tokenSelections < maxSelections then
+                            -- Only select if under the cap (or no cap).
+                            element:SetClass("purge-chip-selected", true)
+                            tokenSelections[#tokenSelections+1] = capturedItem
                         end
                     else
                         -- Single-select: clear all sibling chips first.
@@ -1104,6 +1122,19 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowPurgeDialog(targetDataList, ab
         mainChildren[#mainChildren+1] = gui.Label{
             classes = {"purge-reminder"},
             text = reminderText,
+        }
+    end
+
+    if maxSelections ~= nil then
+        local countText
+        if maxSelections == 1 then
+            countText = "Select 1 effect"
+        else
+            countText = string.format("Select up to %d effects", maxSelections)
+        end
+        mainChildren[#mainChildren+1] = gui.Label{
+            classes = {"purge-count"},
+            text = countText,
         }
     end
 
@@ -1167,6 +1198,16 @@ function ActivatedAbilityPurgeEffectsBehavior:ShowPurgeDialog(targetDataList, ab
                 fontSize = 18,
                 color = "#5C6860",
                 width = "auto",
+                height = "auto",
+                halign = "left",
+                bmargin = 2,
+            },
+            {
+                selectors = {"label", "purge-count"},
+                fontFace = "Berling",
+                fontSize = 12,
+                color = "#C49A5A",
+                width = "100%",
                 height = "auto",
                 halign = "left",
                 bmargin = 2,
@@ -1670,8 +1711,59 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
             options = ActivatedAbilityPurgeEffectsBehavior.purgeTypeOptions,
             change = function(element)
                 self.purgeType = element.idChosen
+                parentPanel:FireEventTree("refreshPurge")
             end,
 
+        },
+    }
+
+    result[#result+1] = gui.Panel{
+        classes = {"formPanel", cond(self.purgeType ~= "chosen", "collapsed")},
+        create = function(element)
+            element:FireEvent("refreshPurge")
+        end,
+        refreshPurge = function(element)
+            element:SetClass("collapsed", self.purgeType ~= "chosen")
+        end,
+        gui.Label{
+            classes = "formLabel",
+            text = "Value:",
+        },
+        gui.GoblinScriptInput{
+            value = self:try_get("value", ""),
+            events = {
+                change = function(element)
+                    self.value = element.value
+                end,
+            },
+            documentation = {
+                help = "A GoblinScript expression that sets the maximum number of effects the player may choose to purge. Leave blank to allow any number.",
+                output = "number",
+                subject = creature.helpSymbols,
+                subjectDescription = "The creature casting the ability.",
+                examples = {
+                    {
+                        script = "2",
+                        text = "Player may choose up to 2 effects to purge.",
+                    },
+                    {
+                        script = "Tier",
+                        text = "Player may choose a number of effects equal to the caster's Tier.",
+                    },
+                },
+                symbols = ActivatedAbility.CatHelpSymbols(ActivatedAbility.helpCasting, {
+                    caster = {
+                        name = "Caster",
+                        type = "creature",
+                        desc = "The creature casting the ability.",
+                    },
+                    target = {
+                        name = "Target",
+                        type = "creature",
+                        desc = "The target of the ability.",
+                    },
+                }),
+            },
         },
     }
 
