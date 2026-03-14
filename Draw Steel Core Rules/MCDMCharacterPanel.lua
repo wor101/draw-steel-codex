@@ -2334,7 +2334,6 @@ function TacPanel.TempStamBox()
                 element.placeholderText = placeholder
             end,
             click = function(element)
-                print("THC:: FOCUS::")
                 element.placeholderText = ""
             end,
             refreshCharacter = function(element, token)
@@ -5787,6 +5786,16 @@ function TacPanel.Conditions()
     }
 end
 
+--- Display the combat panel
+--- @return Panel
+function TacPanel.DrawSteel()
+    return TacPanel.CollapsiblePanel{
+        styles = {TacPanelStyles.DrawSteel},
+        title = "DRAW STEEL!",
+        data = { token = nil },
+    }
+end
+
 CharacterPanel.CreateConditionsPanel = function(token)
     return nil
 end
@@ -7492,6 +7501,7 @@ CharacterPanel.CreateCharacterDetailsPanel = function(m_token)
         } or nil,
 
         newTacPanel and TacPanel.Statistics() or nil,
+        newTacPanel and TacPanel.DrawSteel() or nil,
         newTacPanel and TacPanel.Routines() or nil,
         newTacPanel and TacPanel.AurasEmitting() or nil,
         newTacPanel and TacPanel.PersistentAbilities() or nil,
