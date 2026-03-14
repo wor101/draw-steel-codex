@@ -4,11 +4,13 @@ function creature:GetVictories()
     return self:try_get("victories", 0)
 end
 
+function creature:GetVictoriesWithBonus()
+	return self:try_get("victories", 0) + self:CalculateNamedCustomAttribute("Victory Bonus")
+end
+
 function creature:SetVictories(n)
     self.victories = n
 end
-
-
 
 function CharSheet.InspirationPanel()
 	local resultPanel
