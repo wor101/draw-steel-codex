@@ -2147,6 +2147,7 @@ function GameHud.CreateRollDialog(self)
         },
 
         press = function(element)
+            print("REROLL:: DOING REROLL...", g_activeRoll)
             if g_activeRoll == nil then
                 return
             end
@@ -3201,6 +3202,8 @@ function GameHud.CreateRollDialog(self)
                     m_options.rollProperties.castid = m_symbols.castid
                 end
 
+                print("ROLL:: SET CASTID", m_symbols ~= nil, m_symbols and m_symbols.castid)
+
                 local activeRoll
                 local rollArgs = {
                     guid = resultPanel.data.rollid,
@@ -3215,6 +3218,7 @@ function GameHud.CreateRollDialog(self)
                     creature = creature,
                     properties = rollProperties,
                     begin = function(rollInfo)
+                        print("ROLL:: BEGIN", rollInfo, rollIsSilent, instant)
                         m_rollInfo = rollInfo
                         if beginRollFn ~= nil then
                             beginRollFn(rollInfo)
@@ -3223,20 +3227,25 @@ function GameHud.CreateRollDialog(self)
                         resultPanel:FireEventTree("beginRoll", rollInfo, resultPanel.data.rollid)
                     end,
                     complete = function(rollInfo)
+                        print("ROLL:: COMPLETE")
                         m_rollInfo = rollInfo
 
+                            print("AI:: Dialog IS COMPLETE, SHOWING DIALOG:", showingDialog)
                         if showingDialog then
                             resultPanel:SetClassTree("rolling", false)
                             resultPanel:SetClassTree("finishedRolling", true)
 
                             proceedAfterRollButton.events.press = function()
+                                print("AI:: Dialog PRESSED PROCEED AFTER ROLL")
                                 resultPanel:SetClass('hidden', true)
                                 RelinquishPanel()
 
                                 completeFunction(rollInfo)
                             end
 
+                            print("AI:: Dialog ROLL COMPLETE...")
                             if creature ~= nil and creature._tmp_aicontrol > 0 then
+                            print("AI:: Dialog ROLL PRESS PROCEED...")
                                 proceedAfterRollButton:FireEvent("press")
                             end
 
@@ -3248,6 +3257,7 @@ function GameHud.CreateRollDialog(self)
 
                         if g_activeRoll == activeRoll then
                             g_activeRoll = nil
+                print("ROLL:: ACTIVE ROLL CANCEL")
                         end
                     end
                 }
@@ -3288,6 +3298,7 @@ function GameHud.CreateRollDialog(self)
                 end
 
                 activeRoll = dmhub.Roll(rollArgs)
+                print("ROLL:: ACTIVE ROLL FROM", rollArgs, "HAVE", activeRoll)
 
                 g_activeRoll = activeRoll
 
