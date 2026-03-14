@@ -998,12 +998,12 @@ CharacterModifier.TypeInfo.power = {
 							text = "Malice/Heroic Resources+",
 						},
                         {
-                            id = "surges",
-                            text = "Surges",
+                            id = "epic",
+                            text = "Epic Resources",
                         },
                         {
-                            id = "epicresource",
-                            text = "Epic Resource",
+                            id = "surges",
+                            text = "Surges",
                         },
 					},
 					change = function(element)

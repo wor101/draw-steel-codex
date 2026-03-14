@@ -3193,7 +3193,7 @@ function CharacterModifier:ConsumeResourceInternal(creature, modContext)
             note = modContext.modifier.name
         end
         creature:ConsumeSurges(cost, note)
-    elseif costType == "epicresource" and not self:try_get("overrideCost", false) then
+    elseif costType == "epic" and not self:try_get("overrideCost", false) then
         local charges = self:try_get("_tmp_symbols", {}).charges or 1
         local cost = ExecuteGoblinScript(self:try_get("resourceCostAmount", "1"), creature:LookupSymbol(self:try_get("_tmp_symbols", {})), 0)*charges
         creature:ConsumeResource(CharacterResource.epicResourceId, "unbounded", cost, string.format("%s", self.name))
@@ -3239,7 +3239,7 @@ function CharacterModifier:HasResourcesAvailable(creature)
         local resourcesAvailable = creature:GetAvailableSurges()
         local cost = ExecuteGoblinScript(self:try_get("resourceCostAmount", "1"), creature:LookupSymbol(self:try_get("_tmp_symbols", {})), 0)
         return cost <= resourcesAvailable
-    elseif costType == "epicresource" then
+    elseif costType == "epic" then
         local resourcesAvailable = creature:GetEpicResources()
         local cost = ExecuteGoblinScript(self:try_get("resourceCostAmount", "1"), creature:LookupSymbol(self:try_get("_tmp_symbols", {})), 0)
         return cost <= resourcesAvailable
@@ -3284,7 +3284,7 @@ function CharacterModifier:DescribeResourceAvailability(creature, charges, expec
         if costType == "surges" then
             resourcesAvailable = creature:GetAvailableSurges()
             resourceName = tr("Surges")
-        elseif costType == "epicresource" then
+        elseif costType == "epic" then
             resourcesAvailable = creature:GetEpicResources()
             resourceName = creature:GetEpicResourceName()
         else

@@ -229,6 +229,11 @@ mod.shared.CreateTriggerPanel = function()
     },
 
     gui.Style{
+        classes = {"costInnerDiamond", "epicCost"},
+        bgcolor = "#6fa8e9",
+        borderColor = "#4B6D96",
+    },
+    gui.Style{
         classes = {"costInnerDiamond", "cannotAfford"},
         bgcolor = g_forbiddenColor,
         borderColor = "white",
@@ -883,16 +888,18 @@ mod.shared.CreateTriggerPanel = function()
                                     end,
                                 },
 
-        gui.Panel{
-            classes = {"costDiamond", cond(trigger.heroicResourceCost == 0, "hidden")},
+        (function()
+            local resourceCost = trigger.heroicResourceCost ~= 0 and trigger.heroicResourceCost or trigger.epicResourceCost
+            return gui.Panel{
+            classes = {"costDiamond", cond(resourceCost == 0, "hidden")},
             floating = true,
             rotate = 135,
             gui.Panel{
-                classes = {"costInnerDiamond"},
+                classes = {"costInnerDiamond", cond(trigger.epicResourceCost ~= 0, "epicCost")},
                 gui.Label{
                     classes = {"abilityCostLabel"},
                     rotate = -135,
-                    text = cond(trigger.heroicResourceCost == 0, "!", trigger.heroicResourceCost),
+                    text = cond(resourceCost == 0, "!", resourceCost),
 
                     ability = function(element, ability)
 --[[
@@ -912,7 +919,8 @@ mod.shared.CreateTriggerPanel = function()
                     end,
                 },
             },
-        },
+        }
+        end)(),
 
         --icon panel.
         gui.Label{

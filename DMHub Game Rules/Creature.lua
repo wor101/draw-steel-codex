@@ -8601,6 +8601,7 @@ ActiveTrigger.charid = ""
 ActiveTrigger.free = true
 ActiveTrigger.timestamp = 0
 ActiveTrigger.heroicResourceCost = 0
+ActiveTrigger.epicResourceCost = 0
 ActiveTrigger.clearOnDismiss = false
 ActiveTrigger.dismissOnTrigger = false
 ActiveTrigger.powerRollModifier = false
