@@ -169,13 +169,16 @@ ActivatedAbilityPurgeEffectsBehavior.stacksFormula = "1"
 ActivatedAbilityPurgeEffectsBehavior.damageToSelf = ""
 ActivatedAbilityPurgeEffectsBehavior.chatMessage = ""
 ActivatedAbilityPurgeEffectsBehavior.reminderText = ""
-ActivatedAbilityPurgeEffectsBehavior.includeOngoingEffects = false
 ActivatedAbilityPurgeEffectsBehavior.value = ""
 
 ActivatedAbilityPurgeEffectsBehavior.modeOptions = {
     {
         id = "conditions",
         text = "Underlying Condition",
+    },
+    {
+        id = "conditions_and_effects",
+        text = "Conditions and Effects",
     },
     {
         id = "effect",
@@ -411,7 +414,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
     -- Combined mode: merge conditions from inflictedConditions into filteredEffects so a
     -- single ShowSelectionDialog handles both.  Conditions already represented by an ongoing
     -- effect instance in filteredEffects are skipped to avoid duplicates.
-    if self.mode == "conditions" and self:try_get("includeOngoingEffects", false) and targetCreature:has_key("inflictedConditions") then
+    if self.mode == "conditions_and_effects" and targetCreature:has_key("inflictedConditions") then
         local targetDuration = self:try_get("targetDuration", "all")
         local durationTable = string.split(targetDuration, "|")
         local conditionsTable = dmhub.GetTable(CharacterCondition.tableName) or {}
@@ -477,7 +480,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CastOnTarget(casterToken, targetTo
         end
     end
 
-    if self.mode == "conditions" and not self:try_get("includeOngoingEffects", false) and targetCreature:has_key("inflictedConditions") then
+    if self.mode == "conditions" and targetCreature:has_key("inflictedConditions") then
         local conditions = {}
         local targetDuration = self:try_get("targetDuration", "all")
         local durationTable = string.split(targetDuration, "|")
@@ -580,8 +583,8 @@ end
 
 function ActivatedAbilityPurgeEffectsBehavior:AppliesToEffect(effect)
 	local ongoingEffectsTable = dmhub.GetTable("characterOngoingEffects") or {}
-    if self.mode == "conditions" then
-        if self:try_get("includeOngoingEffects", false) then
+    if self.mode == "conditions" or self.mode == "conditions_and_effects" then
+        if self.mode == "conditions_and_effects" then
             -- Filter ongoing effects by targetDuration using the effect definition
             local targetDuration = self:try_get("targetDuration", "all")
             if targetDuration == "all" then
@@ -632,7 +635,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CollectPurgeItems(targetToken, lim
     local ongoingEffectsTable = dmhub.GetTable("characterOngoingEffects") or {}
     local items = {}
 
-    if self.mode == "conditions" and not self:try_get("includeOngoingEffects", false) then
+    if self.mode == "conditions" then
         -- Path A: conditions-only mode.
         -- Mirror CastOnTarget lines 341-403: if no conditions found, return nil (early-return preserved).
         if not targetCreature:has_key("inflictedConditions") then
@@ -707,7 +710,7 @@ function ActivatedAbilityPurgeEffectsBehavior:CollectPurgeItems(targetToken, lim
             end
         end
 
-    elseif self.mode == "conditions" and self:try_get("includeOngoingEffects", false) then
+    elseif self.mode == "conditions_and_effects" then
         -- Path B: combined mode -- mirrors CastOnTarget lines 271-339.
         local targetDuration = self:try_get("targetDuration", "all")
         local durationTable = string.split(targetDuration, "|")
@@ -1607,7 +1610,7 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
 
     end
 
-    if self.mode == "conditions" then
+    if self.mode == "conditions" or self.mode == "conditions_and_effects" then
         local conditionOptions = {}
         local conditionsTable = dmhub.GetTable(CharacterCondition.tableName)
         for k,v in unhidden_pairs(conditionsTable) do
@@ -1768,9 +1771,9 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
     }
 
     result[#result+1] = gui.Panel{
-        classes = {"formPanel", cond(self.mode ~= "conditions", "collapsed")},
+        classes = {"formPanel", cond(self.mode == "effect", "collapsed")},
         refreshPurge = function(element)
-            element:SetClass("collapsed", self.mode ~= "conditions")
+            element:SetClass("collapsed", self.mode == "effect")
         end,
         gui.Label{
             classes = "formLabel",
@@ -1799,16 +1802,6 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
         },
     }
 
-    if self.mode == "conditions" then
-        result[#result+1] = gui.Check{
-            text = "Include Ongoing Effects",
-            value = self:try_get("includeOngoingEffects", false),
-            change = function(element)
-                self.includeOngoingEffects = element.value
-                parentPanel:FireEvent("refreshBehavior")
-            end,
-        }
-    end
 
     --Future support Shwayguy
     result[#result+1] = gui.Panel{
