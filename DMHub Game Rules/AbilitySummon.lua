@@ -366,11 +366,19 @@ function ActivatedAbilitySummonBehavior:CastDuplicate(ability, casterToken, targ
             newChar:UploadToken()
             game.UpdateCharacterTokens()
             newChar:ChangeLocation(core.Loc{x = loc.x, y = loc.y})
-            coroutine.yield(0.1)
 
-            token = dmhub.GetTokenById(newCharId)
+            --wait for the token to be fully created and available on the map,
+            --following the same pattern as follower creation in DSFollower.lua.
+            for attempt = 1, 100 do
+                token = dmhub.GetTokenById(newCharId)
+                if token ~= nil then
+                    break
+                end
+                coroutine.yield(0.1)
+            end
+
             if token == nil then
-                print("DUPLICATE:: could not find spawned character token")
+                print("DUPLICATE:: timed out waiting for spawned character token")
                 goto continue_duplicate
             end
         end
@@ -436,7 +444,8 @@ function ActivatedAbilitySummonBehavior:CastDuplicate(ability, casterToken, targ
 
         token.partyid = sourceToken.partyid
 
-        summonedTokens[#summonedTokens+1] = token
+        local dupCharId = token.charid
+        summonedTokens[#summonedTokens+1] = dupCharId
 
         token:UploadToken("Duplicate Token")
         game.UpdateCharacterTokens()
@@ -448,22 +457,19 @@ function ActivatedAbilitySummonBehavior:CastDuplicate(ability, casterToken, targ
     --inject spawned duplicates into the target list so subsequent behaviors
     --can target them (e.g. to apply ongoing effects onto the duplicates).
     if #summonedTokens > 0 and args.targets ~= nil and self.duplicateTargetOrigin ~= "source" then
-        --resolve all summoned tokens, polling until they are available
+        --ensure all tokens are fully available before injecting
+        game.UpdateCharacterTokens()
+        coroutine.yield(0.2)
+        game.UpdateCharacterTokens()
+
+        --resolve all summoned tokens by charid
         local resolvedTokens = {}
-        for _,tok in ipairs(summonedTokens) do
-            local resolved = nil
-            for attempt = 1, 50 do
-                game.UpdateCharacterTokens()
-                resolved = dmhub.GetTokenById(tok.charid)
-                if resolved ~= nil then
-                    break
-                end
-                coroutine.yield(0.1)
-            end
+        for _,charid in ipairs(summonedTokens) do
+            local resolved = dmhub.GetTokenById(charid)
             if resolved ~= nil then
                 resolvedTokens[#resolvedTokens+1] = resolved
             else
-                print("DUPLICATE:: timed out resolving token for target injection", tok.charid)
+                print("DUPLICATE:: could not resolve token for target injection", charid)
             end
         end
 
@@ -489,14 +495,29 @@ function ActivatedAbilitySummonBehavior:CastDuplicate(ability, casterToken, targ
             execute = function()
                 local concentration = casterToken.properties:MostRecentConcentration()
                 local summonid = concentration:get_or_add("summonid", {})
-                for _,token in ipairs(summonedTokens) do
-                    summonid[#summonid+1] = token.charid
+                for _,charid in ipairs(summonedTokens) do
+                    summonid[#summonid+1] = charid
                 end
             end,
         }
     end
 
     game.UpdateCharacterTokens()
+    coroutine.yield(0.1)
+
+    --final re-resolution: ensure all injected targets have valid token refs
+    --before subsequent behaviors try to use them.
+    if args.targets ~= nil then
+        for _,t in ipairs(args.targets) do
+            if t.token ~= nil then
+                local fresh = dmhub.GetTokenById(t.token.charid)
+                if fresh ~= nil then
+                    t.token = fresh
+                end
+            end
+        end
+    end
+
     ability:CommitToPaying(casterToken, args)
 end
 

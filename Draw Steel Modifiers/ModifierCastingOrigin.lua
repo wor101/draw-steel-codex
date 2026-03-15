@@ -118,7 +118,7 @@ local function KeywordFilterMatches(ability, keywordFilter)
 	return not hasAnyFilter
 end
 
-local function CasterPassesCondition(casterCreature, modifier, modContext)
+local function CasterPassesCondition(casterCreature, bearerCreature, modifier, modContext)
 	local condition = modifier:try_get("filterCondition", "")
 	if condition == "" then
 		return false
@@ -130,7 +130,9 @@ local function CasterPassesCondition(casterCreature, modifier, modContext)
 	end
 
 	local symbols = modifier:try_get("_tmp_symbols", {})
-	local result = ExecuteGoblinScript(condition, casterCreature:LookupSymbol(symbols), 0, "Casting Origin: caster condition")
+	-- self = bearer (creature with the modifier), caster = creature trying to cast through the relay
+	symbols.caster = casterCreature
+	local result = ExecuteGoblinScript(condition, bearerCreature:LookupSymbol(symbols), 0, "Casting Origin: condition")
 	return result ~= 0
 end
 
@@ -147,7 +149,7 @@ function ActivatedAbility:GetCastingOriginTokens(casterToken)
 			for _, modEntry in ipairs(modifiers) do
 				if modEntry.mod.behavior == "castingorigin"
 					and KeywordFilterMatches(self, modEntry.mod.keywordFilter)
-					and CasterPassesCondition(casterToken.properties, modEntry.mod, modEntry) then
+					and CasterPassesCondition(casterToken.properties, tok.properties, modEntry.mod, modEntry) then
 					result[#result+1] = tok
 					break
 				end
