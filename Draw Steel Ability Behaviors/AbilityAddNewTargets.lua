@@ -28,44 +28,73 @@ ActivatedAbilityAddNewTargetsBehavior.targetMode = 'add'
 function ActivatedAbilityAddNewTargetsBehavior:Cast(ability, casterToken, targets, options)
 	ability:CommitToPaying(casterToken, options)
 
-	local targetingAbility = self.targetingAbility:MakeTemporaryClone()
-	targetingAbility.countsAsCast = false
-	targetingAbility.skippable = true
-
-	if self.promptText ~= '' then
-		targetingAbility.promptOverride = StringInterpolateGoblinScript(self.promptText, casterToken.properties:LookupSymbol{})
-	end
-
-	-- Add a single instant behavior that captures the chosen targets via closure.
-	local capturedTargets = nil
-
-	local captureBehavior = ActivatedAbilityBehavior.new{
-		instant = true,
-	}
-	captureBehavior.Cast = function(behaviorSelf, captureAbility, captureCasterToken, captureTargets, captureOptions)
-		capturedTargets = captureTargets or {}
-	end
-
-	targetingAbility.behaviors = { captureBehavior }
-
 	local symbols = options.symbols or {}
 
-	-- Use ExecuteInvoke which properly handles the action bar invoke lifecycle:
-	ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(casterToken, targetingAbility, casterToken, "prompt", symbols, {})
+	-- Build the list of origin tokens to invoke targeting from.
+	-- Each target from applyto becomes an origin (e.g. burst centered on it).
+	-- If no targets, fall back to the caster.
+	local originTokens = {}
+	if targets ~= nil and #targets > 0 then
+		for _, target in ipairs(targets) do
+			if target.token ~= nil then
+				originTokens[#originTokens+1] = target.token
+			end
+		end
+	end
+	if #originTokens == 0 then
+		originTokens[1] = casterToken
+	end
+
+	-- Invoke targeting once per origin token, accumulating all captured targets.
+	local allCapturedTargets = {}
+
+	for _, originToken in ipairs(originTokens) do
+		-- Add a single instant behavior that captures the chosen targets via closure.
+		-- Functions survive DeepCopy by reference, so the closure is shared with
+		-- the action bar's cloned copy of the ability.
+		local capturedTargets = nil
+
+		local captureBehavior = ActivatedAbilityBehavior.new{
+			instant = true,
+		}
+		captureBehavior.Cast = function(behaviorSelf, captureAbility, captureCasterToken, captureTargets, captureOptions)
+			capturedTargets = captureTargets or {}
+		end
+
+		-- Fresh clone each iteration so the action bar gets a clean ability.
+		local invokeAbility = self.targetingAbility:MakeTemporaryClone()
+		invokeAbility.countsAsCast = false
+		invokeAbility.skippable = true
+		invokeAbility.behaviors = { captureBehavior }
+
+		if self.promptText ~= '' then
+			invokeAbility.promptOverride = StringInterpolateGoblinScript(self.promptText, casterToken.properties:LookupSymbol{})
+		end
+
+		-- Pass originToken as caster so the action bar centers targeting
+		-- (bursts, areas, etc.) on that token's position.
+		ActivatedAbilityInvokeAbilityBehavior.ExecuteInvoke(originToken, invokeAbility, originToken, "prompt", symbols, {})
+
+		if capturedTargets ~= nil then
+			for _, t in ipairs(capturedTargets) do
+				allCapturedTargets[#allCapturedTargets+1] = t
+			end
+		end
+	end
 
 	-- Merge or replace targets based on targetMode.
-	if capturedTargets ~= nil and #capturedTargets > 0 and options.targets ~= nil then
+	if #allCapturedTargets > 0 and options.targets ~= nil then
 		if self.targetMode == 'replace' then
 			-- Clear existing targets and replace with new ones.
 			for i = #options.targets, 1, -1 do
 				options.targets[i] = nil
 			end
-			for _, newTarget in ipairs(capturedTargets) do
+			for _, newTarget in ipairs(allCapturedTargets) do
 				options.targets[#options.targets + 1] = newTarget
 			end
 		else
 			-- Add new targets to the existing list.
-			for _, newTarget in ipairs(capturedTargets) do
+			for _, newTarget in ipairs(allCapturedTargets) do
 				local isDuplicate = false
 				if not self:try_get("allowDuplicates", false) then
 					for _, existingTarget in ipairs(options.targets) do
