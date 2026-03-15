@@ -447,30 +447,40 @@ function ActivatedAbilitySummonBehavior:CastDuplicate(ability, casterToken, targ
 
     --inject spawned duplicates into the target list so subsequent behaviors
     --can target them (e.g. to apply ongoing effects onto the duplicates).
-    if #summonedTokens > 0 and args.targets ~= nil then
-        game.UpdateCharacterTokens()
+    if #summonedTokens > 0 and args.targets ~= nil and self.duplicateTargetOrigin ~= "source" then
+        --resolve all summoned tokens, polling until they are available
+        local resolvedTokens = {}
+        for _,tok in ipairs(summonedTokens) do
+            local resolved = nil
+            for attempt = 1, 50 do
+                game.UpdateCharacterTokens()
+                resolved = dmhub.GetTokenById(tok.charid)
+                if resolved ~= nil then
+                    break
+                end
+                coroutine.yield(0.1)
+            end
+            if resolved ~= nil then
+                resolvedTokens[#resolvedTokens+1] = resolved
+            else
+                print("DUPLICATE:: timed out resolving token for target injection", tok.charid)
+            end
+        end
 
         if self.duplicateTargetOrigin == "duplicate" then
             --replace all existing targets with the duplicates
             for i = #args.targets, 1, -1 do
                 args.targets[i] = nil
             end
-            for _,tok in ipairs(summonedTokens) do
-                local resolved = dmhub.GetTokenById(tok.charid)
-                if resolved ~= nil then
-                    args.targets[#args.targets+1] = {token = resolved, loc = resolved.loc}
-                end
+            for _,resolved in ipairs(resolvedTokens) do
+                args.targets[#args.targets+1] = {token = resolved, loc = resolved.loc}
             end
         elseif self.duplicateTargetOrigin == "both" then
             --keep existing targets and add the duplicates
-            for _,tok in ipairs(summonedTokens) do
-                local resolved = dmhub.GetTokenById(tok.charid)
-                if resolved ~= nil then
-                    args.targets[#args.targets+1] = {token = resolved, loc = resolved.loc}
-                end
+            for _,resolved in ipairs(resolvedTokens) do
+                args.targets[#args.targets+1] = {token = resolved, loc = resolved.loc}
             end
         end
-        --if "source", leave args.targets unchanged
     end
 
     if ability:RequiresConcentration() and casterToken.properties:HasConcentration() then
