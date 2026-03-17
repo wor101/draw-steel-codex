@@ -1878,7 +1878,7 @@ function TacPanel.VictoriesBox()
                     local token = element.data.token
                     if token == nil then return end
                     local n = math.max(0, round(tonumber(element.text) or 0))
-                    if n ~= nil and n ~= token.properties:GetVictories() then
+                    if n ~= token.properties:GetVictories() then
                         token:ModifyProperties{
                             description = "Set Victories",
                             execute = function()
@@ -1886,6 +1886,8 @@ function TacPanel.VictoriesBox()
                                 element.text = string.format("%d", token.properties:GetVictories())
                             end,
                         }
+                    else
+                        element.text = string.format("%d", token.properties:GetVictories())
                     end
                 end,
                 refreshValue = function(element, token)
@@ -2405,7 +2407,24 @@ function TacPanel.StaminaBox()
             gui.Label{
                 classes = {"stambox-stam", "current"},
                 text = "0",
+                editable = true,
+                numeric = true,
+                data = {
+                    token = nil,
+                },
+                change = function(element)
+                    local token = element.data.token
+                    if token ~= nil and token.valid and token.properties ~= nil then
+                        token:ModifyProperties{
+                            description = "Set Stamina",
+                            execute = function()
+                                token.properties:SetCurrentHitpoints(element.text)
+                            end,
+                        }
+                    end
+                end,
                 refreshValue = function(element, token)
+                    element.data.token = token
                     local text = tostring(token.properties:CurrentHitpoints())
                     element.selfStyle.fontSize = _fitFontSize(TacPanelSizes.Fonts.currentStamina, 3, #text)
                     element.text = text
