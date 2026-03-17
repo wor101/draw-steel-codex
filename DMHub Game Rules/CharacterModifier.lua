@@ -2100,7 +2100,9 @@ CharacterModifier.TypeInfo.transform = {
 	RefreshGameState = function(creature, self)
 		if creature:has_key("transformInfo") then
 			local monsterInfo = assets.monsters[creature.transformInfo.transformid]
-			creature._tmp_appearance = monsterInfo.appearance
+			if self:try_get("gainCreatureVisuals") ~= false then
+				creature._tmp_appearance = monsterInfo.appearance
+			end
 			creature._tmp_creaturesize = monsterInfo.info.creatureSize
 		end
 	end,
@@ -2293,6 +2295,10 @@ CharacterModifier.TypeInfo.transform = {
 
 			local capabilities = {
 				{
+					id = "gainCreatureVisuals",
+					text = "Gain Creature Visuals",
+				},
+				{
 					id = "overrideMovement",
 					text = "Override Movement",
 				},
@@ -2345,6 +2351,7 @@ CharacterModifier.StandardModifiers.TransformIntoBeast = CharacterModifier.new{
 	name = "Transformation",
 	source = "Transformation",
 	description = "You are transformed into a different creature",
+	gainCreatureVisuals = true,
 	attributes = {
 		str = true,
 		dex = true,
