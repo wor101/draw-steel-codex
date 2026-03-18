@@ -2361,11 +2361,12 @@ function TacPanel.TempStamBox()
                         end,
                     }
                 end
+                element:FireEvent("deselect")
             end,
-            deselect = function(element)
+            defocus = function(element)
                 element.placeholderText = placeholder
             end,
-            select = function(element)
+            focus = function(element)
                 element.placeholderText = ""
             end,
             refreshCharacter = function(element, token)
