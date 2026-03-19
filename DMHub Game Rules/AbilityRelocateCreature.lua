@@ -279,6 +279,7 @@ function ActivatedAbilityRelocateCreatureBehavior:Cast(ability, casterToken, tar
                     end
                 end
                 print("TRIGGERCOLLIDE:: objects =", #objectsCollidedWith, collisionInfo.speed, withobject, collisionInfo.collideWith)
+                casterToken.properties._tmp_forcedMovementCast = options.symbols.cast
 				casterToken.properties:TriggerEvent("collide", {
 					speed = collisionInfo.speed,
                     withobject = withobject,
@@ -300,6 +301,7 @@ function ActivatedAbilityRelocateCreatureBehavior:Cast(ability, casterToken, tar
                 end
 
 				for _,tok in ipairs(collisionInfo.collideWith or {}) do
+                    tok.properties._tmp_forcedMovementCast = options.symbols.cast
 					tok.properties:TriggerEvent("collide", {
 						speed = collisionInfo.speed,
                         withobject = withobject,

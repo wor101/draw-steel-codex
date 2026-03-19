@@ -3411,6 +3411,13 @@ function creature.TakeDamage(self, amount, note, info)
         sound = info.damagesound,
     }
 
+    if info.damagetype == "collide" then
+        local forcedMovementCast = self:try_get("_tmp_forcedMovementCast")
+        if forcedMovementCast ~= nil then
+            forcedMovementCast:CountForcedMovementDamage(amount)
+        end
+    end
+
     if self.minion then
         if info.keywords ~= nil and info.keywords:Has("area") then
             --area damage can't do more than a single minion's max hitpoints.

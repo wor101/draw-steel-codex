@@ -21,6 +21,7 @@ local mod = dmhub.GetModLoading()
 --- @field tokenToTier table
 --- @field inflictedConditions table
 --- @field retargets table
+--- @field forcedMovementDamageDealt number
 --- @field forcedMovementPaths table
 --- @field forcedMovementCreatureIds table
 --- @field ability ActivatedAbility
@@ -45,6 +46,7 @@ ActivatedAbilityCast.opportunityAttacksTriggered = 0
 ActivatedAbilityCast.targets = {}
 ActivatedAbilityCast.auraObject = false
 ActivatedAbilityCast.forcedMovementCollision = false
+ActivatedAbilityCast.forcedMovementDamageDealt = 0
 
 --a table of custom memory for this cast.
 ActivatedAbilityCast.memory = false
@@ -240,6 +242,13 @@ ActivatedAbilityCast.helpSymbols = {
         name = "Forced Movement Creature Count",
         type = "number",
         desc = "The number of unique creatures that were actually force moved by this ability (excludes creatures that resisted due to stability or could not be moved).",
+    },
+
+    forcedmovementdamagedealt = {
+        name = "Forced Movement Damage Dealt",
+        type = "number",
+        desc = "The amount of damage dealt by forced movement collisions while using this ability.",
+        examples = {"Forced Movement Damage Dealt > 0"},
     },
 }
 
@@ -469,6 +478,10 @@ ActivatedAbilityCast.lookupSymbols = {
         end
         return count
     end,
+
+    forcedmovementdamagedealt = function(c)
+        return c.forcedMovementDamageDealt
+    end,
 }
 
 --- @param tokenid string
@@ -553,6 +566,10 @@ function ActivatedAbilityCast:CountDamage(targetToken, damageDealt, damageRaw)
 	self.damageTable[targetToken.charid] = self.damageTable[targetToken.charid] or { dealt = 0, raw = 0 }
 	self.damageTable[targetToken.charid].dealt = self.damageTable[targetToken.charid].dealt + damageDealt
 	self.damageTable[targetToken.charid].raw = self.damageTable[targetToken.charid].raw + damageRaw
+end
+
+function ActivatedAbilityCast:CountForcedMovementDamage(damageDealt)
+	self.forcedMovementDamageDealt = self.forcedMovementDamageDealt + damageDealt
 end
 
 function ActivatedAbilityCast:AddParam(args)
