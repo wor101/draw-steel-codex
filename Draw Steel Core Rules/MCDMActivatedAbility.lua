@@ -407,6 +407,17 @@ RegisterGoblinScriptSymbol(ActivatedAbility, {
     end,
 })
 
+RegisterGoblinScriptSymbol(ActivatedAbility, {
+    name = "Strain",
+    type = "boolean",
+    desc = "Returns true if this ability can cause strain.",
+    seealso = { "action" },
+    calculate = function(c)
+        return c:try_get("strain", {}).enabled
+    end,
+
+})
+
 function ActivatedAbility:HasAttack()
     return self:HasKeyword("Strike")
 end
