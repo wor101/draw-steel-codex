@@ -411,9 +411,40 @@ RegisterGoblinScriptSymbol(ActivatedAbility, {
     name = "Strain",
     type = "boolean",
     desc = "Returns true if this ability can cause strain.",
-    seealso = { "action" },
     calculate = function(c)
         return c:try_get("strain", {}).enabled
+    end,
+
+})
+
+RegisterGoblinScriptSymbol(ActivatedAbility, {
+    name = "Strain Damage",
+    type = "number",
+    desc = "Returns the amount of damage this ability causes to the caster when strained.",
+    calculate = function(c)
+        local behaviors = c:try_get("behaviors", {})
+        for _, behavior in ipairs(behaviors) do
+            if behavior.typeName == "ActivatedAbilityDamageBehavior" and behavior:try_get("strainSelection", "") == "strained" then
+                return behavior:try_get("roll", 0)
+            end
+        end
+        return 0
+    end,
+
+})
+
+RegisterGoblinScriptSymbol(ActivatedAbility, {
+    name = "Strain Damage Type",
+    type = "string",
+    desc = "Returns the type of damage this ability causes to the caster when strained.",
+    calculate = function(c)
+        local behaviors = c:try_get("behaviors", {})
+        for _, behavior in ipairs(behaviors) do
+            if behavior.typeName == "ActivatedAbilityDamageBehavior" and behavior:try_get("strainSelection", "") == "strained" then
+                return behavior:try_get("damageType", "untyped")
+            end
+        end
+        return "untyped"
     end,
 
 })
