@@ -313,6 +313,57 @@ function Class:CustomEditor(UploadFn, children)
     print("CLASS:: CUSTOM")
     if not self.isSubclass then
     print("CLASS:: CUSTOM IS SUB")
+
+        -- Class Color
+        children[#children+1] = gui.Panel{
+            width = "auto",
+            height = "auto",
+            flow = "horizontal",
+            gui.Label{
+                fontSize = 22,
+                text = "Class Color:",
+                minWidth = 240,
+            },
+            gui.ColorPicker{
+                value = self:try_get("classColor", "#ffffffff"),
+                width = 24,
+                height = 24,
+                halign = "left",
+                valign = "center",
+                borderWidth = 2,
+                borderColor = "#999999ff",
+                confirm = function(element)
+                    self.classColor = element.value
+                    UploadFn()
+                end,
+            },
+        }
+
+        -- Heroic Resource Icon
+        children[#children+1] = gui.Panel{
+            width = "auto",
+            height = "auto",
+            flow = "horizontal",
+            gui.Label{
+                fontSize = 22,
+                valign = "center",
+                text = "Heroic Resource Icon:",
+                minWidth = 240,
+            },
+            gui.IconEditor{
+                library = "abilities",
+                bgcolor = self:try_get("classColor", "#ffffffff"),
+                width = 64,
+                height = 64,
+                halign = "left",
+                value = self:try_get("heroicResourceIcon", ""),
+                change = function(element)
+                    self.heroicResourceIcon = element.value
+                    UploadFn()
+                end,
+            },
+        }
+
         children[#children+1] = gui.Panel{
             width = "auto",
             height = "auto",
