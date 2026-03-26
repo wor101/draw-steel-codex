@@ -19,7 +19,7 @@ local g_refreshChecklistName = {
 -- Commonly used colors
 local GRAY02 = "#666663"
 local RICH_BLACK = "#040807"
-local PANEL = "#0b0f0d"
+local TEAL_BLACK = "#0b0f0d"
 local GOLD = "#966D4B"
 local GOLD_LIGHT = "#C49A5A"
 local GOLD_DARK_BG = "#140d00"
@@ -148,7 +148,7 @@ TacPanelStyles.TacPanel = {
     },
     {
         selectors = {"panel", "tacpanel", "alt-bg"},
-        bgcolor = PANEL,
+        bgcolor = TEAL_BLACK,
     },
     {
         selectors = {"panel", "container"},
