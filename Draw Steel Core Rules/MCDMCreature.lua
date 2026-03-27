@@ -2270,14 +2270,14 @@ function creature:GetActivatedAbilities(options)
         end
     end
 
-    for i, aura in ipairs(self:try_get("auras", {})) do
+    --for i, aura in ipairs(self:try_get("auras", {})) do
         --aura:FillActivatedAbilities(self, result)
-    end
+    --end
 
     if options.manualTriggers then
         local triggeredAbilities = self:GetTriggeredAbilities()
         for i, trigger in ipairs(triggeredAbilities) do
-            if trigger.ability:try_get("hasManualVersion", false) and not trigger.ability:IsLocalOnly() then
+            if trigger.ability:try_get("hasManualVersion", false) and trigger.ability:try_get("mandatory") ~= "local" then
                 --- @type TriggeredAbility
                 local ability = trigger.ability:GenerateManualVersion()
                 result[#result + 1] = ability
