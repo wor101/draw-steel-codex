@@ -29,6 +29,7 @@
 CBFeatureSelector = RegisterGameType("CBFeatureSelector")
 
 local SELECT_MODES = {SELECT = "SELECT", REMOVE = "REMOVE"}
+local EMPTY_SLOT_TEXT = "Unassigned"
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _functionOrValue = CharacterBuilder._functionOrValue
@@ -230,7 +231,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 end
 
                 local option = element.data.option
-                local name = option and option:GetName() or "Empty Slot"
+                local name = option and option:GetName() or EMPTY_SLOT_TEXT
                 if cachedFeature and option then
                     name = cachedFeature:GetOptionDisplayName(option)
                 end
@@ -284,7 +285,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 },
                 gui.Label{
                     classes = {"builder-base", "label", "feature-target"},
-                    text = "Empty Slot",
+                    text = EMPTY_SLOT_TEXT,
                     updateName = function(element, text)
                         if element.text ~= text then element.text = text end
                     end,
