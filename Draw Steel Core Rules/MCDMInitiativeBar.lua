@@ -1246,6 +1246,29 @@ function GameHud.CreateInitiativeBar(self, info)
                                 return
                             end
 
+							if info.initiativeQueue.gameMode == "downtime" then
+								local settings = DTSettings.CreateNew()
+								if settings then
+									settings:SetPauseRolls(false)
+								end
+								for _, token in pairs(dmhub.GetTokens({playerControlled = true})) do
+									token.properties:DispatchEvent("startdowntime", {})
+								end
+							else
+								local settings = DTSettings.CreateNew()
+								if settings then
+									settings:SetPauseRolls(true)
+								end
+							end
+
+							if info.initiativeQueue.gameMode == "respite" then
+								for _, token in pairs(dmhub.GetTokens({playerControlled = true})) do
+									token.properties:DispatchEvent("startrespite", {})
+								end
+							end
+							
+							
+
                         end,
                     }
                 end

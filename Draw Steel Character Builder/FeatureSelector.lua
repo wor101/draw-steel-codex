@@ -29,6 +29,7 @@
 CBFeatureSelector = RegisterGameType("CBFeatureSelector")
 
 local SELECT_MODES = {SELECT = "SELECT", REMOVE = "REMOVE"}
+local EMPTY_SLOT_TEXT = "Unassigned"
 
 local _fireControllerEvent = CharacterBuilder._fireControllerEvent
 local _functionOrValue = CharacterBuilder._functionOrValue
@@ -230,7 +231,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 end
 
                 local option = element.data.option
-                local name = option and option:GetName() or "Empty Slot"
+                local name = option and option:GetName() or EMPTY_SLOT_TEXT
                 if cachedFeature and option then
                     name = cachedFeature:GetOptionDisplayName(option)
                 end
@@ -284,7 +285,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 },
                 gui.Label{
                     classes = {"builder-base", "label", "feature-target"},
-                    text = "Empty Slot",
+                    text = EMPTY_SLOT_TEXT,
                     updateName = function(element, text)
                         if element.text ~= text then element.text = text end
                     end,
@@ -477,7 +478,24 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 local state = _getState()
                 if state == nil then return end
                 local blockSel = state:Get(selector .. ".blockFeatureSelection") == true
-                if blockSel then return end
+                if blockSel then
+                    local selectedItem = state:Get(selector .. ".selectedItem")
+                    if selectedItem == nil then return end
+
+                    local selectorName = CharacterBuilder._ucFirst(selector)
+                    local controller = CharacterBuilder._getController()
+                    if controller then
+                        controller:AddChild(CharacterBuilder._confirmDialog{
+                            title = string.format("Apply %s", selectorName),
+                            message = string.format("Set your %s to %s?", selectorName, selectedItem.name),
+                            onConfirm = function()
+                                _fireControllerEvent("applyCurrent" .. selectorName)
+                                element:FireEvent("selectItem")
+                            end,
+                        })
+                    end
+                    return
+                end
 
                 local cachedFeature = getCachedFeature(state, element.data.featureId)
                 if cachedFeature == nil then return end

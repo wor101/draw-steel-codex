@@ -2473,3 +2473,23 @@ Commands.RegisterMacro{
         end
     end,
 }
+
+Commands.RegisterMacro{
+    name = "opensheet",
+    summary = "Open Character Sheet",
+    doc = "Usage: /opensheet\nOpens the character sheet. Opens specific tab, when given",
+    command = function(str)
+        print("Opening character sheet...", str)
+        local selected = dmhub.selectedTokens
+        if #selected == 0 then
+            return
+        end
+
+        local token = selected[1]
+        if token.properties == nil then
+            return
+        end
+
+        token:ShowSheet(str)
+    end,
+}
