@@ -1696,6 +1696,11 @@ local function ActionSubMenu(args)
                 table.sort(abilities, function(a,b) return a:try_get("villainAction","") < b:try_get("villainAction","") end)
             else
                 table.sort(abilities, function(a, b)
+                    local costA = GetHeroicResourceOrMaliceCost(a) or 0
+                    local costB = GetHeroicResourceOrMaliceCost(b) or 0
+                    if costA ~= costB then
+                        return costA < costB
+                    end
                     return a.name < b.name
                 end)
             end
