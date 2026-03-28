@@ -2344,11 +2344,14 @@ function creature:GetActivatedAbilities(options)
     if options.manualTriggers then
         local triggeredAbilities = self:GetTriggeredAbilities()
         for i, trigger in ipairs(triggeredAbilities) do
-            if trigger.ability:try_get("hasManualVersion", false) and trigger.ability:try_get("mandatory") ~= "local" then
-                --- @type TriggeredAbility
-                local ability = trigger.ability:GenerateManualVersion()
-                result[#result + 1] = ability
+            local ability
+            if trigger.ability.typeName == "ActivatedAbility" then
+                ability = DeepCopy(trigger.ability)
+                ability._tmp_temporaryClone = true
+            elseif trigger.ability:try_get("hasManualVersion", false) and not trigger.ability:IsLocalOnly() then
+                ability = trigger.ability:GenerateManualVersion()
             end
+            result[#result + 1] = ability
         end
     end
 

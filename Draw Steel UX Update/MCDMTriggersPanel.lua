@@ -379,7 +379,13 @@ local function RenderTriggerCard(triggerDisplay, caster, collapsedSet, manualAbi
 					if gamehud.actionBarPanel.data.IsCastingSpell() then
 						return
 					end
-					local ability = manualAbilityEntry.ability:GenerateManualVersion()
+					local ability
+					if manualAbilityEntry.ability.typeName == "ActivatedAbility" then
+						ability = DeepCopy(manualAbilityEntry.ability)
+						ability._tmp_temporaryClone = true
+					else
+						ability = manualAbilityEntry.ability:GenerateManualVersion()
+					end
 					gamehud.actionBarPanel:FireEventTree("invokeAbility", token, ability, {})
 				end,
 			},
@@ -522,9 +528,9 @@ function CreateTriggersPanel()
 		local manualAbilities = {}
 		local triggeredAbilities = creature:GetTriggeredAbilities()
 		for _, entry in ipairs(triggeredAbilities) do
-			local hasManual = entry.ability:try_get("hasManualVersion", false)
-			local mandatory = entry.ability:try_get("mandatory")
-			if hasManual and mandatory ~= "local" then
+			if entry.ability.typeName == "ActivatedAbility" then
+				manualAbilities[string.lower(entry.ability.name)] = entry
+			elseif entry.ability:try_get("hasManualVersion", false) and not entry.ability:IsLocalOnly() then
 				manualAbilities[string.lower(entry.ability.name)] = entry
 			end
 		end
