@@ -1167,6 +1167,30 @@ TacPanelStyles.Notes = {
       fontSize = TacPanelSizes.Fonts.skillsLangs,
       color = CREAM },
 }
+TacPanelStyles.CollapsibleEntry = {
+    -- Outer entry panel: horizontal so arrow + text sit side by side
+    { selectors = {"panel", "ce-entry"},
+      width = "94%", height = "auto",
+      halign = "left", valign = "top",
+      flow = "horizontal",
+      tmargin = 4, lmargin = 6 },
+    -- Collapse arrow (left side, top-aligned with first line of text)
+    { selectors = {"ce-expando"},
+      halign = "left", valign = "top",
+      tmargin = 3,
+      color = DIM },
+    -- Text label (expanded: CREAM base with inline color markup for title)
+    { selectors = {"label", "ce-text"},
+      width = "100%-20", height = "auto",
+      halign = "left", valign = "top",
+      lmargin = 4,
+      fontFace = "Berling",
+      fontSize = TacPanelSizes.Fonts.skillsLangs,
+      color = CREAM },
+    -- Text label (collapsed: title only, MUTED)
+    { selectors = {"label", "ce-text", "ce-collapsed"},
+      color = MUTED },
+}
 TacPanelStyles.MultiEdit = {
     -- Row containers
     { selectors = {"panel", "me-actions"},
@@ -3939,6 +3963,96 @@ function TacPanel.CollapsiblePanel(args)
     return panel
 end
 
+--- Build a single collapsible entry with a left-side expando arrow.
+--- Single label uses one format string for both states.
+--- @param args table {entryKey, entryId, charid, title, body, color, classes?}
+--- @return Panel
+function TacPanel.CollapsibleEntry(args)
+    local entryKey     = args.entryKey
+    local entryId      = args.entryId
+    local charid       = args.charid
+    local title        = args.title
+    local body         = args.body
+    local color        = args.color or MUTED
+    local extraClasses = args.classes or {}
+
+    local prefKey = string.format("ce:%s:%s:%s", entryKey, charid or "default", entryId or "")
+    local saved = dmhub.GetPref(prefKey)
+    local collapsed = saved ~= "open"  -- default collapsed
+
+    local classes = {"ce-entry"}
+    for _, c in ipairs(extraClasses) do
+        classes[#classes + 1] = c
+    end
+
+    local entry = gui.Panel{
+        styles = TacPanelStyles.CollapsibleEntry,
+        classes = classes,
+        data = {
+            collapsed = collapsed, prefKey = prefKey,
+            title = title, body = body, color = color,
+            formatText = function(d, isCollapsed)
+                return string.format("**<color=%s>%s%s</color>** %s",
+                    d.color, d.title, isCollapsed and "" or ":", isCollapsed and "" or d.body)
+            end,
+        },
+        press = function(element)
+            element.data.collapsed = not element.data.collapsed
+            local newState = element.data.collapsed
+            element:FireEventTree("setCollapse", newState)
+            if newState then
+                dmhub.SetPref(element.data.prefKey, nil)
+            else
+                dmhub.SetPref(element.data.prefKey, "open")
+            end
+        end,
+        rightClick = function(element)
+            local d = element.data
+            local fullText = d:formatText(false)
+            element.popup = gui.ContextMenu{
+                entries = {
+                    {
+                        text = "Copy to Clipboard",
+                        click = function()
+                            dmhub.CopyToClipboard(fullText)
+                            element.popup = nil
+                        end,
+                    },
+                    {
+                        text = "Show in Chat",
+                        click = function()
+                            chat.Send(fullText)
+                            element.popup = nil
+                        end,
+                    },
+                },
+            }
+        end,
+        gui.CollapseArrow{
+            classes = {"ce-expando"},
+            width = 10,
+            height = 10,
+            setCollapse = function(element, isCollapsed)
+                element:SetClass("collapseSet", isCollapsed)
+            end,
+        },
+        gui.Label{
+            classes = {"ce-text"},
+            textWrap = true,
+            markdown = true,
+            text = "",
+            setCollapse = function(element, isCollapsed)
+                local d = element.parent.data
+                element:SetClass("ce-collapsed", isCollapsed)
+                element.text = d:formatText(isCollapsed)
+            end,
+        },
+    }
+
+    entry:FireEventTree("setCollapse", collapsed)
+    return entry
+end
+
 --- Display the Routines panel
 --- @return Panel
 function TacPanel.Routines()
@@ -4357,14 +4471,12 @@ function TacPanel.Features()
                 local implemented = DrawSteelMinion.GetWithCaptainEffect(creature.withCaptain) ~= nil
                 local implementedColor = cond(implemented, "#ff", "#55")
 
-                labels[#labels+1] = gui.Label{
-                    classes = {"note-entry"},
-                    textWrap = true,
-                    markdown = true,
-                    text = string.format(
-                        "**<color=%s>With Captain:</color>** <alpha=%s>%s",
-                        MUTED, implementedColor, creature.withCaptain
-                    ),
+                labels[#labels+1] = TacPanel.CollapsibleEntry{
+                    entryKey = "features",
+                    entryId  = "withCaptain",
+                    charid   = token.charid,
+                    title    = "With Captain",
+                    body     = string.format("<alpha=%s>%s", implementedColor, creature.withCaptain),
                 }
             end
 
@@ -4372,17 +4484,12 @@ function TacPanel.Features()
             if features ~= nil then
                 for _, feature in ipairs(features) do
                     if feature.description ~= "" then
-                        local implemented = feature:try_get("implementation", 1) ~= 1
-                        local implementedColor = cond(implemented, "#ff", "#55")
-
-                        labels[#labels+1] = gui.Label{
-                            classes = {"note-entry"},
-                            textWrap = true,
-                            markdown = true,
-                            text = string.format(
-                                "**<color=%s>%s:</color>** <alpha=%s>%s",
-                                MUTED, feature.name, implementedColor, feature.description
-                            ),
+                        labels[#labels+1] = TacPanel.CollapsibleEntry{
+                            entryKey = "features",
+                            entryId  = feature.name,
+                            charid   = token.charid,
+                            title    = feature.name,
+                            body     = feature.description,
                         }
                     end
                 end
@@ -4455,22 +4562,21 @@ function TacPanel.Notes()
 
             element:SetClass("collapsed", false)
 
-            -- Rebuild note labels into the content container
-            local noteLabels = {}
+            -- Rebuild note entries (collapsible) into the content container
+            local charid = token.charid
+            local noteEntries = {}
             for _, note in ipairs(notes) do
                 if note.text ~= nil and note.text ~= "" then
-                    noteLabels[#noteLabels+1] = gui.Label{
-                        classes = {"note-entry"},
-                        textWrap = true,
-                        markdown = true,
-                        text = string.format(
-                            "**<color=%s>%s:</color>** %s",
-                            MUTED, note.title, note.text
-                        ),
+                    noteEntries[#noteEntries+1] = TacPanel.CollapsibleEntry{
+                        entryKey = "notes",
+                        entryId  = note.title,
+                        charid   = charid,
+                        title    = note.title,
+                        body     = note.text,
                     }
                 end
             end
-            element:FireEventTree("setContent", noteLabels)
+            element:FireEventTree("setContent", noteEntries)
         end,
         refreshToken = function(element, token)
             element:FireEvent("refreshCharacter", token)
