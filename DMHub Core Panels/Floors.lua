@@ -1,5 +1,16 @@
 local mod = dmhub.GetModLoading()
 
+local function track(eventType, fields)
+	if dmhub.GetSettingValue("telemetry_enabled") == false then
+		return
+	end
+	fields.type = eventType
+	fields.userid = dmhub.userid
+	fields.gameid = dmhub.gameid
+	fields.version = dmhub.version
+	analytics.Event(fields)
+end
+
 local CreateLayersPanel
 
 DockablePanel.Register{
@@ -9,6 +20,10 @@ DockablePanel.Register{
 	vscroll = false,
 	dmonly = true,
 	content = function()
+		track("panel_open", {
+			panel = "Floors & Layers",
+			dailyLimit = 30,
+		})
 		return CreateLayersPanel()
 	end,
 }

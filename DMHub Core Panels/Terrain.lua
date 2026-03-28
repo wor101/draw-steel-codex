@@ -1,5 +1,16 @@
 local mod = dmhub.GetModLoading()
 
+local function track(eventType, fields)
+	if dmhub.GetSettingValue("telemetry_enabled") == false then
+		return
+	end
+	fields.type = eventType
+	fields.userid = dmhub.userid
+	fields.gameid = dmhub.gameid
+	fields.version = dmhub.version
+	analytics.Event(fields)
+end
+
 local CreateTerrainEditor
 local CreateBuildingEditor
 
@@ -11,6 +22,10 @@ DockablePanel.Register{
 	minHeight = 200,
 	folder = "Map Editing",
 	content = function()
+		track("panel_open", {
+			panel = "Terrain Editor",
+			dailyLimit = 30,
+		})
 		return CreateTerrainEditor{
 			title = "Terrain",
 			layer = "terrain",
@@ -28,6 +43,10 @@ DockablePanel.Register{
 	minHeight = 200,
 	folder = "Map Editing",
 	content = function()
+		track("panel_open", {
+			panel = "Effects Editor",
+			dailyLimit = 30,
+		})
 		return CreateTerrainEditor{
 			title = "Effects",
 			layer = "effects",
@@ -44,6 +63,10 @@ DockablePanel.Register{
 	minHeight = 200,
 	folder = "Map Editing",
 	content = function()
+		track("panel_open", {
+			panel = "Building Editor",
+			dailyLimit = 30,
+		})
 		return CreateBuildingEditor()
 	end,
 }

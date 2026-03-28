@@ -28,6 +28,17 @@
 ]]
 CBFeatureSelector = RegisterGameType("CBFeatureSelector")
 
+local function track(eventType, fields)
+    if dmhub.GetSettingValue("telemetry_enabled") == false then
+        return
+    end
+    fields.type = eventType
+    fields.userid = dmhub.userid
+    fields.gameid = dmhub.gameid
+    fields.version = dmhub.version
+    analytics.Event(fields)
+end
+
 local SELECT_MODES = {SELECT = "SELECT", REMOVE = "REMOVE"}
 local EMPTY_SLOT_TEXT = "Unassigned"
 
@@ -626,6 +637,13 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 if cachedFeature then
                     local actionComplete = cachedFeature:SaveSelection(hero, option)
                     if actionComplete then
+                        track("builder_selection", {
+                            featureId = element.data.featureId,
+                            optionId = option:GetGuid(),
+                            optionName = option:GetName(),
+                            isFinal = true,
+                            dailyLimit = 20,
+                        })
                         _fireControllerEvent("tokenDataChanged")
                     end
                 end
@@ -639,6 +657,12 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 if cachedFeature then
                     local actionComplete = cachedFeature:RemoveSelection(hero, option)
                     if actionComplete then
+                        track("ability_respec", {
+                            featureId = element.data.featureId,
+                            removedOptionId = option:GetGuid(),
+                            removedOptionName = option:GetName(),
+                            dailyLimit = 10,
+                        })
                         _fireControllerEvent("tokenDataChanged")
                     end
                 end
@@ -650,6 +674,13 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 local cachedFeature = getCachedFeature(state, element.data.featureId)
                 if cachedFeature then
                     if cachedFeature:SetSelectedOption(itemId) then
+                        local option = cachedFeature:GetOption(itemId)
+                        track("builder_ability_view", {
+                            featureId = element.data.featureId,
+                            optionId = itemId,
+                            optionName = option and option:GetName() or nil,
+                            dailyLimit = 20,
+                        })
                         element:FireEventTree("setSelectMode", SELECT_MODES.SELECT)
                         element:FireEventTree("refreshBuilderState", state)
                     end

@@ -15,6 +15,17 @@ if g_directlyLaunchingGame then
     return
 end
 
+local function track(eventType, fields)
+    if dmhub.GetSettingValue("telemetry_enabled") == false then
+        return
+    end
+    fields.type = eventType
+    fields.userid = dmhub.userid
+    fields.gameid = dmhub.gameid
+    fields.version = dmhub.version
+    analytics.Event(fields)
+end
+
 local function ScaleDimensions(dim)
     return dim * math.max(1, (dmhub.screenDimensions.x / dmhub.screenDimensions.y) / (1920 / 1080))
 end
@@ -201,6 +212,16 @@ local function CreateHero(element)
                                 c.properties.creatorid = dmhub.userid
                             end,
                         }
+                        local classInfo = c.properties:GetClass()
+                        local kitTable = dmhub.GetTable("kits")
+                        local kitId = c.properties:try_get("kitid")
+                        track("character_create", {
+                            ancestry = c.properties:RaceOrMonsterType() or "",
+                            class = classInfo and classInfo.name or "",
+                            kit = (kitId and kitTable[kitId]) and kitTable[kitId].name or "",
+                            method = "titlescreen",
+                            dailyLimit = 5,
+                        })
                         EditHero(element, c)
                     end
                     return
@@ -2039,6 +2060,13 @@ local function MakeHeroPanel(heroIndex)
                         fontSize = 24,
                         halign = "center",
                         click = function(element)
+                            local classInfo = m_character.properties:GetClass()
+                            track("character_delete", {
+                                class = classInfo and classInfo.name or "",
+                                ancestry = m_character.properties:RaceOrMonsterType() or "",
+                                level = m_character.properties:CharacterLevel(),
+                                dailyLimit = 5,
+                            })
                             game.DeleteCharacters({ m_character.charid })
                             modal:DestroySelf()
                         end,

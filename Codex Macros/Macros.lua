@@ -1,5 +1,16 @@
 local mod = dmhub.GetModLoading()
 
+local function track(eventType, fields)
+	if dmhub.GetSettingValue("telemetry_enabled") == false then
+		return
+	end
+	fields.type = eventType
+	fields.userid = dmhub.userid
+	fields.gameid = dmhub.gameid
+	fields.version = dmhub.version
+	analytics.Event(fields)
+end
+
 --- @param str string The criteria to search by.
 --- @return CharacterToken[] The list of tokens that match the criteria.
 local tokenSearch = function(str, tokens)
@@ -1725,6 +1736,14 @@ Commands.RegisterMacro{
                         token.properties:SetHeroTokens(token.properties:GetHeroTokens() + points)
                     end,
                 }
+
+                local classInfo = token.properties:IsHero() and token.properties:GetClass() or nil
+                track("hero_token_change", {
+                    change = points,
+                    source = "manual",
+                    class = classInfo and classInfo.name or "unknown",
+                    dailyLimit = 30,
+                })
 
                 break
             end

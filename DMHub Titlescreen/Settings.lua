@@ -2481,3 +2481,13 @@ setting{
 		},
 	},
 }
+
+setting{
+	id = "telemetry_enabled",
+	description = "Send Anonymous Usage Data",
+	help = "Help improve DMHub by sending anonymous usage statistics. No personal information is collected.",
+	storage = "preference",
+	section = "General",
+	editor = "check",
+	default = true,
+}

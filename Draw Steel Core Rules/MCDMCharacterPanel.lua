@@ -1,5 +1,16 @@
 local mod = dmhub.GetModLoading()
 
+local function track(eventType, fields)
+    if dmhub.GetSettingValue("telemetry_enabled") == false then
+        return
+    end
+    fields.type = eventType
+    fields.userid = dmhub.userid
+    fields.gameid = dmhub.gameid
+    fields.version = dmhub.version
+    analytics.Event(fields)
+end
+
 setting{
     id = "oldTacPanel",
     description = "Use the old tactical panel",
@@ -1739,7 +1750,17 @@ function TacPanel.HeroTokenBox()
                     if token == nil then return end
                     local n = tonum(element.text, -1)
                     if n >= 0 then
+                        local prev = token.properties:GetHeroTokens()
                         token.properties:SetHeroTokens(n, "Set manually")
+                        if n ~= prev then
+                            local classInfo = token.properties:IsHero() and token.properties:GetClass() or nil
+                            track("hero_token_change", {
+                                change = n - prev,
+                                source = "manual",
+                                class = classInfo and classInfo.name or "unknown",
+                                dailyLimit = 30,
+                            })
+                        end
                     end
                     element.textNoNotify = string.format("%d", token.properties:GetHeroTokens())
                 end,
@@ -1762,12 +1783,22 @@ function TacPanel.HeroTokenBox()
                 local token = element.parent.data.token
                 if token ~= nil then
                     local n = dmhub.GetSettingValue("numheroes")
+                    local prev = token.properties:GetHeroTokens()
                     token:ModifyProperties{
                         description = "Reset Hero Tokens",
                         execute = function()
                             token.properties:SetHeroTokens(n, "Session Reset")
                         end,
                     }
+                    if n ~= prev then
+                        local classInfo = token.properties:IsHero() and token.properties:GetClass() or nil
+                        track("hero_token_change", {
+                            change = n - prev,
+                            source = "session_reset",
+                            class = classInfo and classInfo.name or "unknown",
+                            dailyLimit = 30,
+                        })
+                    end
                 end
             end,
             linger = function(element)
@@ -2695,6 +2726,31 @@ function TacPanel.RecoveriesBox()
                                 end
                             end,
                         }
+                        if useHeroTokens then
+                            local classInfo = token.properties:IsHero() and token.properties:GetClass() or nil
+                            track("hero_token_change", {
+                                change = -2,
+                                source = "recovery",
+                                class = classInfo and classInfo.name or "unknown",
+                                dailyLimit = 30,
+                            })
+                        end
+
+                        local remaining = max(0, (token.properties:GetResources()[recoveryid] or 0) - (token.properties:GetResourceUsage(recoveryid, recoveryInfo.usageLimit) or 0))
+                        if useHeroTokens then
+                            remaining = remaining
+                        else
+                            remaining = remaining - 1
+                        end
+                        local classInfo = token.properties:IsHero() and token.properties:GetClass() or nil
+                        local q = dmhub.initiativeQueue
+                        track("recovery_spend", {
+                            class = classInfo and classInfo.name or "unknown",
+                            level = token.properties:CharacterLevel(),
+                            remaining = max(0, remaining),
+                            context = (q ~= nil and not q.hidden and q:try_get("gameMode") == "combat") and "combat" or "rest",
+                            dailyLimit = 20,
+                        })
                     end,
                 },
             },
@@ -9012,7 +9068,25 @@ function CharacterPanel.DecorateHitpointsPanel()
 
                 if useHeroTokens then
                     m_token.properties:SetHeroTokens(m_token.properties:GetHeroTokens()-2, "Used to Recover")
+                    local classInfo = m_token.properties:IsHero() and m_token.properties:GetClass() or nil
+                    track("hero_token_change", {
+                        change = -2,
+                        source = "recovery",
+                        class = classInfo and classInfo.name or "unknown",
+                        dailyLimit = 30,
+                    })
                 end
+
+                local remaining = max(0, (m_token.properties:GetResources()[recoveryid] or 0) - (m_token.properties:GetResourceUsage(recoveryid, recoveryInfo.usageLimit) or 0))
+                local classInfo = m_token.properties:IsHero() and m_token.properties:GetClass() or nil
+                local q = dmhub.initiativeQueue
+                track("recovery_spend", {
+                    class = classInfo and classInfo.name or "unknown",
+                    level = m_token.properties:CharacterLevel(),
+                    remaining = remaining,
+                    context = (q ~= nil and not q.hidden and q:try_get("gameMode") == "combat") and "combat" or "rest",
+                    dailyLimit = 20,
+                })
 			end,
 
 			rightClick = function(element)
@@ -9229,7 +9303,17 @@ function CharacterPanel.DecoratePortraitPanel(token)
                             items[#items+1] = {
                                 text = string.format("Reset Hero Tokens For Session (%d heroes)", n),
                                 click = function()
+                                    local prev = m_token.properties:GetHeroTokens()
                                     m_token.properties:SetHeroTokens(n, "Session Reset")
+                                    if n ~= prev then
+                                        local classInfo = m_token.properties:IsHero() and m_token.properties:GetClass() or nil
+                                        track("hero_token_change", {
+                                            change = n - prev,
+                                            source = "session_reset",
+                                            class = classInfo and classInfo.name or "unknown",
+                                            dailyLimit = 30,
+                                        })
+                                    end
                                     element.popup = nil
                                 end,
                             }
@@ -9288,7 +9372,17 @@ function CharacterPanel.DecoratePortraitPanel(token)
                         local n = tonumber(element.text)
                         if n ~= nil and round(n) == n then
                             n = math.max(0, n)
+                            local prev = m_token.properties:GetHeroTokens()
                             m_token.properties:SetHeroTokens(n, "Set manually")
+                            if n ~= prev then
+                                local classInfo = m_token.properties:IsHero() and m_token.properties:GetClass() or nil
+                                track("hero_token_change", {
+                                    change = n - prev,
+                                    source = "manual",
+                                    class = classInfo and classInfo.name or "unknown",
+                                    dailyLimit = 30,
+                                })
+                            end
                         end
                         element.text = string.format("%d", m_token.properties:GetHeroTokens())
                     end,

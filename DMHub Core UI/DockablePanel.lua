@@ -1221,7 +1221,7 @@ CreateDockablePanelTabbedContainer = function(options)
             hpad = 4,
 			dragTarget = true,
 			draggable = true,
-			dragBounds = { x1 = -32*8, y1 = -200, x2 = 32*8, y2 = 200 },
+			dragBounds = { x1 = -32*8, y1 = 0, x2 = 32*8, y2 = 0 },
             numTabs = function(element, n)
                 element.interactable = n > 1
             end,
@@ -1255,13 +1255,19 @@ CreateDockablePanelTabbedContainer = function(options)
 				return target.parent == tabPanel
 			end,
 
+			beginDrag = function(element)
+				element.data.dragStartMouseY = gui.GetMousePosition().y
+			end,
+
 			drag = function(element, target)
 				DockablePanel.Serialize()
 			end,
 
 			dragging = function(element, target)
 				-- Detect vertical drag-off: detach tab into a solo panel and transfer drag
-				if math.abs(element.ydrag) > 30 and #panelInstances > 1 then
+				local mouseY = gui.GetMousePosition().y
+				local verticalDelta = mouseY - (element.data.dragStartMouseY or mouseY)
+				if math.abs(verticalDelta) > 30 and #panelInstances > 1 then
 					local panelInstance = DetachPanelInstance(element)
 					if panelInstance ~= nil then
 						local newPanel = CreateDockablePanelTabbedContainer{
