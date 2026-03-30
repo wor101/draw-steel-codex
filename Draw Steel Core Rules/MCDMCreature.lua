@@ -633,7 +633,7 @@ function creature:MinionDeath()
         return
     end
 
-    if self._tmp_minionSquad.liveMinions > 1 then
+    if (self._tmp_minionSquad.liveMinions or 0) > 1 then
         --we still have more minions so don't remove the captain yet.
         return
     end
@@ -782,7 +782,7 @@ function creature:RefreshSquadInfo(token)
         end
     end
 
-    if self._tmp_minionSquad.tokens[1].charid == token.charid then
+    if self._tmp_minionSquad.tokens[1] ~= nil and self._tmp_minionSquad.tokens[1].charid == token.charid then
         local onCurrentFloor = false
         local curFloor = dmhub.floorid
         for _, tok in ipairs(self._tmp_minionSquad.tokens) do
@@ -2344,11 +2344,14 @@ function creature:GetActivatedAbilities(options)
     if options.manualTriggers then
         local triggeredAbilities = self:GetTriggeredAbilities()
         for i, trigger in ipairs(triggeredAbilities) do
-            if trigger.ability:try_get("hasManualVersion", false) and trigger.ability:try_get("mandatory") ~= "local" then
-                --- @type TriggeredAbility
-                local ability = trigger.ability:GenerateManualVersion()
-                result[#result + 1] = ability
+            local ability
+            if trigger.ability.typeName == "ActivatedAbility" then
+                ability = DeepCopy(trigger.ability)
+                ability._tmp_temporaryClone = true
+            elseif trigger.ability:try_get("hasManualVersion", false) and not trigger.ability:IsLocalOnly() then
+                ability = trigger.ability:GenerateManualVersion()
             end
+            result[#result + 1] = ability
         end
     end
 
@@ -3473,14 +3476,14 @@ function creature.SetCurrentHitpoints(self, amount, note)
     if (not mod.unloaded) and self.minion and self:has_key("_tmp_minionSquad") then
         local token = dmhub.LookupToken(self)
         if token ~= nil then
-            local damage_taken_seq = self._tmp_minionSquad.damage_taken_seq + 1
+            local damage_taken_seq = (self._tmp_minionSquad.damage_taken_seq or 0) + 1
             local damage_taken = self:MaxHitpoints() - amount
             if damage_taken < 0 then
                 damage_taken = 0
             end
 
             local tokenCount = 0
-            for _, tok in ipairs(self._tmp_minionSquad.tokens) do
+            for _, tok in ipairs(self._tmp_minionSquad.tokens or {}) do
                 if tok ~= nil and tok.valid then
                     tokenCount = tokenCount + 1
                 end
@@ -3489,7 +3492,7 @@ function creature.SetCurrentHitpoints(self, amount, note)
             self._tmp_minionSquad.damage_taken = damage_taken
             self._tmp_minionSquad.damage_time_pending = true
 
-            for _, tok in ipairs(self._tmp_minionSquad.tokens) do
+            for _, tok in ipairs(self._tmp_minionSquad.tokens or {}) do
                 if tok ~= nil and tok.valid then
                     tok:ModifyProperties {
                         description = note,
@@ -3695,8 +3698,8 @@ function creature.TakeDamage(self, amount, note, info)
         local attackerClassInfo = nil
         local attackerLabel = "unknown"
         if info.attacker ~= nil and info.attacker ~= self then
-            attackerClassInfo = info.attacker.properties:IsHero() and info.attacker.properties:GetClass() or nil
-            attackerLabel = attackerClassInfo and attackerClassInfo.name or info.attacker.properties:try_get("monster_type", "monster")
+            attackerClassInfo = info.attacker:IsHero() and info.attacker:GetClass() or nil
+            attackerLabel = attackerClassInfo and attackerClassInfo.name or info.attacker:try_get("monster_type", "monster")
         end
         local targetClassInfo = self:IsHero() and self:GetClass() or nil
         local abilityName = nil
@@ -3750,6 +3753,33 @@ function creature.TakeDamage(self, amount, note, info)
         if not isDeadAtStart then
             if self:IsHero() then
                 audio.DispatchSoundEvent("Notify.Status_Dead_Hero", {})
+
+                local heroClass = self:GetClass()
+                local attackerLabel = nil
+                if eventArg.attacker ~= nil then
+                    local aClassInfo = eventArg.attacker:IsHero() and eventArg.attacker:GetClass() or nil
+                    attackerLabel = aClassInfo and aClassInfo.name or eventArg.attacker:try_get("monster_type", "monster")
+                end
+                local abilityName = nil
+                if eventArg.ability ~= nil then
+                    abilityName = eventArg.ability.name
+                end
+                local roundNumber = nil
+                if dmhub.initiativeQueue ~= nil then
+                    roundNumber = dmhub.initiativeQueue.round
+                end
+
+                track("hero_dead", {
+                    class = heroClass and heroClass.name or "unknown",
+                    level = self:try_get("level", 1),
+                    ancestry = self:try_get("ancestry", "unknown"),
+                    damage = eventArg.damage,
+                    damageType = eventArg.damagetype or "untyped",
+                    attacker = attackerLabel,
+                    ability = abilityName,
+                    roundNumber = roundNumber,
+                    dailyLimit = 20,
+                })
             else
                 audio.DispatchSoundEvent("Notify.Status_Dead_Enemy", {})
             end
@@ -3773,6 +3803,7 @@ function creature.TakeDamage(self, amount, note, info)
                 if dmhub.initiativeQueue ~= nil then
                     roundNumber = dmhub.initiativeQueue.round
                 end
+
                 track("hero_down", {
                     class = heroClass and heroClass.name or "unknown",
                     level = self:try_get("level", 1),

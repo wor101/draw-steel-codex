@@ -988,11 +988,17 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 				self:ConsumeResources(casterToken, {
 					costOverride = options.costOverride,
 				})
-				options.alreadyPaid = true
 
 			end
 
 			return
+		end
+
+		--For the coroutine path, consume resources upfront if behaviors
+		--may not call CommitToPaying (e.g. triggers without damage/invoke behaviors).
+		if not argOptions.alreadyPaid then
+			self:ConsumeResources(casterToken, {})
+			argOptions.alreadyPaid = true
 		end
 
 		local nframe = dmhub.FrameCount()
@@ -1194,6 +1200,7 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
                 else
                     symbols.mode = 1
                 end
+
 				dmhub.Schedule(0.01, function() --make execute in the main thread with a schedule.
 					executeTrigger()
 				end)

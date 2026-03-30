@@ -1550,11 +1550,11 @@ function ActivatedAbility:FireUseAbility(casterToken, options)
 			}
 		end
 
-        casterToken.properties:DispatchEvent("useability", {usedability = self, cast = options.cast})
+        casterToken.properties:DispatchEvent("useability", {usedability = self, cast = options.symbols and options.symbols.cast})
 
         for _,target in ipairs(options.targets or {}) do
             if target.token ~= nil then
-                casterToken.properties:DispatchEvent("targetwithability", {usedability = self, cast = options.cast, target = target.token.properties})
+                casterToken.properties:DispatchEvent("targetwithability", {usedability = self, cast = options.symbols and options.symbols.cast, target = target.token.properties})
             end
         end
 	end
@@ -1588,7 +1588,7 @@ function ActivatedAbility:GetCost(casterToken, options)
 
 		local currentMoveSpeed = creature:CurrentMovementSpeed()
 		if creature:DistanceMovedThisTurnInFeet() + moveCost > currentMoveSpeed or currentMoveSpeed <= 0 then
-			canAfford = false
+			result.canAfford = false
 			result.cannotMove = true
 		end
 	end
@@ -2137,8 +2137,6 @@ CastActivatedAbilityChatMessage = RegisterGameType("CastActivatedAbilityChatMess
 CastActivatedAbilityChatMessage.status = "complete"
 
 function CastActivatedAbilityChatMessage.Render(self, message)
-    local resultPanel
-
     local m_status = self.status
 
     local token = self:GetCasterToken()
@@ -2153,8 +2151,8 @@ function CastActivatedAbilityChatMessage.Render(self, message)
     local targetTokenPanels = {}
     for _,tok in ipairs(self:GetTargetTokens()) do
         targetTokenPanels[#targetTokenPanels+1] = gui.CreateTokenImage(tok, {
-            width = 32,
-            height = 32,
+            width = 28,
+            height = 28,
             valign = "center",
             halign = "left",
 
@@ -2175,21 +2173,14 @@ function CastActivatedAbilityChatMessage.Render(self, message)
 
     local m_statusCount = 0
     local statusLabel = gui.Label{
-        floating = true,
-        fontSize = 12,
-        width = 70,
-        height = "auto",
-        halign = "right",
-        valign = "top",
-        text = "Executing",
-        textAlignment = "left",
+        classes = {"action-log-subtext"},
+        text = "",
 
         think = function(element)
             m_statusCount = m_statusCount + 1
             if m_statusCount > 3 then
                 m_statusCount = 0
             end
-
             element:FireEvent("updateMessage")
         end,
 
@@ -2199,50 +2190,78 @@ function CastActivatedAbilityChatMessage.Render(self, message)
                 for i=1,m_statusCount do
                     text = text .. "."
                 end
-
                 element.text = text
             elseif m_status == "aborted" then
                 element.text = "Aborted"
             elseif m_status == "error" then
                 element.text = "Error"
             else
-                element.text = "Complete"
+                element.text = ""
             end
         end,
     }
 
     statusLabel:FireEvent("updateMessage")
 
+    local abilityTypeText = ""
+    if ability.AbilityTypeDescription ~= nil then
+        abilityTypeText = ability:AbilityTypeDescription()
+    end
 
-    local tokenPanel = gui.CreateTokenImage(token,{
-        scale = 0.9,
-        valign = "center",
-        halign = "left",
-
-        interactable = true,
+    local abilityLabel = gui.Label{
+        classes = {"action-log-detail"},
+        text = ability.name,
         hover = function(element)
-            local tok = token
-            local text = string.format("<b>%s</b>", tok.name)
-            local messages = self:try_get("tokenMessages", {})
-            local messageLog = messages[tok.charid] or {}
-            if messageLog ~= nil then
-                for _,msg in ipairs(messageLog) do
-                    text = text .. "\n" .. msg
-                end
+            local tok = self:GetCasterToken()
+            if tok == nil then
+                return
             end
-            gui.Tooltip(text)(element)
-        end
-    })
+            local dock = element:FindParentWithClass("dock")
+            if dock == nil then
+                return
+            end
+            element.tooltipParent = dock
+            element.tooltip = CreateAbilityTooltip(ability, {halign = dock.data.TooltipAlignment(), token = tok, width = 540})
+        end,
+    }
 
+    local typeLabel = nil
+    if abilityTypeText ~= "" then
+        typeLabel = gui.Label{
+            classes = {"action-log-subtext"},
+            text = abilityTypeText,
+        }
+    end
 
-    resultPanel = gui.Panel{
+    local targetsPanel = nil
+    if #targetTokenPanels > 0 then
+        targetsPanel = gui.Panel{
+            floating = true,
+            width = "auto",
+            height = "auto",
+            halign = "right",
+            valign = "top",
+            flow = "horizontal",
+            wrap = true,
+            maxWidth = 90,
+            rmargin = 6,
+            tmargin = 2,
+            children = targetTokenPanels,
+        }
+    end
+
+    local card = CreateActionLogCard{
+        token = token,
+        content = {abilityLabel, typeLabel, statusLabel, targetsPanel},
+    }
+
+    local resultPanel = gui.Panel{
         classes = {"chat-message-panel"},
 
         data = {
-            --advertise that we are willing to adopt roll panels using this castid.
             castid = self:try_get("castid"),
         },
- 
+
         flow = "vertical",
         width = "100%",
         height = "auto",
@@ -2255,63 +2274,10 @@ function CastActivatedAbilityChatMessage.Render(self, message)
             else
                 statusLabel.thinkTime = nil
             end
-
             statusLabel:FireEvent("updateMessage")
         end,
 
-        gui.Panel{
-			classes = {'separator'},
-		},
-
-        gui.Panel{
-
-            width = "100%",
-            height = "auto",
-            flow = "horizontal",
-
-            tokenPanel,
-
-            gui.Panel{
-                flow = "vertical",
-                width = "100%-80",
-                height = "auto",
-                halign = "right",
-                valign = "top",
-
-                gui.Label{
-                    fontSize = 14,
-                    width = "auto",
-                    height = "auto",
-                    maxWidth = 420,
-                    halign = "left",
-                    valign = "top",
-                    text = string.format("<b>%s</b>", ability.name),
-                    hover = function(element)
-                        local token = self:GetCasterToken()
-                        if token == nil then
-                            return
-                        end
-	                    local dock = element:FindParentWithClass("dock")
-	                    element.tooltipParent = dock
-
-					    local tooltip = CreateAbilityTooltip(ability, {halign = dock.data.TooltipAlignment(), token = token, width = 540})
-                        print("HOVER ABILITY::", ability)
-                        element.tooltip = tooltip
-                    end,
-                },
-
-                statusLabel,
-
-                gui.Panel{
-                    width = "50%",
-                    height = "auto",
-                    halign = "left",
-                    flow = "horizontal",
-                    wrap = true,
-                    children = targetTokenPanels,
-                }
-            },
-        },
+        card,
     }
 
     return resultPanel
