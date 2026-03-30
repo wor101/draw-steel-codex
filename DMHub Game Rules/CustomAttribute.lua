@@ -313,6 +313,9 @@ end
 
 function CustomAttribute:CalculateBaseValue(creature)
 	local typeInfo = self.GetAttributeType(self.id)
+	if typeInfo == nil then
+		return nil
+	end
 	if type(self.baseValue) == "string" and trim(self.baseValue) == "" then
 		return typeInfo:DefaultValue()
 	end
