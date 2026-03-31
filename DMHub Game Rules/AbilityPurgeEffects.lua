@@ -2458,7 +2458,7 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
             classes = {"formInput"},
             placeholderText = "Enter Damage...",
             text = self:try_get("damageToSelf", ""),
-            characterLimit = 3,
+            characterLimit = 12,
             change = function(element)
                 self.damageToSelf = element.text
             end,
