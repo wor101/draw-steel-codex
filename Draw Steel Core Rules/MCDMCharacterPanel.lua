@@ -2541,16 +2541,6 @@ function TacPanel.StaminaBox()
         valign = "center",
         data = { token = nil },
 
-        linger = function(element)
-            local token = element.data.token
-            if token ~= nil and token.properties ~= nil then
-                element.tooltip = gui.StatsHistoryTooltip{
-                    description = "stamina",
-                    entries = token.properties:GetStatHistory("stamina"):GetHistory()
-                }
-            end
-        end,
-
         refreshCharacter = function(element, token)
             element.data.token = token
             element:FireEventTree("refreshValue", token)
@@ -2576,6 +2566,15 @@ function TacPanel.StaminaBox()
                 data = {
                     token = nil,
                 },
+                linger = function(element)
+                    local token = element.data.token
+                    if token ~= nil and token.properties ~= nil then
+                        element.tooltip = gui.StatsHistoryTooltip{
+                            description = "stamina",
+                            entries = token.properties:GetStatHistory("stamina"):GetHistory()
+                        }
+                    end
+                end,
                 change = function(element)
                     local token = element.data.token
                     if token ~= nil and token.valid and token.properties ~= nil then
@@ -2600,8 +2599,22 @@ function TacPanel.StaminaBox()
             gui.Label{
                 classes = {"stambox-stam", "max"},
                 text = "/ 0",
+                data = { token = nil },
                 refreshValue = function(element, token)
+                    element.data.token = token
                     element.text = string.format("/ %d", token.properties:MaxHitpoints())
+                end,
+                linger = function(element)
+                    local token = element.data.token
+                    if token ~= nil and token.properties ~= nil then
+                        local baseValue = token.properties:BaseHitpoints()
+                        local modifications = token.properties:DescribeModifications("hitpoints", baseValue)
+                        local text = string.format("Base Stamina: %d", baseValue)
+                        for _, modification in ipairs(modifications) do
+                            text = text .. string.format("\n%s: %s", modification.key, modification.value)
+                        end
+                        element.tooltip = TacPanel.Tooltip(text)
+                    end
                 end,
             },
         },
