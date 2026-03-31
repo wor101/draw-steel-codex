@@ -4037,7 +4037,7 @@ CreateAbilityController = function()
 
                         if pathDist < requestDist and (g_currentAbility:try_get("targeting", "direct") == "straightline") and g_token.properties:CalculateNamedCustomAttribute("No Damage From Forced Movement") == 0 then
                             local prevOvershoot = g_pointTargeting.pathEndOvershoot
-                            g_pointTargeting.pathEndOvershoot = abilityDist - pathDist
+                            g_pointTargeting.pathEndOvershoot = requestDist - pathDist
 
                             local prevPathEnd = g_pointTargeting.shapePathEnd
                             destroyLabelsBeforeReturning = false
