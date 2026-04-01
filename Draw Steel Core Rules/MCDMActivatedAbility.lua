@@ -1520,7 +1520,29 @@ function ActivatedAbility:Render(options, params)
                     flow = "horizontal",
                     gui.Label {
 
-                        text = "e",
+                        create = function(element)
+                            if self:has_key("villainAction") then
+                                element.text = "d"
+                            elseif self.targetType == "all" then
+                                element.text = "b"
+                            elseif self.targetType == "self" then
+                                print("HAEZ:: Setting self target icon")
+                                element.text = "f"
+                            elseif self.targetType == "map" then
+                                element.text = "c"
+                            elseif self.targetType == "cube" or self.targetType == "line" or self:HasKeyword("Area") then
+                                element.text = "e"
+                            elseif self:HasKeyword("Melee") then
+                                if self:HasKeyword("Ranged") then
+                                    element.text = "l"
+                                end
+                                element.text = "t"
+                            elseif self:HasKeyword("Ranged") then
+                                element.text = "g"
+                            else
+                                element.text = "*"
+                            end
+                        end,
                         fontFace = "DrawSteelGlyphs",
                         fontSize = 20,
                         width = "auto",
@@ -1538,6 +1560,7 @@ function ActivatedAbility:Render(options, params)
                         fontWeight = "Light",
                         width = "auto",
                         halign = "left",
+                        lmargin = 6,
                         valign = "center",
                         markdown = true,
 
@@ -1570,6 +1593,7 @@ function ActivatedAbility:Render(options, params)
                         fontWeight = "Light",
                         width = "auto",
                         halign = "right",
+                        lmargin = 4,
                         valign = "center",
                         markdown = true,
                         height = "auto",
