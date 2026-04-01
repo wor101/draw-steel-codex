@@ -2580,8 +2580,8 @@ function TacPanel.StaminaBox()
                 change = function(element)
                     local token = element.data.token
                     if token ~= nil and token.valid and token.properties ~= nil then
-                        local n = tonum(element.text, -1)
-                        if n >= 0 then
+                        local n = tonumber(element.text)
+                        if n ~= nil and (n >= 0 or token.properties:IsHero()) then
                             token:ModifyProperties{
                                 description = "Set Stamina",
                                 execute = function()
@@ -3065,8 +3065,8 @@ function TacPanel.HealthBar()
             -- diamond:SetClass("has-temp", tempHP > 0)
 
             -- Status boxes: show when health is in that segment's range (mutually exclusive)
-            local inDyingRange = isHero and currentHP < 0
-            local inWindedRange = currentHP >= 0 and currentHP <= windedVal
+            local inDyingRange = isHero and currentHP <= 0
+            local inWindedRange = not inDyingRange and currentHP >= 0 and currentHP <= windedVal
 
             dyingStatus:SetClass("collapsed", not inDyingRange)
             windedStatus:SetClass("collapsed", not inWindedRange)
