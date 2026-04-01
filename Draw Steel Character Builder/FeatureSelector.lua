@@ -200,6 +200,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 featureId = featureId,
                 itemIndex = itemIndex,
                 option = nil,
+                expanded = false,
             },
             doubleclick = function(element)
                 element:FireEvent("removeItem")
@@ -288,10 +289,21 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     element:SetClass("filled", element.parent:HasClass("filled"))
                     element:SetClass("selected", element.parent:HasClass("selected"))
                 end,
-                gui.Panel{
-                    classes = {"builder-base", "panel-base", "feature-toggle", "collapsed"},
+                gui.CollapseArrow{
+                    classes = {"collapseSet"},
+                    halign = "left",
+                    valign = "center",
+                    hmargin = 8,
                     customPanel = function(element, panelFn)
                         element:SetClass("collapsed", panelFn == nil)
+                    end,
+                    setExpanded = function(element, expanded)
+                        element:SetClass("collapseSet", not expanded)
+                    end,
+                    press = function(element)
+                        local item = element:FindParentWithClass("feature-target")
+                        item.data.expanded = not item.data.expanded
+                        item:FireEventTree("setExpanded", item.data.expanded)
                     end,
                 },
                 gui.Label{
@@ -328,8 +340,13 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     end
                     if element.data.panelFn then element:AddChild(element.data.panelFn()) end
                 end,
+                setExpanded = function(element, expanded)
+                    local visible = element.data.panelFn ~= nil and expanded
+                    element:SetClass("collapsed-anim", not visible)
+                end,
                 refreshBuilderState = function(element, state)
-                    local visible = element.data.panelFn ~= nil and element.parent:HasClass("selected")
+                    local item = element.parent
+                    local visible = element.data.panelFn ~= nil and (item.data.expanded == true)
                     element:SetClass("collapsed-anim", not visible)
                 end,
             },
@@ -368,6 +385,7 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 featureId = featureId,
                 option = nil,
                 panelFn = nil,
+                expanded = false,
             },
             applyFilter = function(element, filterText)
                 if element.data.option == nil then return end
@@ -530,10 +548,21 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                 refreshBuilderState = function(element, state)
                     element:SetClass("selected", element.parent:HasClass("selected"))
                 end,
-                gui.Panel{
-                    classes = {"builder-base", "panel-base", "feature-toggle", "collapsed"},
+                gui.CollapseArrow{
+                    classes = {"collapseSet"},
+                    halign = "left",
+                    valign = "center",
+                    hmargin = 8,
                     customPanel = function(element, panelFn)
                         element:SetClass("collapsed", panelFn == nil)
+                    end,
+                    setExpanded = function(element, expanded)
+                        element:SetClass("collapseSet", not expanded)
+                    end,
+                    press = function(element)
+                        local item = element:FindParentWithClass("feature-choice")
+                        item.data.expanded = not item.data.expanded
+                        item:FireEventTree("setExpanded", item.data.expanded)
                     end,
                 },
                 gui.Label{
@@ -573,8 +602,13 @@ function CBFeatureSelector.SelectionPanel(selector, feature)
                     end
                     if element.data.panelFn then element:AddChild(element.data.panelFn()) end
                 end,
+                setExpanded = function(element, expanded)
+                    local visible = element.data.panelFn ~= nil and expanded
+                    element:SetClass("collapsed-anim", not visible)
+                end,
                 refreshBuilderState = function(element, state)
-                    local visible = element.data.panelFn ~= nil and element.parent:HasClass("selected")
+                    local item = element.parent
+                    local visible = element.data.panelFn ~= nil and (item.data.expanded == true)
                     element:SetClass("collapsed-anim", not visible)
                 end,
             },
