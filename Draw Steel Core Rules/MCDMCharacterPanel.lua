@@ -3712,7 +3712,7 @@ function TacPanel.HRGainRow(entry, token)
             gui.Label{
                 classes = {"label", "hr-chip-value"},
                 text = string.format("+%d", tonumber(entry.quantity) or 1),
-                refreshToken = not safe_toint(entry.quantity) and function(element)
+                refreshToken = not safe_toint(entry.quantity) and function(element, token)
                     local text = dmhub.EvalGoblinScript(entry.quantity, token.properties:LookupSymbol())
                     element.text = string.format("+%s", text)
                 end or nil,
