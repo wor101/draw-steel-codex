@@ -2507,7 +2507,7 @@ function TacPanel.TempStamBox()
             change = function(element)
                 local before = tonum(element.data.token.properties:TemporaryHitpointsStr(), 0)
                 local after = tonum(element.text, 0)
-                if after > before and element.data.token ~= nil and element.data.token.properties ~= nil then
+                if element.text ~= "" and after ~= before and element.data.token ~= nil and element.data.token.properties ~= nil then
                     element.data.token:ModifyProperties{
                         description = "Apply Temp Stamina",
                         execute = function()
