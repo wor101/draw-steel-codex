@@ -1888,7 +1888,7 @@ function ActivatedAbilityPowerRollBehavior:EditorItems(parentPanel)
             gui.Label{ fontSize = 24, text = tier, fontFace = "DrawSteelGlyphs" },
             gui.Input{
                 text = self.tiers[i],
-                characterLimit = 256,
+                characterLimit = 350,
                 halign = "right",
                 change = function(element)
                     self.tiers[i] = element.text
