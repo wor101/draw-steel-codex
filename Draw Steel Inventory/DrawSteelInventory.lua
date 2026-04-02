@@ -376,7 +376,7 @@ local CreateInventorySlot = function(dmhud, options)
 
                 if slotInfo.type == "trinket" and EquipmentCategory.IsTrinket(item) then
                     return true
-                elseif slotInfo.type == "leveled" and EquipmentCategory.IsLeveledTreasure(item) then
+                elseif slotInfo.type == "leveled" and (EquipmentCategory.IsLeveledTreasure(item) or EquipmentCategory.IsArtifact(item)) then
                     return true
                 end
 
