@@ -587,7 +587,7 @@ TacPanelStyles.Stamina = {
     },
     {
         selectors = {"input", "recovery-count"},
-        width = "auto",
+        width = "33%",
         height = "auto",
         valign = "top",
         halign = "left",
@@ -595,7 +595,7 @@ TacPanelStyles.Stamina = {
         margin = 0,
         border = 0,
         bgcolor = "clear",
-        textAlignment = "left",
+        textAlignment = "center",
         fontFace = "Newzald",
         fontSize = TacPanelSizes.Fonts.recoveryCount,
         color = CREAM,
