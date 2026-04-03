@@ -678,7 +678,7 @@ function CustomDocument:CreateInterface(args)
     end
 
     local m_titlePanel = args.titlePanel or gui.Panel {
-        classes = {cond(self:HaveEditPermissions(), "", "collapsed")},
+        classes = {"collapsed"},
         halign = "left",
         valign = "center",
         width = "auto",
@@ -807,6 +807,7 @@ function CustomDocument:CreateInterface(args)
                 writePanel:SetClass("collapsed", not writePanel:HasClass("collapsed"))
                 readPanel:SetClass("collapsed", not readPanel:HasClass("collapsed"))
                 element:SetClass("active", not writePanel:HasClass("collapsed"))
+                m_titlePanel:SetClass("collapsed", writePanel:HasClass("collapsed"))
 
                 element.thinkTime = cond(element:HasClass("active"), 1)
             end,
