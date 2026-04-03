@@ -98,6 +98,14 @@ function CharacterFeat:FillClassFeatures(choices, result)
 
 		if feature.typeName == 'CharacterFeature' then
 			result[#result+1] = feature
+		elseif feature.typeName == 'CharacterFeatureList' then
+			for _,child in ipairs(feature.features) do
+				if child.typeName == 'CharacterFeature' then
+					result[#result+1] = child
+				else
+					child:FillChoice(choices, result)
+				end
+			end
 		else
 			if choices[feature.guid] ~= nil then
 				feature:FillChoice(choices, result)
