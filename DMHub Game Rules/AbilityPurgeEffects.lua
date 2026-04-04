@@ -701,6 +701,12 @@ function ActivatedAbilityPurgeEffectsBehavior:CollectPurgeItems(targetToken, lim
                         break
                     end
                 end
+                if not passFilter and self:try_get("includeProne") then
+                    local condDef = conditionsTable[key]
+                    if condDef ~= nil and string.lower(condDef.name) == "prone" then
+                        passFilter = true
+                    end
+                end
                 local casterOk = limitToCasterid == nil
                 if not casterOk and conditionInfo.casterInfo ~= nil then
                     casterOk = conditionInfo.casterInfo.tokenid == limitToCasterid
@@ -805,6 +811,12 @@ function ActivatedAbilityPurgeEffectsBehavior:CollectPurgeItems(targetToken, lim
                             if durationEntry == "all" or string.lower(durationEntry) == string.lower(conditionInfo.duration or "") then
                                 passFilter = true
                                 break
+                            end
+                        end
+                        if not passFilter and self:try_get("includeProne") then
+                            local condDef = conditionsTable[key]
+                            if condDef ~= nil and string.lower(condDef.name) == "prone" then
+                                passFilter = true
                             end
                         end
                         local casterOk = limitToCasterid == nil
@@ -2357,6 +2369,18 @@ function ActivatedAbilityPurgeEffectsBehavior:EditorItems(parentPanel)
         },
     }
 
+
+    result[#result+1] = gui.Check{
+        classes = {cond(self.purgeType ~= "chosen", "collapsed")},
+        text = "Include Prone",
+        value = self:try_get("includeProne", false),
+        change = function(element)
+            self.includeProne = element.value
+        end,
+        refreshPurge = function(element)
+            element:SetClass("collapsed", self.purgeType ~= "chosen")
+        end,
+    }
 
     --Future support Shwayguy
     result[#result+1] = gui.Panel{

@@ -1412,6 +1412,33 @@ creature.RegisterSymbol {
 }
 
 creature.RegisterSymbol {
+    symbol = "eoteffects",
+    lookup = function(c)
+        if c:has_key("inflictedConditions") then
+            local conditions = c.inflictedConditions
+            for _, cond in pairs(conditions) do
+                if cond.duration == "eot" then
+                    return true
+                end
+            end
+        end
+
+        for _, effectInstance in ipairs(c:ActiveOngoingEffects()) do
+            if effectInstance.removeAtNextTurnEnd then
+                return true
+            end
+        end
+
+        return false
+    end,
+    help = {
+        name = "EoT Effects",
+        type = "boolean",
+        desc = "Does this creature have any end of turn effects?",
+    }
+}
+
+creature.RegisterSymbol {
     symbol = "leader",
     lookup = function(c)
         return string.find(string.lower(c:try_get("role", "")), "leader") ~= nil

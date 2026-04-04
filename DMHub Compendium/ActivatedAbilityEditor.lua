@@ -1683,6 +1683,13 @@ function ActivatedAbility:TargetTypeEditor()
 									},
 									subject = creature.helpSymbols,
 									subjectDescription = "The creature using the ability.",
+									symbols = {
+										subject = {
+											name = "Subject",
+											type = "creature",
+											desc = "The creature that the event occurred on. For triggered abilities this is the creature that triggered the event; for self-only triggers this is the same as Self.",
+										},
+									},
 								},
 							},
 
