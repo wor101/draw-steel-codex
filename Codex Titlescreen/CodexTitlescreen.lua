@@ -2592,6 +2592,9 @@ function CreateTitlescreen(dialog, options)
                     width = "100%",
                     height = "100%",
                     brightness = 0.3,
+                    click = function(element)
+                        element.root:FireEventTree("titlescreenClick")
+                    end,
                     styles = {
                         {
                             selectors = { "starting-screen" },
@@ -3715,6 +3718,10 @@ function CreateTitlescreen(dialog, options)
             end
         end,
 
+        titlescreenClick = function(element)
+            element:FireEvent("press")
+        end,
+
         press = function(element)
             if (dmhub.gameLoadingProgress or 0) >= 1 and not element.data.triggered then
                 element.data.triggered = true
@@ -3768,9 +3775,10 @@ function CreateTitlescreen(dialog, options)
 
         },
         hpad = 160,
+        vpad = 40,
         floating = true,
         text = "PRESS ANY KEY",
-        fontFace = "Gothville",
+        fontFace = "Book",
         fontSize = 60,
         color = "white",
         halign = "center",
@@ -3778,6 +3786,7 @@ function CreateTitlescreen(dialog, options)
         vmargin = 80,
         width = "auto",
         height = "auto",
+        interactable = false,
         styles = {
             {
                 opacity = 0,
@@ -3791,6 +3800,7 @@ function CreateTitlescreen(dialog, options)
                 selectors = {"fade"},
                 transitionTime = 0.2,
                 opacity = 0,
+                hidden = 1,
             },
         },
         thinkTime = 0.1,
