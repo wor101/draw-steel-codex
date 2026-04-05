@@ -77,6 +77,7 @@ Aura.name = "Aura"
 Aura.source = "Aura"
 Aura.description = ""
 Aura.applyto = "all"
+Aura.hasCustomIcon = false
 
 function Aura.OnDeserialize(self)
     --we had to change id -> guid to match CharacterFeature.
