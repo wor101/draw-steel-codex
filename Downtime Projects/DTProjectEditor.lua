@@ -46,7 +46,7 @@ function DTProjectEditor:_createProjectForm()
         },
         gui.Style {
             selectors = {"PEFormFieldContainer", "DTPanel", "DTBase"},
-            height = "100%-8",
+            height = "auto", "100%-8",
             pad = 0,
             margin = 0,
             hpad = 2,
@@ -904,6 +904,7 @@ function DTProjectEditor:_createProjectForm()
             -- Row 3
             gui.Panel {
                 classes = {"PEFormRow", "DTPanelRow", "DTPanel", "DTBase"},
+                height = "auto",
                 children = {
                     gui.Panel {
                         classes = {"PEFormFieldContainer", "DTPanel", "DTBase"},
