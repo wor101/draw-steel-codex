@@ -671,6 +671,33 @@ function GameHud.CreateEmbeddedRollDialog()
     end
 
 
+    -- Find the line-of-sight marker for a given target token. For normal
+    -- abilities the key is "casterId-targetId". For minion squad abilities
+    -- the source of each ray is a different squad member, so we fall back
+    -- to scanning all keys for one ending with the target's charid.
+    local function FindMarkerForTarget(casterToken, targetToken)
+        if m_options == nil or m_options.markLineOfSight == nil then
+            return nil
+        end
+
+        -- Fast path: direct caster -> target key.
+        local key = string.format("%s-%s", casterToken.charid, targetToken.charid)
+        local markers = m_options.markLineOfSight[key]
+        if markers ~= nil then
+            return markers
+        end
+
+        -- Slow path: squad targeting -- scan for any ray ending at target.
+        local suffix = "-" .. targetToken.charid
+        for k, m in pairs(m_options.markLineOfSight) do
+            if string.ends_with(k, suffix) then
+                return m
+            end
+        end
+
+        return nil
+    end
+
     -- Update the targeting arrow labels for the current target based on enabled modifiers.
     local function UpdateArrowLabelsForCurrentTarget()
         if m_options == nil or m_options.markLineOfSight == nil then
@@ -688,8 +715,7 @@ function GameHud.CreateEmbeddedRollDialog()
             return
         end
 
-        local key = string.format("%s-%s", casterToken.charid, targetToken.charid)
-        local markers = m_options.markLineOfSight[key]
+        local markers = FindMarkerForTarget(casterToken, targetToken)
         if markers == nil then
             return
         end
@@ -739,8 +765,7 @@ function GameHud.CreateEmbeddedRollDialog()
             return
         end
 
-        local key = string.format("%s-%s", casterToken.charid, target.token.charid)
-        local markers = m_options.markLineOfSight[key]
+        local markers = FindMarkerForTarget(casterToken, target.token)
         if markers == nil then
             return
         end
@@ -812,6 +837,8 @@ function GameHud.CreateEmbeddedRollDialog()
 
     -- After the roll is made, replace all arrow labels with tier results.
     -- Uses each target's saved rollProperties so per-target modifiers are reflected.
+    -- For squad targeting where multiple minions attack the same target, only the
+    -- first minion's arrow gets the tier label to avoid duplicate labels.
     local function UpdateArrowLabelsWithTierResults()
         if m_options == nil or m_options.markLineOfSight == nil then
             return
@@ -825,9 +852,13 @@ function GameHud.CreateEmbeddedRollDialog()
             return
         end
 
+        local labeledTargets = {}
         for _, target in ipairs(m_multitargets) do
-            local targetRollProps = target.rollProperties or rollProperties
-            UpdateArrowLabelForTarget(casterToken, target, targetRollProps)
+            if target.token ~= nil and not labeledTargets[target.token.charid] then
+                labeledTargets[target.token.charid] = true
+                local targetRollProps = target.rollProperties or rollProperties
+                UpdateArrowLabelForTarget(casterToken, target, targetRollProps)
+            end
         end
     end
 

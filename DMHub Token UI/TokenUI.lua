@@ -2950,3 +2950,24 @@ Commands.RegisterMacro{
         end
     end,
 }
+
+--[[
+TokenHud.RegisterPanel{
+	id = "bleeding",
+    layer = "bottom",
+	create = function(token, sharedInfo)
+        local resultPanel
+
+        resultPanel = gui.Panel{
+            width = 96,
+            height = 96,
+            bgcolor = "white",
+            bgimage = "drawsteel/StatBlockIcons/condition-bleed.png",
+            valign = "bottom",
+            y = 40,
+        }
+
+        return resultPanel
+    end,
+}
+]]

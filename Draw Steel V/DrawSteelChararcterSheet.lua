@@ -1958,6 +1958,8 @@ local EditResistanceEntry = function(creature, resistanceEntry, params)
             gui.Dropdown({
                 options = damageTypeOptions,
                 optionChosen = resistanceEntry.damageType,
+                hasSearch = true,
+                sort = true,
                 halign = 'left',
                 valign = 'center',
                 height = 24,

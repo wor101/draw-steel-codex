@@ -6,6 +6,7 @@
 --- @field isObject boolean If this token is an object, not a creature
 --- @field isAttackableObject boolean If this token is an attackable object, as opposed to e.g. a corpse.
 --- @field objectComponent any 
+--- @field hasTokenOnThisMap boolean If this token is deployed on the current map.
 --- @field hasTokenOnAnyMap boolean If this token is deployed on a map somewhere.
 --- @field summonerid nil|string (Read-only) the tokenid of the token that summoned this token, if there is one.
 --- @field mountObject nil|LuaObjectComponent The object that this token is mounted on. e.g. sitting on a chair.

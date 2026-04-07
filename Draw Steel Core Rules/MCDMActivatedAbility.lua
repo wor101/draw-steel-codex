@@ -2235,87 +2235,82 @@ local function GetTargetsWithTokens(targets)
     return result
 end
 
----@param squad Token[] The squad of minions who will do the targeting.
----@param squadTargetsPerToken table<string, boolean>[] for each token, the locs that token can target (encoded as strings)
----@param targets table<{token: Token}> the targets.
----@param targetLocsOccupying table<string, boolean>[] the locs that the targets occupy. parallel with "targets".
----@param output Token[][] The permutations of possibly unused tokens who are still available to target.
----@param outputTargetingCombinations table<{a: Token, b: Token}>[][]|nil An array of combinations of possible targeting of minions to targets.
----@param currentCombinationInternal table<{a: Token, b: Token}>[]|nil The current combination of minions to targets. Optional and for internal use only.
-local function GetSquadTargetPermutations(squad, squadTargetsPerToken, targets, targetLocsOccupying, output,
-                                          outputTargetingCombinations, currentCombinationInternal)
-    if currentCombinationInternal == nil then
-        currentCombinationInternal = {}
-    end
-
-    if #targetLocsOccupying == 0 then
-        table.sort(squad, function(a, b) return a.charid < b.charid end)
-        for _, candidate in ipairs(output) do
-            local match = true
-            for i = 1, #candidate do
-                if candidate[i].charid ~= squad[i].charid then
-                    match = false
+-- Build a minion-to-target adjacency table. adjacency[minionIdx] is a list of
+-- target indices that minion can reach (range overlap + line of effect).
+local function BuildSquadAdjacency(squadTokens, squadTargetsPerToken, targets, targetLocsOccupying)
+    local adjacency = {}
+    for i, tok in ipairs(squadTokens) do
+        adjacency[i] = {}
+        for j, target in ipairs(targets) do
+            local canReach = false
+            for key, _ in pairs(targetLocsOccupying[j]) do
+                if squadTargetsPerToken[i][key] then
+                    canReach = true
                     break
                 end
             end
-
-            if match then
-                return
+            if canReach and RuleUtils.HasLineOfEffect(tok, target.token) then
+                adjacency[i][#adjacency[i] + 1] = j
             end
         end
-        output[#output + 1] = squad
+    end
+    return adjacency
+end
 
-        if outputTargetingCombinations ~= nil then
-            outputTargetingCombinations[#outputTargetingCombinations + 1] = table.shallow_copy(
-                currentCombinationInternal)
+-- Augmenting-path bipartite matching. Finds a maximum matching of minions to
+-- targets in O(n^2 * m) time, replacing the previous O(n!) permutation search.
+-- Minions are processed in order so earlier indices (the caster) get priority.
+-- committedTargets is an optional table of targetIdx -> minionIdx for
+-- assignments that should be preserved. The algorithm seeds the matching with
+-- these and only runs augmenting paths for unmatched targets, so committed
+-- assignments are only displaced as a last resort.
+-- Returns matchOfTarget[targetIdx] = minionIdx for each matched target.
+local function BipartiteMatch(adjacency, nMinions, nTargets, committedTargets)
+    local matchOfTarget = {} -- matchOfTarget[targetIdx] = minionIdx or nil
+    local matchOfMinion = {} -- reverse map: minionIdx -> targetIdx or nil
+    local committedMinions = {} -- set of minion indices that must not be displaced
+
+    -- Seed with committed assignments.
+    if committedTargets ~= nil then
+        for targetIdx, minionIdx in pairs(committedTargets) do
+            matchOfTarget[targetIdx] = minionIdx
+            matchOfMinion[minionIdx] = targetIdx
+            committedMinions[minionIdx] = true
         end
-        return
     end
 
-    local targetLocs = targetLocsOccupying[1]
-
-    for i, token in ipairs(squad) do
-        local canTarget = false
-        for key, _ in pairs(targetLocs) do
-            if squadTargetsPerToken[i][key] then
-                canTarget = true
-                break
-            end
-        end
-
-        if canTarget then
-            --check that we have line of effect to the target.
-            if not RuleUtils.HasLineOfEffect(token, targets[1].token) then
-                canTarget = false
-            end
-        end
-
-        if canTarget then
-            local newSquad = {}
-            local newSquadTargets = {}
-            for j, tok in ipairs(squad) do
-                if i ~= j then
-                    newSquad[#newSquad + 1] = tok
-                    newSquadTargets[#newSquadTargets + 1] = squadTargetsPerToken[j]
+    local function augment(minionIdx, visited)
+        for _, targetIdx in ipairs(adjacency[minionIdx]) do
+            if not visited[targetIdx] then
+                visited[targetIdx] = true
+                local holder = matchOfTarget[targetIdx]
+                -- Never displace a committed minion.
+                if holder == nil or (not committedMinions[holder] and augment(holder, visited)) then
+                    if holder ~= nil then
+                        matchOfMinion[holder] = nil
+                    end
+                    matchOfTarget[targetIdx] = minionIdx
+                    matchOfMinion[minionIdx] = targetIdx
+                    return true
                 end
             end
+        end
+        return false
+    end
 
-            local newTargets = {}
-            local newTargetLocsOccupying = {}
-            for i = 2, #targetLocsOccupying do
-                newTargetLocsOccupying[#newTargetLocsOccupying + 1] = targetLocsOccupying[i]
-                newTargets[#newTargets + 1] = targets[i]
-            end
-
-            currentCombinationInternal[#currentCombinationInternal + 1] = { a = token, b = targets[1].token }
-
-            GetSquadTargetPermutations(newSquad, newSquadTargets, newTargets, newTargetLocsOccupying, output,
-                outputTargetingCombinations, currentCombinationInternal)
-
-            currentCombinationInternal[#currentCombinationInternal] = nil
+    -- Only run augmenting paths for minions not already committed.
+    for minionIdx = 1, nMinions do
+        if matchOfMinion[minionIdx] == nil then
+            augment(minionIdx, {})
         end
     end
+
+    return matchOfTarget
 end
+
+-- Previous targeting result, used to stabilize assignments when new targets
+-- are added so that existing minion-to-target pairings are preserved.
+local g_prevTargetingRays = nil
 
 ---@param casterToken CharacterToken The token that is casting the ability.
 ---@param range number The range of the ability.
@@ -2369,21 +2364,89 @@ function ActivatedAbility:GetTargetingRays(casterToken, range, symbols, targets)
             end
         end
 
-        local possibleSquads = {}
-        local targetCombinations = {}
-        GetSquadTargetPermutations(squadTokens, possibleTargetsForEachToken, targets, targetLocsOccupying, possibleSquads,
-            targetCombinations)
+        local adjacency = BuildSquadAdjacency(squadTokens, possibleTargetsForEachToken, targets, targetLocsOccupying)
 
-        local targeting = {}
-        if #targetCombinations > 0 then
-            for j, target in ipairs(targetCombinations[1]) do
-                targeting[#targeting + 1] = { a = target.a.id, b = target.b.id }
+        -- Build committed assignments from the previous result. Map previous
+        -- minion->target pairings onto the current squad/target indices so the
+        -- matching preserves them and only assigns uncommitted minions to new targets.
+        local committedTargets = nil
+        if g_prevTargetingRays ~= nil then
+            -- Build lookup: minionId -> squadIndex
+            local minionIdToIdx = {}
+            for i, tok in ipairs(squadTokens) do
+                minionIdToIdx[tok.id] = i
+            end
+
+            -- Build lookup: targetCharid -> targetIndex
+            local targetIdToIdx = {}
+            for j, target in ipairs(targets) do
+                -- Only record the first index for each target so we don't
+                -- double-commit when multiple minions attack the same creature.
+                if targetIdToIdx[target.token.charid] == nil then
+                    targetIdToIdx[target.token.charid] = j
+                end
+            end
+
+            committedTargets = {}
+            for _, prev in ipairs(g_prevTargetingRays) do
+                local mIdx = minionIdToIdx[prev.a.id]
+                local tIdx = targetIdToIdx[prev.b.charid]
+                if mIdx ~= nil and tIdx ~= nil then
+                    -- Only commit if the minion can still reach this target.
+                    local stillValid = false
+                    for _, adjTarget in ipairs(adjacency[mIdx]) do
+                        if adjTarget == tIdx then
+                            stillValid = true
+                            break
+                        end
+                    end
+
+                    if stillValid then
+                        committedTargets[tIdx] = mIdx
+                        -- Remove from lookup so the next minion attacking the same
+                        -- target gets a fresh slot rather than double-committing.
+                        targetIdToIdx[prev.b.charid] = nil
+                        minionIdToIdx[prev.a.id] = nil
+                    end
+                end
             end
         end
 
-        if #targetCombinations > 0 then
-            return targetCombinations[1]
+        -- Try with locked commitments first to keep assignments stable.
+        local matchOfTarget = BipartiteMatch(adjacency, #squadTokens, #targets, committedTargets)
+
+        -- Check that every target got a minion assigned.
+        local allMatched = true
+        for j = 1, #targets do
+            if matchOfTarget[j] == nil then
+                allMatched = false
+                break
+            end
         end
+
+        -- If locked commitments prevented a full match, fall back to an
+        -- unconstrained match that can reassign anyone.
+        if not allMatched then
+            matchOfTarget = BipartiteMatch(adjacency, #squadTokens, #targets)
+            allMatched = true
+            for j = 1, #targets do
+                if matchOfTarget[j] == nil then
+                    allMatched = false
+                    break
+                end
+            end
+        end
+
+        if allMatched then
+            local result = {}
+            for j = 1, #targets do
+                result[#result + 1] = { a = squadTokens[matchOfTarget[j]], b = targets[j].token }
+            end
+            g_prevTargetingRays = result
+            return result
+        end
+
+        g_prevTargetingRays = nil
     end
 
     return nil
@@ -2456,22 +2519,40 @@ function ActivatedAbility:CustomTargetShape(casterToken, range, symbols, targets
             end
         end
 
-        local possibleSquads = {}
-        GetSquadTargetPermutations(squadTokens, possibleTargetsForEachToken, targets, targetLocsOccupying, possibleSquads)
-
+        -- A squad member is "usable" if there exists SOME valid complete
+        -- assignment of the current targets that leaves that member free.
+        -- Equivalently: member i is usable if removing it from the squad
+        -- still allows a complete matching of all targets.
+        -- When no targets are selected yet, all members are usable.
         local usableSquadMembers = {}
-        for _, memberList in ipairs(possibleSquads) do
-            for _, member in ipairs(memberList) do
-                local alreadyCounted = false
-                for _, existing in ipairs(usableSquadMembers) do
-                    if existing.charid == member.charid then
-                        alreadyCounted = true
+        if #targets == 0 then
+            usableSquadMembers = squadTokens
+        else
+            local adjacency = BuildSquadAdjacency(squadTokens, possibleTargetsForEachToken, targets, targetLocsOccupying)
+            for i, tok in ipairs(squadTokens) do
+                -- Build adjacency with member i removed (shift indices).
+                local reducedAdj = {}
+                local ri = 0
+                for k = 1, #squadTokens do
+                    if k ~= i then
+                        ri = ri + 1
+                        reducedAdj[ri] = adjacency[k]
+                    end
+                end
+
+                local matchOfTarget = BipartiteMatch(reducedAdj, #squadTokens - 1, #targets)
+
+                -- If all targets are still matched without member i, it's usable.
+                local allMatched = true
+                for j = 1, #targets do
+                    if matchOfTarget[j] == nil then
+                        allMatched = false
                         break
                     end
                 end
 
-                if not alreadyCounted then
-                    usableSquadMembers[#usableSquadMembers + 1] = member
+                if allMatched then
+                    usableSquadMembers[#usableSquadMembers + 1] = tok
                 end
             end
         end

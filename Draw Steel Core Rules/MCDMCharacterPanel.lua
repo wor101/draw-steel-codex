@@ -2989,17 +2989,18 @@ function TacPanel.HealthBar()
         valign = "center",
         halign = "left",
         hmargin = 4,
+        lmargin = 50,
     }
     local label = gui.Label{
         fontFace = "Newzald",
-        fontSize = 14,
+        fontSize = 16,
         bold = true,
         color = "white",
         halign = "center",
         valign = "center",
         width = "auto",
         height = "auto",
-        minWidth = 60,
+        minWidth = 80,
     }
 
     local labelPanel = gui.Panel{
@@ -3076,13 +3077,13 @@ function TacPanel.HealthBar()
                 label.text = "DEAD"
                 icon.bgimage = "ui-icons/Pin_Boss.png"
             elseif m_dying then
-                label.text = "DYING"
+                label.text = string.format("<b>%d/%d</b>", m_currentHP, m_maxHP)
                 icon.bgimage = "drawsteel/Icon_STA_Dying.png"
             elseif m_bloodied then
-                label.text = "WINDED"
+                label.text = string.format("<b>%d/%d</b>", m_currentHP, m_maxHP)
                 icon.bgimage = "drawsteel/Icon_STA_Winded.png"
             else
-                label.text = "HEALTHY"
+                label.text = string.format("<b>%d/%d</b>", m_currentHP, m_maxHP)
                 icon.bgimage = "drawsteel/Icon_STA_Healthy.png"
             end
 
