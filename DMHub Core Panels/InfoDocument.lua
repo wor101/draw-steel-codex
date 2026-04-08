@@ -870,15 +870,15 @@ function GameHud:ShowInfoBubbleTip(info)
     local markdownDoc = info.document:GetMarkdownDocument()
     if markdownDoc ~= nil then
         gamehud.popupPanel.popup = gui.TooltipFrame(
-            markdownDoc:DisplayPanel {
-                width = "100%",
+            gui.Label{
+                fontSize = 18,
+                text = string.format("<b><size=140%%>%s</size></b>\n<i>Journal Document</i>\nClick to Open", markdownDoc.name),
+                markdown = true,
+                width = "auto",
                 height = "auto",
-                halign = "right",
-                maxHeight = 1000,
-                vscroll = false,
             },
             {
-                width = 800,
+                width = "auto",
                 interactable = false,
             }
         )
