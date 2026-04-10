@@ -624,6 +624,7 @@ function CharacterBuilder.CreatePanel()
                         { feature = kitFeature }
                     }
                     local kitFeatureCache = CBFeatureCache.CreateNew(hero, classItem.id, classItem.name, features)
+                    kitFeatureCache:TransferUISelections(state:Get(SEL.KIT .. ".featureCache"))
                     local kitSelectionStatus = CBSelectionStatus.CreateNew{
                         featureCache = kitFeatureCache,
                         selectorName = SEL.KIT,
