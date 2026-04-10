@@ -145,6 +145,7 @@ local SetRace = function(tableName, racePanel, raceid)
 			height = 'auto',
 			width = 700,
 			textAlignment = "topleft",
+			characterLimit = 8192,
 			change = function(element)
 				race.lore = element.text
 				UploadRace()
