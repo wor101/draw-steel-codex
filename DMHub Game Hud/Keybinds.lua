@@ -226,7 +226,7 @@ Keybinds.Register{
 
 Keybinds.Register{
     command = "togglevisibility",
-    name = tr("Toggle Visibility of Tokens and Objects"),
+    name = tr("Toggle Invisibility of Tokens and Objects"),
     section = "editor",
     dmonly = true,
 }

@@ -417,7 +417,7 @@ Tier strings describe outcomes using semicolons to separate effects:
 For complex conditions, use a separate `ActivatedAbilityApplyOngoingEffectBehavior` with `tiersSelected`:
 ```yaml
 - __typeName: ActivatedAbilityApplyOngoingEffectBehavior
-  tiersSelected: [2, 1]        # Apply on tiers 1 and 2 only (0-indexed)
+  tiersSelected: [1, 2]        # Apply on tiers 1 and 2 only (1-indexed)
   ongoingEffect: <effect-uuid>
   duration: save_ends
 ```

@@ -1429,6 +1429,19 @@ setting{
 }
 
 setting{
+	id = "macos:cmdAsCtrl",
+	description = "Use Cmd for keyboard shortcuts",
+	help = "When enabled, the Cmd key acts as Ctrl for all keyboard shortcuts (e.g. Cmd+Z for undo). This matches standard macOS behavior. Disable if you want Cmd and Ctrl to be separate modifier keys.",
+	storage = "preference",
+	section = "game",
+	editor = "check",
+	default = true,
+	visible = function()
+		return dmhub.platform == "macOS"
+	end,
+}
+
+setting{
 	id = "permissions.playerlibrary",
 	description = "Allow players to access the library",
 	default = true,

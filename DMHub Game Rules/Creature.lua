@@ -9568,6 +9568,8 @@ function creature:EventDropImage(path)
 		portraitZoom = token.portraitZoom,
 	}
 
+	local snapshot = token:PrepareUploadAppearance()
+
 	assets:UploadImageAsset{
 		path = path,
 		imageType = "Avatar",
@@ -9590,7 +9592,7 @@ function creature:EventDropImage(path)
 			token.portrait = imageid
 			token.portraitOffset = {x = 0, y = 0}
 			token.portraitZoom = 1
-			token:UploadAppearance()
+			token:UploadAppearance(snapshot)
 			dmhub.Debug("COMPLETED PASTE")
 		end,
 		addlocal = function(imageid)
@@ -9624,6 +9626,8 @@ function creature:EventPaste()
 
 	dmhub.Debug("PASTING CREATURE...")
 
+	local snapshot = token:PrepareUploadAppearance()
+
 	assets:UploadImageAsset{
 		path = "CLIPBOARD",
 		imageType = "Avatar",
@@ -9646,7 +9650,7 @@ function creature:EventPaste()
 			token.portrait = imageid
 			token.portraitOffset = {x = 0, y = 0}
 			token.portraitZoom = 1
-			token:UploadAppearance()
+			token:UploadAppearance(snapshot)
 			dmhub.Debug("COMPLETED PASTE")
 		end,
 		addlocal = function(imageid)

@@ -150,9 +150,15 @@ function CharacterToken:SerializeAppearanceFromString(s)
 	-- dummy implementation for documentation purposes only
 end
 
---- UploadAppearance: Upload the @see appearance section of the token.
---- @return nil
-function CharacterToken:UploadAppearance()
+--- PrepareUploadAppearance: Capture the current appearance and size of the token as a snapshot that can be passed to @see UploadAppearance to make the change undoable.
+--- @return any
+function CharacterToken:PrepareUploadAppearance()
+	-- dummy implementation for documentation purposes only
+end
+
+--- UploadAppearance: Upload the @see appearance section of the token. If a snapshot from @see PrepareUploadAppearance is provided, the change will be undoable.
+--- @param snapshot? string A snapshot from @see PrepareUploadAppearance representing the previous appearance to restore on undo.
+function CharacterToken:UploadAppearance(snapshot)
 	-- dummy implementation for documentation purposes only
 end
 

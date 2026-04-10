@@ -1293,6 +1293,22 @@ local function MakeGamePanel(gameIndex)
                 },
 
                 gui.Label {
+                    hidden = not dmhub.GetSettingValue("dev"),
+                    refreshGames = function(element)
+                        local backend = (m_game.storage ~= nil and m_game.storage ~= 0) and "Durable Objects" or "Firebase"
+                        element.text = string.format("Backend: %s", backend)
+                    end,
+                    fontSize = 12,
+                    color = "#b8d4ff",
+                    halign = "left",
+                    valign = "top",
+                    width = "auto",
+                    height = "auto",
+                    hpad = 5,
+                    tmargin = -4,
+                },
+
+                gui.Label {
                     refreshGames = function(element)
                         element.text = m_game.descriptionDetails
                     end,
@@ -1510,7 +1526,7 @@ local function MakeGamePanel(gameIndex)
     return resultPanel
 end
 
-function CreateGameLoadingScreen(moduleInfo)
+function CreateGameLoadingScreen(moduleInfo, backend)
     local resultPanel
 
     resultPanel = gui.Panel {
@@ -1595,6 +1611,7 @@ function CreateGameLoadingScreen(moduleInfo)
         descriptionDetails = moduleInfo.descriptionDetails,
         coverart = moduleInfo.coverart,
         startingModule = moduleInfo.id,
+        backend = backend or "durableobjects",
         create = function(gameid)
             if resultPanel == nil or not resultPanel.valid then
                 return
@@ -1717,6 +1734,40 @@ function CreateGameDialog()
                 end,
             },
 
+            gui.Panel {
+                width = "80%",
+                height = 32,
+                halign = "center",
+                flow = "horizontal",
+                vmargin = 4,
+                hidden = not dmhub.GetSettingValue("dev"),
+
+                create = function(element)
+                    -- For dev users, default to durableobjects in the dialog state
+                    resultPanel.data.backend = "durableobjects"
+                end,
+
+                gui.Label {
+                    text = "Storage Backend:",
+                    width = "auto",
+                    height = "auto",
+                    fontSize = 16,
+                    valign = "center",
+                    rmargin = 8,
+                },
+                gui.Dropdown {
+                    width = 200,
+                    height = 28,
+                    fontSize = 16,
+                    valign = "center",
+                    options = { { id = "durableobjects", text = "Durable Objects" }, { id = "firebase", text = "Firebase" } },
+                    idChosen = "durableobjects",
+                    change = function(element)
+                        resultPanel.data.backend = element.idChosen
+                    end,
+                },
+            },
+
             gui.Button {
                 halign = "center",
                 valign = "bottom",
@@ -1727,7 +1778,10 @@ function CreateGameDialog()
                 bold = true,
                 text = "Create Campaign",
                 click = function(element)
-                    local loadingScreen = CreateGameLoadingScreen(GetModule())
+                    -- Default to firebase for non-dev users; dev users get whatever
+                    -- they selected in the dropdown (which defaults to durableobjects).
+                    local backend = resultPanel.data and resultPanel.data.backend or "firebase"
+                    local loadingScreen = CreateGameLoadingScreen(GetModule(), backend)
                     element.root:AddChild(loadingScreen)
                     resultPanel:DestroySelf()
                 end,
@@ -1879,7 +1933,7 @@ local function MakeHeroPanel(heroIndex)
         halign = "left",
         textAlignment = "left",
         refreshCharacter = function(element, token)
-            print("CREATURE::", json(token.properties))
+
             local ancestry = token.properties:RaceOrMonsterType()
 
             local className = ""
@@ -2117,7 +2171,7 @@ local function MakeHeroPanel(heroIndex)
             local c = chars[heroIndex]
             m_character = c
 
-            print("CHARACTER:: REFRESH", heroIndex, "/", #chars, "HAVE", c ~= nil)
+
             element:SetClassTree("nocharacter", c == nil)
             if c ~= nil then
                 local joinedCampaign = rawget(c.properties, "joinedCampaign")
@@ -3297,7 +3351,13 @@ function CreateTitlescreen(dialog, options)
                             refreshGame = function(element)
                                 local chars = table.values(dmhub.GetAllCharacters())
                                 table.sort(chars, function(a, b)
-                                    return (rawget(a.properties, "ctime") or 0) < (rawget(b.properties, "ctime") or 0)
+                                    local ca = rawget(a.properties, "ctime") or 0
+                                    local cb = rawget(b.properties, "ctime") or 0
+                                    if type(ca) ~= "number" or type(cb) ~= "number" then
+                                        printf("ERROR ctime sort: a.charid=%s ca=%s(%s) b.charid=%s cb=%s(%s)", tostring(a.charid), tostring(ca), type(ca), tostring(b.charid), tostring(cb), type(cb))
+                                        return false
+                                    end
+                                    return ca < cb
                                 end)
                                 local games = lobby.games
                                 element:FireEventTree("characters", chars, games)
