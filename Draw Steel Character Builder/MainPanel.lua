@@ -489,7 +489,7 @@ function CharacterBuilder.CreatePanel()
                 state:Set{ key = SEL.CAREER .. ".blockFeatureSelection", value = blockFeatureSelection }
             end
 
-            if not (careerChanged or levelChoicesChanged) then return end
+            -- if not (careerChanged or levelChoicesChanged) then return end
 
             local newState = {
                 { key = SEL.CAREER .. ".selectedId", value = careerId },
