@@ -7683,14 +7683,7 @@ creature.lookupSymbols = {
 	end,
 
 	size = function(c)
-		local token = dmhub.LookupToken(c)
-		if token ~= nil and token.valid then
-            return token.creatureSizeNumber
-		end
-
-		local num = creature:GetBaseCreatureSizeNumber()
-
-		return num or 1
+		return c:GetCalculatedCreatureSizeAsNumber()
 	end,
 
 	tilesize = function(c)
@@ -7699,7 +7692,7 @@ creature.lookupSymbols = {
             return token.tileSize
 		end
 
-		local num = creature:GetBaseCreatureSizeNumber()
+		local num = c:GetBaseCreatureSizeNumber()
 		if num ~= nil then
 			return math.max(1, num - 3)
 		end

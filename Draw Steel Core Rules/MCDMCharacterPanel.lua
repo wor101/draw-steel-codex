@@ -323,6 +323,11 @@ TacPanelStyles.ControlButtons = {
         selectors = {"light-btn", "light-on"},
         bgcolor = GOLD_LIGHT,
     },
+    {
+        selectors = {"character-sheet-btn"},
+        bgimage = "ui-icons/character-sheet.png",
+        bgcolor = DIMMER,
+    },
 }
 TacPanelStyles.TokenBox = {
     {
@@ -1830,6 +1835,31 @@ function TacPanel.Portrait()
                 end,
                 linger = function(element)
                     gui.Tooltip("Toggle Light")(element)
+                end,
+            }),
+            outlineButton(gui.Panel{
+                classes = {"toggle-btn", "character-sheet-btn"},
+                hoverCursor = "pressbutton",
+                width = TacPanelSizes.VisionBtn.size,
+                height = TacPanelSizes.VisionBtn.size,
+                data = { token = nil },
+                refreshCharacter = function(element, token)
+                    element.data.token = token
+                end,
+                refreshToken = function(element, token)
+                    element:FireEvent("refreshCharacter", token)
+                end,
+                setToken = function(element, token)
+                    element:FireEvent("refreshCharacter", token)
+                end,
+                press = function(element)
+                    local token = element.data.token
+                    if token ~= nil then
+                        token:ShowSheet()
+                    end
+                end,
+                linger = function(element)
+                    gui.Tooltip("Open Character Sheet")(element)
                 end,
             }),
             outlineButton(gui.Panel{

@@ -461,6 +461,27 @@ RegisterGoblinScriptSymbol(ActivatedAbility, {
 
 })
 
+RegisterGoblinScriptSymbol(ActivatedAbility, {
+    name = "Has Rolled Damage",
+    type = "boolean",
+    desc = "Returns true if this ability has rolled damage.",
+    examples = { "Ability.HasRolledDamage" },
+    calculate = function(c)
+        for _, behavior in ipairs(c.behaviors) do
+            if behavior.typeName == "ActivatedAbilityPowerRollBehavior" then
+                local tiers = behavior.tiers
+                for _, entry in ipairs(tiers) do
+                    if regex.MatchGroups(entry, " damage") ~= nil then
+                        return true
+                    end
+                end
+            end
+        end
+
+        return false
+    end,
+})
+
 function ActivatedAbility:HasAttack()
     return self:HasKeyword("Strike")
 end

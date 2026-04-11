@@ -441,7 +441,8 @@ function CharacterBuilder.CreatePanel()
             local ancestryChanged = ancestryId ~= cachedAncestryId or inheritedAncestryId ~= cachedInheritedAncestryId
             local levelChoicesChanged = not dmhub.DeepEqual(cachedLevelChoices, levelChoices)
 
-            if not (ancestryChanged or levelChoicesChanged) then return end
+            -- Caching is bad because of prerequisites.
+            -- if not (ancestryChanged or levelChoicesChanged) then return end
 
             local newState = {
                 { key = SEL.ANCESTRY .. ".selectedId", value = ancestryId },
@@ -488,7 +489,7 @@ function CharacterBuilder.CreatePanel()
                 state:Set{ key = SEL.CAREER .. ".blockFeatureSelection", value = blockFeatureSelection }
             end
 
-            if not (careerChanged or levelChoicesChanged) then return end
+            -- if not (careerChanged or levelChoicesChanged) then return end
 
             local newState = {
                 { key = SEL.CAREER .. ".selectedId", value = careerId },

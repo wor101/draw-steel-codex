@@ -2303,6 +2303,8 @@ function GameHud.CreateInitiativeEntry(self, info, initiativeid, options)
 				return
 			end
 
+			element:SetClass("collapsed", false)
+
             local charid = token.charid
 
 			local resources = token.properties:GetResources()

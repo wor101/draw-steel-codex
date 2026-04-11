@@ -61,6 +61,7 @@ function creature:Invalidate()
     self._tmp_grantsFlanking = nil
     self._tmp_highestCharacteristic = nil
     self._tmp_maxSurgeCount = nil
+    self._tmp_creaturesize = nil
 end
 
 local g_creatureSingleMaxHitpoints = creature.MaxHitpoints
@@ -3443,6 +3444,7 @@ function creature:ShowCharacteristicRollDialog(attrid)
 
     local displaying = false
     if token ~= nil then
+        CharacterPanel.UnlockDisplayAbility()
         displaying = CharacterPanel.DisplayAbility(token, syntheticAbility, nil, {lock = true, renderAsAbility = true})
     end
 

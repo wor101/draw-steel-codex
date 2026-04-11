@@ -51,8 +51,10 @@ function ActivatedAbilityRecoverySelectionBehavior:Cast(ability, casterToken, ta
     local calcCost = function()
         local numEffects = 0
         local numRecovery = 0
+        local numTargets = 0
         for token, recoveries in pairs(recoveryTargets) do
             numRecovery = numRecovery + recoveries
+            numTargets = numTargets + 1
         end
 
         for _, effects in pairs(effectTargets) do
@@ -63,7 +65,7 @@ function ActivatedAbilityRecoverySelectionBehavior:Cast(ability, casterToken, ta
             end
         end
 
-        return max(0, numEffects + numRecovery - 1)
+        return max(0, numEffects + numRecovery - 1) + max(0, numTargets - 1)
     end
 
     local recoveryid = nil
