@@ -5760,7 +5760,7 @@ function creature:GetResources()
                     ignore = true
                 end
             end
-
+            
             if not ignore then
 			    result[key] = (result[key] or 0) + resource.unbounded
             end
@@ -10247,7 +10247,7 @@ function creature:Repair(localOnly)
         table.remove(remoteInvokes, 1)
         if #remoteInvokes == 0 then
             remoteInvokes = nil
-            self.removeInvokes = nil
+            self.remoteInvokes = nil
         end
     end
 
