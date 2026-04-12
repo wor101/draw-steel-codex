@@ -3543,7 +3543,7 @@ function gui.AudioEditor(args)
 					{
 						flow = 'vertical',
 						halign = 'left',
-						valign = 'center',
+						valign = 'top',
 						width = 600,
 						height = 820,
 						borderWidth = 0,

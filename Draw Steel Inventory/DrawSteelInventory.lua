@@ -283,6 +283,8 @@ function CreateItemTooltip(item, options, token)
 	options = options or {}
 
     options.noninteractive = true
+	options.maxHeight = "50%"
+	options.vscroll = true
 
 	local tooltipResult = gui.TooltipFrame(gui.Panel{
 		id = 'inventory-item-tooltip',
@@ -291,7 +293,7 @@ function CreateItemTooltip(item, options, token)
 				textWrap = true,
 				halign = options.tooltipAlign or 'left',
 				valign = 'top',
-				height = 'auto',
+				height = "auto",
 				width = options.width or 400,
 				bgcolor = 'black',
 				flow = 'vertical',
@@ -301,7 +303,7 @@ function CreateItemTooltip(item, options, token)
 		},
 
 		valign = "center",
-		maxHeight = 1080,
+		maxHeight = "80%", --1080,
 
 		item:Render(options, token),
 
