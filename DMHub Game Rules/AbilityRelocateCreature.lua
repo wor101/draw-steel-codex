@@ -174,7 +174,7 @@ function ActivatedAbilityRelocateCreatureBehavior:Cast(ability, casterToken, tar
 			local throughCreatures = ability:try_get("forcedMovementThroughCreatures", false)
 			local forcedPushOptions = casterToken.properties:GetForcedPushOptions()
 			local abilityDist = ability:GetRange(casterToken.properties)/dmhub.unitsPerSquare
-			if (ability.targeting == "straightline" or ability.targetType == "line") and casterToken.properties:CalculateNamedCustomAttribute("No Damage From Forced Movement") == 0 then
+			if ability.targeting == "straightline" or ability.targetType == "line" then
 				local abilityDistForArrow = abilityDist
 				local movementInfo = casterToken:MarkMovementArrow(targets[1].loc, {waypoints = options.symbols.waypoints, straightline = true, ignorecreatures = (ability.targetType == "line" or throughCreatures), forcedMovementDistance = abilityDistForArrow, rebound = forcedPushOptions.rebound, maxBounces = forcedPushOptions.maxBounces})
 				if movementInfo ~= nil then
@@ -333,15 +333,17 @@ function ActivatedAbilityRelocateCreatureBehavior:Cast(ability, casterToken, tar
                     end
                 end
                 print("TRIGGERCOLLIDE:: objects =", #objectsCollidedWith, collisionInfo.speed, withobject, collisionInfo.collideWith)
-                casterToken.properties._tmp_forcedMovementCast = options.symbols.cast
-				casterToken.properties:TriggerEvent("collide", {
-					speed = collisionInfo.speed,
-                    withobject = withobject,
-                    withcreature = not withobject,
-                    pusher = options.symbols.invoker,
-                    haspusher = options.symbols.invoker ~= nil,
-                    movementtype = forcedMovementType,
-				})
+                if casterToken.properties:CalculateNamedCustomAttribute("No Damage From Forced Movement") == 0 then
+                    casterToken.properties._tmp_forcedMovementCast = options.symbols.cast
+                    casterToken.properties:TriggerEvent("collide", {
+                        speed = collisionInfo.speed,
+                        withobject = withobject,
+                        withcreature = not withobject,
+                        pusher = options.symbols.invoker,
+                        haspusher = options.symbols.invoker ~= nil,
+                        movementtype = forcedMovementType,
+                    })
+                end
 
                 if casterToken.isObject then
                     --hard code damage equal to speed.
