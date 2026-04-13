@@ -2109,6 +2109,12 @@ function TacPanel.SurgesBox()
 
         linger = function(element)
             if element.data.token then
+                local q = dmhub.initiativeQueue
+                if q == nil or q.hidden then
+                    gui.Tooltip("No surges while not in combat.")(element)
+                    return
+                end
+
                 element.tooltip = gui.StatsHistoryTooltip{
                     description = "Surges",
                     entries = element.data.token.properties:GetStatHistory(

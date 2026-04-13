@@ -1153,6 +1153,146 @@ end
 
 
 
+-- Show a modal dialog that runs MigrateGameToDurableObjects for the given
+-- game and reports progress. Called from both the game-details panel
+-- "Migrate to Durable Objects" button and the dev/admin context menu on
+-- the game card. `root` is the root panel to attach the modal to.
+function RunMigrateToDOModal(root, game)
+    local statusLabel
+    local modal
+    modal = gui.Panel {
+        classes = { "framedPanel" },
+        floating = true,
+        width = 600,
+        height = 240,
+        halign = "center",
+        valign = "center",
+        bgimage = true,
+        flow = "vertical",
+        styles = { Styles.Default, Styles.Panel },
+
+        gui.Label {
+            text = "Migrating to Durable Objects",
+            width = "auto", height = "auto",
+            halign = "center", valign = "top",
+            fontSize = 24, vmargin = 12,
+        },
+
+        gui.Label {
+            id = "migrationStatus",
+            text = "Starting...",
+            width = "auto", height = "auto",
+            halign = "center", valign = "center",
+            fontSize = 16,
+            create = function(element) statusLabel = element end,
+        },
+
+        gui.Panel {
+            halign = "center", valign = "bottom", vmargin = 16,
+            width = "auto", height = "auto",
+            gui.Button {
+                id = "closeMigrationBtn",
+                text = "Close",
+                fontSize = 16, width = 120, height = 32,
+                halign = "center", interactable = false,
+                click = function(element) modal:DestroySelf() end,
+            },
+        },
+    }
+    root:AddChild(modal)
+
+    lobby:MigrateGameToDurableObjects(game.gameid, {
+        progress = function(status, pct)
+            if statusLabel ~= nil and statusLabel.valid then
+                statusLabel.text = string.format("%s (%d%%)", status, math.floor(pct * 100))
+            end
+        end,
+        complete = function(success, err)
+            if statusLabel ~= nil and statusLabel.valid then
+                if success then
+                    statusLabel.text = "Migration complete!"
+                    statusLabel.color = "#88ff88"
+                else
+                    statusLabel.text = string.format("Migration failed: %s", err or "unknown")
+                    statusLabel.color = "#ff8888"
+                end
+            end
+            local closeBtn = modal:Get("closeMigrationBtn")
+            if closeBtn ~= nil then closeBtn.interactable = true end
+        end,
+    })
+end
+
+-- Show a modal dialog that runs CloneFirebaseGameToStagingDO for the given
+-- game and reports progress. Used by both the game-details panel button
+-- and the dev/admin context menu on the game card.
+function RunCloneToStagingModal(root, game)
+    local statusLabel
+    local modal
+    modal = gui.Panel {
+        classes = { "framedPanel" },
+        floating = true,
+        width = 600,
+        height = 240,
+        halign = "center",
+        valign = "center",
+        bgimage = true,
+        flow = "vertical",
+        styles = { Styles.Default, Styles.Panel },
+
+        gui.Label {
+            text = "Cloning to Staging DO",
+            width = "auto", height = "auto",
+            halign = "center", valign = "top",
+            fontSize = 24, vmargin = 12,
+        },
+
+        gui.Label {
+            id = "cloneStatus",
+            text = "Starting...",
+            width = "auto", height = "auto",
+            halign = "center", valign = "center",
+            fontSize = 16,
+            create = function(element) statusLabel = element end,
+        },
+
+        gui.Panel {
+            halign = "center", valign = "bottom", vmargin = 16,
+            width = "auto", height = "auto",
+            gui.Button {
+                id = "closeCloneBtn",
+                text = "Close",
+                fontSize = 16, width = 120, height = 32,
+                halign = "center", interactable = false,
+                click = function(element) modal:DestroySelf() end,
+            },
+        },
+    }
+    root:AddChild(modal)
+
+    lobby:CloneFirebaseGameToStagingDO(game.gameid, {
+        progress = function(status, pct)
+            if statusLabel ~= nil and statusLabel.valid then
+                statusLabel.text = string.format("%s (%d%%)", status, math.floor(pct * 100))
+            end
+        end,
+        complete = function(success, newGameid, err)
+            if statusLabel ~= nil and statusLabel.valid then
+                if success then
+                    statusLabel.text = string.format("Clone complete! New game: %s", newGameid or "?")
+                    statusLabel.color = "#88ff88"
+                else
+                    statusLabel.text = string.format("Clone failed: %s", err or "unknown")
+                    statusLabel.color = "#ff8888"
+                end
+            end
+            local closeBtn = modal:Get("closeCloneBtn")
+            if closeBtn ~= nil then closeBtn.interactable = true end
+        end,
+    })
+end
+
+
 local function MakeGamePanel(gameIndex)
     local m_game = nil
 
@@ -1213,6 +1353,41 @@ local function MakeGamePanel(gameIndex)
 
         dehover = function(element)
             element:SetClassTree("hovergame", false)
+        end,
+
+        -- Dev/admin context menu. Gives access to Clone-to-Staging and
+        -- Migrate-to-DO from any game card, including games where the
+        -- user is just a player (the regular buttons are only exposed
+        -- from the game-details panel that only game owners can open).
+        rightClick = function(element)
+            if m_game == nil then return end
+            if not (dmhub.GetSettingValue("dev") or dmhub.isAdminAccount) then return end
+
+            local entries = {}
+
+            if m_game.storage == 0 then
+                -- Firebase-backed: offer clone and migrate
+                table.insert(entries, {
+                    text = "Clone to Staging DO",
+                    click = function()
+                        RunCloneToStagingModal(element.root, m_game)
+                    end,
+                })
+                table.insert(entries, {
+                    text = "Migrate to Durable Objects",
+                    click = function()
+                        RunMigrateToDOModal(element.root, m_game)
+                    end,
+                })
+            end
+
+            if #entries == 0 then return end
+
+            element.popup = gui.ContextMenu {
+                width = 260,
+                entries = entries,
+                click = function() element.popup = nil end,
+            }
         end,
 
         refreshGames = function(element, orderedGames, baseIndex)
@@ -1397,7 +1572,17 @@ local function MakeGamePanel(gameIndex)
                 gui.Label {
                     hidden = not dmhub.GetSettingValue("dev"),
                     refreshGames = function(element)
-                        local backend = (m_game.storage ~= nil and m_game.storage ~= 0) and "Durable Objects" or "Firebase"
+                        local storage = m_game.storage
+                        local backend
+                        if storage == 1 then
+                            backend = "Durable Objects"
+                        elseif storage == 2 then
+                            backend = "Durable Objects (Staging)"
+                        elseif storage == 3 then
+                            backend = "Local"
+                        else
+                            backend = "Firebase"
+                        end
                         element.text = string.format("Backend: %s", backend)
                     end,
                     fontSize = 12,
@@ -1453,6 +1638,11 @@ local function MakeGamePanel(gameIndex)
                     end,
                     refreshGames = function(element)
                         if m_game ~= nil then
+                            -- Hide the gameid copy label for local games; the
+                            -- id is a local-only GUID that nobody can join.
+                            -- The "Invite Players" button shows in its place.
+                            element:SetClass("hidden", m_game.storage == 3)
+
                             local gameid = m_game.gameid
                             if g_streamerModeSetting:Get() then
                                 gameid = string.format(
@@ -1478,6 +1668,24 @@ local function MakeGamePanel(gameIndex)
                         hmargin = 12,
                         bgimage = "icons/icon_app/icon_app_108.png",
                     },
+                },
+
+                -- "Invite Players" button that replaces the gameid-copy label
+                -- for local games. Clicking it starts the promote-to-DO flow.
+                gui.PrettyButton {
+                    text = "Invite Players",
+                    width = 360,
+                    height = 36,
+                    fontSize = 18,
+                    valign = "bottom",
+                    vmargin = 4,
+                    hmargin = 4,
+                    refreshGames = function(element)
+                        element:SetClass("hidden", m_game == nil or m_game.storage ~= 3)
+                    end,
+                    click = function(element)
+                        ShowPromoteLocalGameDialog(m_game, element.root)
+                    end,
                 },
 
 
@@ -1623,6 +1831,207 @@ local function MakeGamePanel(gameIndex)
         bmargin = 10,
         gamePanel,
         addGameButton,
+    }
+
+    return resultPanel
+end
+
+--- Shows the "Deploy Game Online" confirmation dialog and, on confirm,
+--- kicks off the local-to-DO promotion flow.
+--- Shows the "Deploy Game Online" confirmation dialog and, on confirm,
+--- kicks off the local-to-DO promotion flow. Uses the framed-panel modal
+--- pattern from the titlescreen (same as the "Leave Game?" dialog), because
+--- gui.ShowModal() doesn't show up in the titlescreen's own modal stack.
+function ShowPromoteLocalGameDialog(game, root)
+    if game == nil or game.storage ~= 3 then
+        return
+    end
+
+    local gameid = game.gameid
+
+    local modal
+    modal = gui.Panel {
+        classes = { "framedPanel" },
+        floating = true,
+        width = 640,
+        height = 360,
+        halign = "center",
+        valign = "center",
+        bgimage = true,
+        flow = "none",
+        styles = {
+            Styles.Default,
+            Styles.Panel,
+        },
+
+        gui.Label {
+            text = "Deploy Game Online?",
+            width = "auto",
+            height = "auto",
+            halign = "center",
+            fontSize = 28,
+            valign = "top",
+            vmargin = 16,
+        },
+
+        gui.Label {
+            text = "Inviting players will deploy this game online to Durable Objects. " ..
+                "The game will get a new game ID, and all its data will be copied to the cloud. " ..
+                "The local copy will be deleted once the online copy is verified.",
+            width = "80%",
+            height = "auto",
+            halign = "center",
+            valign = "center",
+            textAlignment = "center",
+            textWrap = true,
+            fontSize = 16,
+        },
+
+        gui.Panel {
+            valign = "bottom",
+            halign = "center",
+            flow = "horizontal",
+            width = "80%",
+            height = "auto",
+            vmargin = 16,
+            gui.Button {
+                width = "auto",
+                height = "auto",
+                fontSize = 18,
+                vpad = 6,
+                hpad = 12,
+                text = "Deploy Online",
+                halign = "center",
+                hmargin = 12,
+                click = function(element)
+                    modal:DestroySelf()
+                    local loadingScreen = CreatePromoteLoadingScreen(gameid)
+                    root:AddChild(loadingScreen)
+                end,
+            },
+
+            gui.Button {
+                width = "auto",
+                height = "auto",
+                fontSize = 18,
+                vpad = 6,
+                hpad = 12,
+                text = "Cancel",
+                halign = "center",
+                hmargin = 12,
+                escapeActivates = true,
+                click = function(element)
+                    modal:DestroySelf()
+                end,
+            },
+        },
+    }
+
+    root:AddChild(modal)
+end
+
+--- Loading/progress screen shown while a local game is being promoted to
+--- Durable Objects. Mirrors CreateGameLoadingScreen's pattern: a full-size
+--- panel with a centered status label that updates via progress callbacks.
+function CreatePromoteLoadingScreen(oldGameid)
+    local resultPanel
+
+    local statusLabel
+    local progressPct = 0
+
+    resultPanel = gui.Panel {
+        width = "100%",
+        height = "100%",
+        bgimage = true,
+        bgcolor = "clear",
+        halign = "center",
+        valign = "center",
+        styles = {
+            Styles.Default,
+            Styles.Panel,
+        },
+
+        gui.Panel {
+            classes = { "framedPanel" },
+            floating = true,
+            width = 600,
+            height = 200,
+            halign = "center",
+            valign = "center",
+            bgimage = true,
+            flow = "vertical",
+
+            gui.Label {
+                text = "Deploying Game Online",
+                textAlignment = "center",
+                fontSize = 24,
+                bold = true,
+                width = "auto",
+                height = "auto",
+                halign = "center",
+                vmargin = 16,
+            },
+
+            gui.Label {
+                id = "status",
+                text = "Preparing...",
+                textAlignment = "center",
+                fontSize = 16,
+                width = "80%",
+                height = 40,
+                halign = "center",
+                valign = "center",
+                create = function(element) statusLabel = element end,
+                setStatus = function(element, status)
+                    element.text = status
+                end,
+                error = function(element, message)
+                    element.text = message
+                    element.selfStyle.color = "red"
+                end,
+                success = function(element, newGameid)
+                    element.text = "Done! Opening new game..."
+                    -- Small delay then navigate to the new game's edit panel.
+                    dmhub.Schedule(0.5, function()
+                        if resultPanel == nil or not resultPanel.valid then return end
+                        local games = lobby.games or {}
+                        for i, g in ipairs(games) do
+                            if g.gameid == newGameid then
+                                local editor = CreateGameEditor { game = g }
+                                resultPanel.root:AddChild(editor)
+                                break
+                            end
+                        end
+                        resultPanel:DestroySelf()
+                    end)
+                end,
+            },
+
+            gui.CloseButton {
+                floating = true,
+                halign = "right",
+                valign = "top",
+                press = function(element)
+                    resultPanel:DestroySelf()
+                end,
+            },
+        },
+    }
+
+    lobby:PromoteLocalGame {
+        gameid = oldGameid,
+        progress = function(status, pct)
+            if resultPanel == nil or not resultPanel.valid then return end
+            resultPanel:FireEventTree("setStatus", status)
+        end,
+        complete = function(success, newGameid, err)
+            if resultPanel == nil or not resultPanel.valid then return end
+            if success then
+                resultPanel:FireEventTree("success", newGameid)
+            else
+                resultPanel:FireEventTree("error", err or "Unknown error")
+            end
+        end,
     }
 
     return resultPanel
@@ -1857,7 +2266,7 @@ function CreateGameDialog()
                     height = 28,
                     fontSize = 16,
                     valign = "center",
-                    options = { { id = "durableobjects", text = "Durable Objects" }, { id = "firebase", text = "Firebase" } },
+                    options = { { id = "durableobjects", text = "Durable Objects" }, { id = "durableobjects-staging", text = "Durable Objects (Staging)" }, { id = "firebase", text = "Firebase" }, { id = "local", text = "Local" } },
                     idChosen = "durableobjects",
                     create = function(element)
                         -- Only dev users see this dropdown; default their selection to DO
