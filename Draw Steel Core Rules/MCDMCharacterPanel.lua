@@ -5516,8 +5516,9 @@ function TacPanel.MultiEdit()
             text = "",
             markdown = true,
 
-            multimonitor = "eds",
+            multimonitor = {"eds"},
             monitor = function(element)
+                print("EDS:: MONITOR")
                 if m_tokens ~= nil then
                     element:FireEvent("tokens", m_tokens)
                 end
