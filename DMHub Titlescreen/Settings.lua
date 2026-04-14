@@ -810,9 +810,14 @@ setting{
 	default = true,
 }
 
+local hidefText = "High Definition"
+if dmhub.platform == "macOS" then
+    hidefText = "Retina Display"
+end
+
 setting{
 	id = "hidef",
-	description = "High Definition",
+	description = hidefText,
 	storage = "preference",
 	editor = "check",
 
