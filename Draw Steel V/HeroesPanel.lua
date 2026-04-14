@@ -77,37 +77,24 @@ local CreateAddButtonPanel = function()
             valign = "center",
             bgcolor = "#A29078",
             click = function(element)
+                -- Detect whether the current game is a local (offline) game.
+                -- Local games have storage == 3 (StorageBackend.Local in C#).
+                local isLocalGame = false
+                for _, g in ipairs(lobby.games or {}) do
+                    if g.gameid == dmhub.gameid then
+                        isLocalGame = (g.storage == 3)
+                        break
+                    end
+                end
+
                 local inviteDialog
-                inviteDialog = gui.Panel {
-                    classes = { 'framedPanel' },
-                    width = 600,
-                    height = 400,
-                    styles = {
-                        Styles.Panel,
-                    },
+                local contentPanel
+                local progressLabel
+                local StartPromote
+                local SetContent
 
-                    gui.Label {
-                        fontSize = 24,
-                        width = "auto",
-                        height = "auto",
-                        floating = true,
-                        bold = true,
-                        text = "Invite Players",
-                        halign = "center",
-                        valign = "top",
-                        vmargin = 8,
-                    },
-
-                    gui.CloseButton {
-                        halign = "right",
-                        valign = "top",
-                        escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
-                        click = function(element)
-                            gui.CloseModal()
-                        end,
-                    },
-
-                    gui.Panel {
+                local BuildInviteCodeView = function(displayGameid)
+                    return gui.Panel {
                         halign = "center",
                         valign = "center",
                         flow = "horizontal",
@@ -127,10 +114,9 @@ local CreateAddButtonPanel = function()
                             height = "auto",
                             flow = "horizontal",
 
-                            click = function(element)
-                                local tooltip = gui.Tooltip { text = "Copied to Clipboard", valign = "top", borderWidth = 0 } (
-                                    element)
-                                dmhub.CopyToClipboard(dmhub.gameid)
+                            click = function(el)
+                                gui.Tooltip { text = "Copied to Clipboard", valign = "top", borderWidth = 0 } (el)
+                                dmhub.CopyToClipboard(displayGameid)
                             end,
 
                             gui.Label {
@@ -141,7 +127,7 @@ local CreateAddButtonPanel = function()
                                 halign = "center",
                                 valign = "center",
                                 vmargin = 20,
-                                text = dmhub.gameid,
+                                text = displayGameid,
                             },
 
                             gui.Panel {
@@ -160,6 +146,234 @@ local CreateAddButtonPanel = function()
                                 hmargin = 4,
                             },
                         }
+                    }
+                end
+
+                local BuildOfflinePromptView = function()
+                    return gui.Panel {
+                        halign = "center",
+                        valign = "center",
+                        width = "90%",
+                        height = "auto",
+                        flow = "vertical",
+
+                        gui.Label {
+                            text = "This game is currently offline. Put it online to get an invite code that players can use to join.",
+                            width = "90%",
+                            height = "auto",
+                            halign = "center",
+                            textAlignment = "center",
+                            textWrap = true,
+                            fontSize = 16,
+                            vmargin = 8,
+                        },
+
+                        gui.Label {
+                            text = "A new game ID will be generated and all game data will be copied to the cloud. This may take a moment.",
+                            width = "90%",
+                            height = "auto",
+                            halign = "center",
+                            textAlignment = "center",
+                            textWrap = true,
+                            fontSize = 13,
+                            color = "#A29078",
+                            vmargin = 4,
+                        },
+
+                        gui.Button {
+                            text = "Put Game Online",
+                            width = "auto",
+                            height = "auto",
+                            fontSize = 18,
+                            vpad = 6,
+                            hpad = 16,
+                            halign = "center",
+                            vmargin = 16,
+                            click = function()
+                                StartPromote()
+                            end,
+                        },
+                    }
+                end
+
+                local BuildProgressView = function()
+                    return gui.Panel {
+                        halign = "center",
+                        valign = "center",
+                        width = "90%",
+                        height = "auto",
+                        flow = "vertical",
+
+                        gui.Label {
+                            text = "Putting Game Online...",
+                            width = "auto",
+                            height = "auto",
+                            halign = "center",
+                            fontSize = 18,
+                            bold = true,
+                            vmargin = 8,
+                        },
+
+                        gui.Label {
+                            text = "Preparing...",
+                            width = "90%",
+                            height = "auto",
+                            halign = "center",
+                            textAlignment = "center",
+                            textWrap = true,
+                            fontSize = 14,
+                            color = "#A29078",
+                            create = function(el)
+                                progressLabel = el
+                            end,
+                        },
+                    }
+                end
+
+                local BuildSuccessView = function(newGameid)
+                    return gui.Panel {
+                        halign = "center",
+                        valign = "center",
+                        width = "90%",
+                        height = "auto",
+                        flow = "vertical",
+
+                        gui.Label {
+                            text = "Game is Online!",
+                            width = "auto",
+                            height = "auto",
+                            halign = "center",
+                            fontSize = 20,
+                            bold = true,
+                            vmargin = 4,
+                        },
+
+                        BuildInviteCodeView(newGameid),
+
+                        gui.Button {
+                            text = "Play Online",
+                            width = "auto",
+                            height = "auto",
+                            fontSize = 16,
+                            vpad = 6,
+                            hpad = 16,
+                            halign = "center",
+                            vmargin = 4,
+                            click = function()
+                                gui.CloseModal()
+                                lobby:EnterGame(newGameid)
+                            end,
+                        },
+                    }
+                end
+
+                local BuildErrorView = function(msg)
+                    return gui.Panel {
+                        halign = "center",
+                        valign = "center",
+                        width = "90%",
+                        height = "auto",
+                        flow = "vertical",
+
+                        gui.Label {
+                            text = "Failed to Put Game Online",
+                            width = "auto",
+                            height = "auto",
+                            halign = "center",
+                            fontSize = 18,
+                            bold = true,
+                            color = "red",
+                            vmargin = 4,
+                        },
+
+                        gui.Label {
+                            text = msg,
+                            width = "90%",
+                            height = "auto",
+                            halign = "center",
+                            textAlignment = "center",
+                            textWrap = true,
+                            fontSize = 14,
+                            color = "#A29078",
+                            vmargin = 8,
+                        },
+                    }
+                end
+
+                SetContent = function(newContent)
+                    if contentPanel ~= nil and contentPanel.valid then
+                        contentPanel.children = { newContent }
+                    end
+                end
+
+                StartPromote = function()
+                    SetContent(BuildProgressView())
+                    lobby:PromoteLocalGame {
+                        gameid = dmhub.gameid,
+                        -- TEMP: target staging until the release DO server
+                        -- is redeployed with the /admin/bulk-upload route.
+                        staging = true,
+                        progress = function(status, pct)
+                            if progressLabel ~= nil and progressLabel.valid then
+                                progressLabel.text = status or ""
+                            end
+                        end,
+                        complete = function(success, newGameid, err)
+                            if inviteDialog == nil or not inviteDialog.valid then return end
+                            if success then
+                                SetContent(BuildSuccessView(newGameid))
+                            else
+                                SetContent(BuildErrorView(err or "Unknown error"))
+                            end
+                        end,
+                    }
+                end
+
+                local titleText = isLocalGame and "Put Game Online" or "Invite Players"
+
+                inviteDialog = gui.Panel {
+                    classes = { 'framedPanel' },
+                    width = 600,
+                    height = 400,
+                    styles = {
+                        Styles.Panel,
+                    },
+
+                    gui.Label {
+                        fontSize = 24,
+                        width = "auto",
+                        height = "auto",
+                        floating = true,
+                        bold = true,
+                        text = titleText,
+                        halign = "center",
+                        valign = "top",
+                        vmargin = 8,
+                    },
+
+                    gui.CloseButton {
+                        halign = "right",
+                        valign = "top",
+                        escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
+                        click = function(element)
+                            gui.CloseModal()
+                        end,
+                    },
+
+                    gui.Panel {
+                        halign = "center",
+                        valign = "center",
+                        width = "90%",
+                        height = "auto",
+                        flow = "vertical",
+                        create = function(el)
+                            contentPanel = el
+                            if isLocalGame then
+                                el.children = { BuildOfflinePromptView() }
+                            else
+                                el.children = { BuildInviteCodeView(dmhub.gameid) }
+                            end
+                        end,
                     },
                 }
 
