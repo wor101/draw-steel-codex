@@ -1890,13 +1890,6 @@ function ActivatedAbility.ExpectedResourceConsumptionFromCurrentCast()
         end
     end
 
-    local improvCosts = info.options.improvementCosts
-    if improvCosts ~= nil then
-        for _, ic in ipairs(improvCosts) do
-            result[ic.resourceId] = (result[ic.resourceId] or 0) + ic.costAmt
-        end
-    end
-
     return result
 end
 
@@ -1944,7 +1937,6 @@ function ActivatedAbility:ConsumeResources(casterToken, options)
 
             execute = function()
                 local cost = options.costOverride or self:GetCost(tok)
-                print("COST:: CONSUME", cost)
 
                 local resourceTable = dmhub.GetTable("characterResources")
 
@@ -2759,18 +2751,6 @@ function ActivatedAbility.CastCoroutine(self, casterToken, targets, options)
 
 	if (options.pay or (options.payIfNotAborted and (not options.abort))) and not options.alreadyPaid then
 		self:ConsumeResources(casterToken, options)
-		if options.improvementCosts ~= nil and #options.improvementCosts > 0 then
-			local costs = options.improvementCosts
-			casterToken:ModifyProperties{
-				description = "Ability Improvement Cost",
-				undoable = false,
-				execute = function()
-					for _, ic in ipairs(costs) do
-						casterToken.properties:ConsumeResource(ic.resourceId, ic.refreshType, ic.costAmt, ic.name)
-					end
-				end,
-			}
-		end
 		options.alreadyPaid = true
 	end
 

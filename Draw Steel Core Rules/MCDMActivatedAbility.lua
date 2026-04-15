@@ -482,6 +482,36 @@ RegisterGoblinScriptSymbol(ActivatedAbility, {
     end,
 })
 
+RegisterGoblinScriptSymbol(ActivatedAbility, {
+    name = "Characteristics",
+    type = "set",
+    desc = "Returns the characteristics of this ability.",
+    examples = { 'Ability.Characteristics has "Might"', 'Ability.Characteristics has "Highest"' },
+    calculate = function(c)
+        local result = {}
+        for _, behavior in ipairs(c.behaviors) do
+            if behavior.typeName == "ActivatedAbilityPowerRollBehavior" then
+                local roll = behavior:try_get("roll", "")
+                if roll ~= "" then
+                    local rollLower = string.lower(roll)
+                    for desc, id in pairs(creature.descriptionToAttribute) do
+                        if string.find(rollLower, string.lower(desc)) then
+                            result[#result+1] = desc
+                        end
+                    end
+                    if string.find(rollLower, "highest characteristic") then
+                        result[#result+1] = "Highest"
+                    end
+                end
+            end
+        end
+
+        return StringSet.new{
+            strings = result,
+        }
+    end,
+})
+
 function ActivatedAbility:HasAttack()
     return self:HasKeyword("Strike")
 end
@@ -2813,6 +2843,39 @@ GameSystem.RegisterGoblinScriptField {
             end
         end
         return false
+    end,
+}
+
+GameSystem.RegisterGoblinScriptField {
+    target = ActivatedAbility,
+    name = "TestSkills",
+    type = "set",
+    desc = "The skills applied to any test power rolls in this ability.",
+    seealso = {},
+    examples = {"Ability.TestSkills has 'Intimidate'"},
+    calculate = function(c)
+        local strings = {}
+        local seen = {}
+        local function addSkill(skillid)
+            if skillid ~= nil and skillid ~= "none" and not seen[skillid] then
+                seen[skillid] = true
+                local skill = dmhub.GetTable(Skill.tableName)[skillid]
+                if skill ~= nil then
+                    strings[#strings + 1] = skill.name
+                end
+            end
+        end
+        if c:try_get("isTest", false) then
+            addSkill(c:try_get("skillid"))
+        end
+        for _, behavior in ipairs(c.behaviors) do
+            if behavior.typeName == "ActivatedAbilityPowerRollBehavior" and behavior:try_get("isTest", false) then
+                addSkill(behavior:try_get("skillid"))
+            end
+        end
+        return StringSet.new {
+            strings = strings,
+        }
     end,
 }
 
