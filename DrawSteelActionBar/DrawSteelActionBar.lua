@@ -2200,14 +2200,57 @@ local m_castingTriggers = nil
 local m_castingTriggersOwnerPanel = nil
 
 
---- Applies checked improvement params, re-runs CalculateSpellTargeting, then restores.
+--- Applies checked improvement params, re-runs CalculateSpellTargeting
 --- Rebuilds g_currentCostProposal from scratch so improvement resource costs are included.
---- Each param's registered apply() temporarily patches the ability and returns a restore fn.
+--- Each param's registered apply() temporarily patches the ability
+local function AppendImprovementCosts(costProposal)
+    if g_token == nil or costProposal == nil then return end
+    local resourceTable = dmhub.GetTable("characterResources")
+    for _, entry in ipairs(m_activeImprovements) do
+        if entry.checked then
+            local costType = entry.mod:try_get("resourceCostType", "none")
+            if costType ~= "none" then
+                local looksym = g_token.properties:LookupSymbol{ability = g_currentAbility}
+                local costAmt = tonumber(ExecuteGoblinScript(
+                    entry.mod:try_get("resourceCostAmount", "1"),
+                    looksym, 1)) or 1
+                if costAmt > 0 then
+                    local resourceId = cond(costType == "epic",
+                        CharacterResource.epicResourceId,
+                        g_token.properties.resourceid)
+                    local resourceInfo = resourceTable[resourceId]
+                    if resourceInfo ~= nil then
+                        local creature = g_token.properties
+                        local max = (resourceInfo.usageLimit == "global")
+                            and CharacterResource.GetGlobalResource(resourceId)
+                            or (creature:GetResources()[resourceId] or 0)
+                        local usage = creature:GetResourceUsage(resourceId, resourceInfo.usageLimit)
+                        local available = (max - usage) + resourceInfo:AllowResourceBelowZero(creature)
+                        local canAfford = available >= costAmt
+                        costProposal.canAfford = costProposal.canAfford and canAfford
+                        costProposal.details[#costProposal.details + 1] = {
+                            cost = resourceId,
+                            quantity = costAmt,
+                            canAfford = canAfford,
+                            refreshType = resourceInfo.usageLimit,
+                            paymentOptions = cond(canAfford,
+                                {{resourceid = resourceId, quantity = costAmt}}, {}),
+                            expendedOptions = cond(not canAfford,
+                                {{resourceid = resourceId, quantity = costAmt}}, {}),
+                        }
+                    end
+                end
+            end
+        end
+    end
+end
+
 local ApplyImprovements = function()
     if g_token == nil or g_currentAbility == nil then return end
 
     -- Rebuild the base cost proposal, then append costs for each checked improvement.
     g_currentCostProposal = g_currentAbility:GetCost(g_token, g_currentSymbols)
+    AppendImprovementCosts(g_currentCostProposal)
 
     -- Reset all improvement bonus fields so each call starts fresh.
     g_currentSymbols.abilityRangeBonus = nil
@@ -3064,6 +3107,7 @@ CreateAbilityController = function()
 
 
                             g_currentCostProposal = g_currentAbility:GetCost(g_token, g_currentSymbols)
+                            AppendImprovementCosts(g_currentCostProposal)
                             CalculateSpellTargeting()
                             --TODO: resourcesBar
                             --resourcesBar:FireEventTree("cost", g_currentCostProposal)
@@ -3349,6 +3393,7 @@ CreateAbilityController = function()
 
             --recalculate with the new cost proposal.
             g_currentCostProposal = g_currentAbility:GetCost(g_token, { charges = charges, mode = g_currentSymbols.mode })
+            AppendImprovementCosts(g_currentCostProposal)
             g_currentSymbols.charges = charges
 
             CalculateSpellTargeting()
@@ -3577,6 +3622,7 @@ CreateAbilityController = function()
             end
 
             g_currentCostProposal = ability:GetCost(g_token, g_currentSymbols)
+            AppendImprovementCosts(g_currentCostProposal)
 
             g_targetInfo = CreateTargetInfo(g_currentAbility)
 
@@ -4821,6 +4867,8 @@ CreateAbilityController = function()
                     section = "main",
                 }
 
+                AppendImprovementCosts(g_currentCostProposal)
+
                 local clearAbility = g_currentAbility
                 g_currentAbility:Cast(g_token, targets, {
                     targetArea = g_pointTargeting.shape,
@@ -5120,38 +5168,12 @@ CalculateSpellTargeting = function(forceCast, initialSetup)
                 section = "main",
             }
 
-            -- Build improvement costs to pass into Cast so they are consumed
-            -- at the same time as the ability's own cost (inside AbilityPayCost).
-            local improvCosts = {}
-            do
-                local resourceTable = dmhub.GetTable("characterResources")
-                for _, entry in ipairs(m_activeImprovements) do
-                    if entry.checked then
-                        local costType = entry.mod:try_get("resourceCostType", "none")
-                        if costType ~= "none" then
-                            local costAmt = tonumber(ExecuteGoblinScript(entry.mod:try_get("resourceCostAmount", "1"), g_token.properties:LookupSymbol{}, 1)) or 1
-                            if costAmt > 0 then
-                                local resourceId = cond(costType == "epic", CharacterResource.epicResourceId, g_token.properties.resourceid)
-                                local resourceInfo = resourceTable[resourceId]
-                                if resourceInfo ~= nil then
-                                    improvCosts[#improvCosts+1] = {
-                                        resourceId = resourceId,
-                                        costAmt = costAmt,
-                                        refreshType = resourceInfo.usageLimit,
-                                        name = entry.mod:try_get("name", "Improvement"),
-                                    }
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+            AppendImprovementCosts(g_currentCostProposal)
 
             local clearAbility = g_currentAbility
             g_currentAbility:Cast(g_token, targets, {
                 attachedTriggers = attachedTriggers,
                 costOverride = g_currentCostProposal,
-                improvementCosts = improvCosts,
                 symbols = g_currentSymbols,
                 markLineOfSight = m_targetLineOfSightRays,
                 OnFinishCastHandlers = {
