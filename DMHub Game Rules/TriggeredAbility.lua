@@ -1060,6 +1060,9 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 			argOptions.alreadyPaid = true
 		end
 		executeTrigger()
+		if self:ActionResource() == CharacterResource.triggerResourceId then
+			casterToken.properties:DispatchEvent("finishability", {usedability = self})
+		end
 	else
 		dmhub.Coroutine(function()
 			local guid = dmhub.GenerateGuid()
@@ -1240,6 +1243,7 @@ function TriggeredAbility:Trigger(characterModifier, creature, symbols, auraCont
 
 				dmhub.Schedule(0.01, function() --make execute in the main thread with a schedule.
 					executeTrigger()
+					casterToken.properties:DispatchEvent("finishability", {usedability = self})
 				end)
 			end
 		end)
