@@ -877,6 +877,7 @@ function ActivatedAbility:GenerateEditor()
 					minHeight = 20,
 					textAlignment = "topleft",
 					text = self.flavor,
+                    characterLimit = 512,
 					change = function(element)
 						self.flavor = element.text
 					end,
