@@ -4901,53 +4901,36 @@ function ActivatedAbility:ShowEditActivatedAbilityDialog(options)
 
 	-- Themed overrides that beat the base Styles.Panel and prettyButton
 	-- defaults. Applied only when the sectioned editor is active.
+	-- Splice in the shared themed-dialog pack (framedPanel + prettyButton
+	-- chrome, widget skins, form pattern, modifier/behavior chrome). The
+	-- previous inlined overrides lived here before the pack existed; the
+	-- pack owns them now so future editors get the same chrome with one
+	-- helper call.
 	local themeStyles = Styles.Panel
 	if themed then
 		themeStyles = {}
 		for _, rule in ipairs(Styles.Panel) do
 			themeStyles[#themeStyles+1] = rule
 		end
-		-- Outer frame: dark background + gold border, beating framedPanel defaults.
-		themeStyles[#themeStyles+1] = gui.Style{
-			selectors = {"framedPanel"},
-			priority = 3,
-			bgcolor = c.BG,
-			borderColor = c.GOLD,
-			gradient = nil,
-		}
-		-- prettyButton: gold-on-dark. Priority 3 beats the base `label button`
-		-- and `label button prettyButton` rules in DMHub Titlescreen/Styles.lua.
-		themeStyles[#themeStyles+1] = gui.Style{
-			selectors = {"label", "button", "prettyButton"},
-			priority = 3,
-			bgcolor = c.PANEL_BG,
-			bgimage = "panels/square.png",
-			color = c.CREAM_BRIGHT,
-			borderColor = c.GOLD,
-			borderWidth = 2,
-			cornerRadius = 4,
-			fontFace = "Berling",
-			fontSize = 20,
-			fontWeight = "bold",
-			hmargin = 8,
-			vmargin = 8,
-			textAlignment = "center",
-		}
-		themeStyles[#themeStyles+1] = gui.Style{
-			selectors = {"label", "button", "prettyButton", "hover"},
-			priority = 3,
-			bgcolor = c.GOLD_DIM,
-			color = c.BG,
-			borderColor = c.CREAM_BRIGHT,
-		}
-		themeStyles[#themeStyles+1] = gui.Style{
-			selectors = {"label", "button", "prettyButton", "press"},
-			priority = 3,
-			bgcolor = c.GOLD,
-			color = c.BG,
-			brightness = 0.85,
-		}
+		for _, rule in ipairs(abilityEditor.GetThemedDialogStyles(c)) do
+			themeStyles[#themeStyles+1] = rule
+		end
 	end
+
+	-- Flat white gradient: Styles.Panel's framedPanel rule sets
+	-- gradient = dialogGradient (near-black #000000 -> #060606), and the
+	-- engine MULTIPLIES bgcolor with the gradient's color at each pixel.
+	-- Our themed bgcolor multiplied with dialogGradient produces near-
+	-- black rather than c.BG. Supplying a flat-white gradient lets
+	-- bgcolor paint as-is (bgcolor * white = bgcolor).
+	local flatWhiteGradient = themed and gui.Gradient{
+		point_a = {x = 0, y = 0},
+		point_b = {x = 1, y = 1},
+		stops = {
+			{position = 0, color = "#ffffff"},
+			{position = 1, color = "#ffffff"},
+		},
+	} or nil
 
 	local args = {
 		style = {
@@ -4960,6 +4943,12 @@ function ActivatedAbility:ShowEditActivatedAbilityDialog(options)
 
 		classes = {"framedPanel"},
 		styles = themeStyles,
+		bgimage = themed and "panels/square.png" or nil,
+		bgcolor = themed and c.BG or nil,
+		gradient = flatWhiteGradient,
+		borderWidth = themed and 2 or nil,
+		borderColor = themed and c.GOLD or nil,
+		cornerRadius = themed and 6 or nil,
 
 		floating = true,
 

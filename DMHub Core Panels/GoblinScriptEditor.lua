@@ -845,6 +845,13 @@ function gui.GoblinScriptInput(options)
 		args[k] = option
 	end
 
+	-- Default the outer wrapper to halign = "left" so the widget doesn't
+	-- center in whatever container embeds it. Callers can still override
+	-- by passing halign in options.
+	if args.halign == nil then
+		args.halign = "left"
+	end
+
 	resultPanel = gui.Panel(args)
 
 	if input_value ~= nil then

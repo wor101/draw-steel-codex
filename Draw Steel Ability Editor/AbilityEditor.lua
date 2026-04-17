@@ -1091,10 +1091,18 @@ local function _sharedWidgetStyles(colors)
         gui.Style{ selectors = {"formDropdown"}, halign = "left", priority = 5 },
         gui.Style{ selectors = {"formInput"}, halign = "left", priority = 5 },
         gui.Style{ selectors = {"formValue"}, halign = "left", priority = 5 },
-        -- Dropdown skin.
+        -- Dropdown skin. halign = "left" catches standalone dropdowns
+        -- (e.g. Modify Abilities' "Add Attribute", KeywordSelector's
+        -- "Add Keyword") that sit as direct children of vertical-flow
+        -- content panels. Without it they have width < 100% and no
+        -- halign hint, so the engine centers them. Dropdowns inside
+        -- formPanel (horizontal flow) aren't affected by halign in the
+        -- same way, so this doesn't break multi-input rows like Modify
+        -- Power Roll's Replace in Table.
         gui.Style{
             selectors = {"dropdown"},
             priority = 3,
+            halign = "left",
             bgcolor = c.PANEL_BG,
             borderWidth = 1,
             borderColor = c.GOLD,
@@ -1295,9 +1303,15 @@ local function _sharedFormStyles(colors)
             textAlignment = "left",
             bmargin = 4,
         },
+        -- Inline rows: width = "auto" so the row shrinks to label + widget
+        -- and anchors left. Using "100%" (the ability editor's
+        -- nae-field-row-inline convention) produces a huge gap in wider
+        -- containers like the feature panel's 900px content column
+        -- because children with their own halign float to opposite ends
+        -- of the wide row instead of packing tight.
         gui.Style{
             selectors = {"ds-field-row-inline"},
-            width = "100%",
+            width = "auto",
             height = "auto",
             flow = "horizontal",
             halign = "left",
@@ -1330,6 +1344,14 @@ local function _sharedFormStyles(colors)
             borderBox = true,
             fontSize = 14,
             textAlignment = "left",
+        },
+        -- Compact variant for short single-line fields (Name / Source).
+        -- Narrower than the full-width ds-field-input so the row doesn't
+        -- span the whole popup for a 20-char value.
+        gui.Style{
+            selectors = {"ds-field-input", "ds-field-input-compact"},
+            priority = 5,
+            width = 420,
         },
         gui.Style{
             selectors = {"ds-field-textarea"},
@@ -1366,6 +1388,437 @@ local function _sharedFormStyles(colors)
 end
 
 AbilityEditor.GetSharedFormStyles = _sharedFormStyles
+
+--[[
+    ============================================================================
+    Themed dialog styles (exported)
+    ============================================================================
+    The "themed dialog" is the complete DS chrome pack: gold/cream palette
+    outer frame, widget skin, form row pattern, compact nested-editor chrome.
+    Splice it into the OUTERMOST dialog panel's `styles = {...}` list and
+    every descendant inherits the theme -- no per-panel theming needed.
+
+    Why this exists vs. combining GetSharedWidgetStyles + GetSharedFormStyles
+    inline at each call site: the frame itself (framedPanel + prettyButton)
+    and the compact sizing for nested editors (modifierEditorPanel,
+    descendant formPanel/formLabel) were duplicated across call sites, and
+    the framedPanel had a subtle bug -- base Styles.Panel applies
+    dialogGradient (near-black) which can't be cleared by `gradient = nil`
+    in a Lua style table (nil-valued keys are absent, so the base rule
+    wins). This helper overrides with a flat gradient in our palette, so
+    the frame's surface is truly c.BG top-to-bottom.
+]]
+local function _themedDialogStyles(colors)
+    local c = colors or COLORS
+    local styles = {}
+
+    -- Compose widget + form packs first.
+    for _, rule in ipairs(_sharedWidgetStyles(c)) do
+        styles[#styles+1] = rule
+    end
+    for _, rule in ipairs(_sharedFormStyles(c)) do
+        styles[#styles+1] = rule
+    end
+
+    -- Flat white gradient. The engine MULTIPLIES bgcolor by the gradient's
+    -- color at each pixel. Base Styles.Panel's framedPanel rule sets
+    -- gradient to dialogGradient (near-black #000000 -> #060606); any
+    -- bgcolor multiplied by that produces near-black. Supplying a flat
+    -- white gradient lets bgcolor paint as-is (bgcolor * white = bgcolor).
+    local flatGradient = gui.Gradient{
+        point_a = {x = 0, y = 0},
+        point_b = {x = 1, y = 1},
+        stops = {
+            {position = 0, color = "#ffffff"},
+            {position = 1, color = "#ffffff"},
+        },
+    }
+
+    -- Outer frame.
+    styles[#styles+1] = gui.Style{
+        selectors = {"framedPanel"},
+        priority = 3,
+        bgimage = "panels/square.png",
+        bgcolor = c.BG,
+        borderColor = c.GOLD,
+        borderWidth = 2,
+        gradient = flatGradient,
+    }
+
+    -- PrettyButton (Confirm/Cancel and similar).
+    styles[#styles+1] = gui.Style{
+        selectors = {"label", "button", "prettyButton"},
+        priority = 3,
+        bgcolor = c.PANEL_BG,
+        bgimage = "panels/square.png",
+        color = c.CREAM_BRIGHT,
+        borderColor = c.GOLD,
+        borderWidth = 2,
+        cornerRadius = 4,
+        fontFace = "Berling",
+        fontSize = 20,
+        fontWeight = "bold",
+        hmargin = 8,
+        vmargin = 8,
+        textAlignment = "center",
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"label", "button", "prettyButton", "hover"},
+        priority = 3,
+        bgcolor = c.GOLD_DIM,
+        color = c.BG,
+        borderColor = c.CREAM_BRIGHT,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"label", "button", "prettyButton", "press"},
+        priority = 3,
+        bgcolor = c.GOLD,
+        color = c.BG,
+        brightness = 0.85,
+    }
+
+    -- Inner content surface: transparent so the frame's themed surface
+    -- shows through uninterrupted. Content-panel keeps its role as the
+    -- scroll viewport; callers should wrap their children in a
+    -- height="auto" inner panel so rows pack at the top instead of being
+    -- distributed across the viewport height. See CharacterFeature's
+    -- EditorPanel inner wrapper (pattern copied from the Create New
+    -- Ability modal at AbilityEditorTemplates.lua:1436-1453).
+    styles[#styles+1] = gui.Style{
+        selectors = {"content-panel"},
+        priority = 6,
+        bgcolor = "clear",
+        valign = "top",
+        hpad = 16,
+        vpad = 12,
+        borderBox = true,
+    }
+
+    -- Nested modifier / behavior editor panels: themed card chrome.
+    -- (Kept for callers that still use the classic modifierEditorPanel
+    -- class; new callers should use the nae-behavior-* classes below.)
+    styles[#styles+1] = gui.Style{
+        selectors = {"modifierEditorPanel"},
+        priority = 6,
+        bgcolor = c.PANEL_BG,
+        borderColor = c.GOLD,
+        borderWidth = 1,
+        pad = 6,
+        vmargin = 6,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"modifierHeadingLabel"},
+        priority = 6,
+        fontSize = 16,
+        bold = true,
+        color = c.GOLD_BRIGHT,
+        height = "auto",
+        bmargin = 4,
+    }
+
+    -- Shared nae-behavior-* chrome for modifier / behavior list items.
+    -- Mirrors the ability editor's effects section so feature panel
+    -- modifiers visually match ability editor behaviors.
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-item"},
+        width = "100%",
+        height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+        bgcolor = "clear",
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-header"},
+        width = "100%",
+        height = "auto",
+        flow = "horizontal",
+        halign = "left",
+        valign = "center",
+        bgimage = "panels/square.png",
+        bgcolor = c.PANEL_BG,
+        border = {y1 = 0, y2 = 1, x1 = 0, x2 = 0},
+        borderColor = c.GOLD,
+        hpad = 8,
+        vpad = 6,
+        borderBox = true,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-summary"},
+        width = "auto",
+        height = "auto",
+        fontSize = 16,
+        bold = true,
+        color = c.GOLD_BRIGHT,
+        halign = "left",
+        valign = "center",
+        textAlignment = "left",
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-controls"},
+        width = "auto",
+        height = "auto",
+        flow = "horizontal",
+        halign = "right",
+        valign = "center",
+        bgcolor = "clear",
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-copy-btn"},
+        priority = 3,
+        width = "auto",
+        height = "auto",
+        fontSize = 11,
+        bold = true,
+        color = c.CREAM,
+        valign = "center",
+        rmargin = 8,
+        hpad = 6,
+        vpad = 2,
+        borderWidth = 1,
+        borderColor = c.GOLD,
+        cornerRadius = 2,
+        bgimage = "panels/square.png",
+        bgcolor = c.PANEL_BG,
+        borderBox = true,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-copy-btn", "hover"},
+        priority = 3,
+        bgcolor = c.GOLD_DIM,
+        color = c.BG,
+        borderColor = c.CREAM_BRIGHT,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-copy-btn", "press"},
+        priority = 3,
+        bgcolor = c.GOLD,
+        color = c.BG,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-arrow"},
+        width = 24,
+        height = 12,
+        valign = "center",
+        bgimage = "panels/hud/down-arrow.png",
+        bgcolor = c.GOLD_BRIGHT,
+        lmargin = 4,
+        transitionTime = 0.15,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-arrow", "nae-up"},
+        scale = {x = 1, y = -1},
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-arrow", "disabled"},
+        bgcolor = c.GRAY,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-arrow", "hover"},
+        bgcolor = c.CREAM_BRIGHT,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-arrow", "disabled", "hover"},
+        bgcolor = c.GRAY,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-content"},
+        width = "100%",
+        height = "auto",
+        flow = "vertical",
+        halign = "left",
+        valign = "top",
+        bgcolor = "clear",
+        hpad = 8,
+        vpad = 4,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"nae-behavior-divider"},
+        width = "100%",
+        height = 1,
+        bgimage = "panels/square.png",
+        bgcolor = c.GOLD .. "66",
+        vmargin = 4,
+    }
+
+    -- Tighten formPanel/formLabel descendants so modifier sub-editor rows
+    -- match the behavior editor's density. Horizontal flow is preserved --
+    -- some modifier editors (Modify Power Roll's "Replace in Table" row)
+    -- emit multiple inputs in one formPanel expecting them side-by-side.
+    -- width = "auto" shrinks the row to fit its content, so combined with
+    -- halign = "left" everything anchors to the left edge instead of
+    -- centering within a 100%-wide row.
+    styles[#styles+1] = gui.Style{
+        selectors = {"formPanel"},
+        priority = 7,
+        flow = "horizontal",
+        width = "auto",
+        height = "auto",
+        minHeight = 0,
+        halign = "left",
+        valign = "center",
+        pad = 0,
+        vmargin = 4,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"formLabel"},
+        priority = 7,
+        width = 140,
+        halign = "left",
+        valign = "center",
+        fontSize = 14,
+        bold = true,
+        color = c.CREAM_BRIGHT,
+        textAlignment = "left",
+    }
+    -- formInput is the classic class most modifier sub-editors attach to
+    -- their gui.Input. Themed version gets DS chrome + left halign so the
+    -- input doesn't center in whatever container the modifier emitted.
+    styles[#styles+1] = gui.Style{
+        selectors = {"formInput"},
+        priority = 7,
+        halign = "left",
+        bgcolor = c.PANEL_BG,
+        borderColor = c.GOLD,
+        borderWidth = 1,
+        cornerRadius = 2,
+        color = c.CREAM_BRIGHT,
+        fontSize = 14,
+        height = 26,
+        hpad = 6,
+        vpad = 2,
+        borderBox = true,
+        textAlignment = "left",
+    }
+
+    return styles
+end
+
+AbilityEditor.GetThemedDialogStyles = _themedDialogStyles
+
+--[[
+    ============================================================================
+    Themed confirmation dialog (exported)
+    ============================================================================
+    Drop-in replacement for gui.ModalMessage when the caller wants the DS
+    gold-on-dark chrome instead of the engine-wide default. Used by the
+    feature panel's modifier delete flow so the confirm dialog matches
+    the surrounding editor. The engine-wide ModalMessage is deliberately
+    not themed -- it's used by ~20+ unrelated panels and changing its
+    style risks regressions outside this PR's scope.
+
+    options:
+      title        string   Heading displayed at the top.
+      message      string   Body message.
+      confirmText  string   Label for the confirm button (default "Confirm").
+      cancelText   string   Label for the cancel button  (default "Cancel").
+      onConfirm    function Fired when confirm is pressed.
+      onCancel     function Fired when cancel is pressed (optional).
+      colors       table    Palette override (defaults to AbilityEditor.COLORS).
+]]
+function AbilityEditor.ShowThemedConfirm(options)
+    local c = options.colors or COLORS
+    local title = options.title or "Confirm"
+    local message = options.message or ""
+    local confirmText = options.confirmText or "Confirm"
+    local cancelText = options.cancelText or "Cancel"
+
+    local flatWhiteGradient = gui.Gradient{
+        point_a = {x = 0, y = 0},
+        point_b = {x = 1, y = 1},
+        stops = {
+            {position = 0, color = "#ffffff"},
+            {position = 1, color = "#ffffff"},
+        },
+    }
+
+    local dialogPanel
+    local function close()
+        if dialogPanel ~= nil and dialogPanel.valid then
+            gui.CloseModal()
+        end
+    end
+
+    local dialogStyles = {Styles.Panel, Styles.Default}
+    for _, rule in ipairs(_themedDialogStyles(c)) do
+        dialogStyles[#dialogStyles+1] = rule
+    end
+
+    dialogPanel = gui.Panel{
+        classes = {"framedPanel"},
+        floating = true,
+        flow = "vertical",
+        width = 480,
+        height = "auto",
+        halign = "center",
+        valign = "center",
+        bgimage = "panels/square.png",
+        bgcolor = c.BG,
+        gradient = flatWhiteGradient,
+        borderWidth = 2,
+        borderColor = c.GOLD,
+        cornerRadius = 6,
+        hpad = 24,
+        vpad = 20,
+        borderBox = true,
+        styles = dialogStyles,
+
+        children = {
+            gui.Label{
+                width = "100%",
+                height = "auto",
+                fontSize = 18,
+                bold = true,
+                color = c.GOLD_BRIGHT,
+                textAlignment = "left",
+                bmargin = 12,
+                text = title,
+            },
+            gui.Label{
+                width = "100%",
+                height = "auto",
+                fontSize = 14,
+                color = c.CREAM_BRIGHT,
+                textAlignment = "left",
+                bmargin = 20,
+                text = message,
+            },
+            gui.Panel{
+                width = "100%",
+                height = "auto",
+                flow = "horizontal",
+                halign = "right",
+                valign = "center",
+
+                gui.Button{
+                    text = cancelText,
+                    fontSize = 14,
+                    width = 120,
+                    height = 32,
+                    rmargin = 8,
+                    escapeActivates = true,
+                    escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
+                    click = function()
+                        close()
+                        if options.onCancel ~= nil then options.onCancel() end
+                    end,
+                },
+                gui.Button{
+                    text = confirmText,
+                    fontSize = 14,
+                    width = 120,
+                    height = 32,
+                    click = function()
+                        close()
+                        if options.onConfirm ~= nil then options.onConfirm() end
+                    end,
+                },
+            },
+        },
+    }
+
+    gui.ShowModal(dialogPanel)
+end
 
 --[[
     ============================================================================
