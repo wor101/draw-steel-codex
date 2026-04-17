@@ -713,8 +713,9 @@ function CharacterBuilder.CreatePanel()
             element:FireEventTree("refreshBuilderState", element.data.state)
         end,
 
-        tokenDataChanged = function(element)
-            element:FireEvent("notifyChangeSound")
+        tokenDataChanged = function(element, suppressSound)
+            suppressSound = suppressSound == nil and false or suppressSound
+            if not suppressSound then element:FireEvent("notifyChangeSound") end
             local cs = CharacterBuilder._getCharacterSheet()
             if cs then
                 -- The character sheet fires refreshToken which in turn
