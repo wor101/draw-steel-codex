@@ -677,6 +677,44 @@ function CustomDocument:CreateInterface(args)
         }
     end
 
+    local m_bubbleLockIcon = nil
+    if args.bubbleIcon then
+        m_bubbleLockIcon = gui.Panel {
+            width = 16,
+            height = 16,
+            bgcolor = "white",
+            bgimage = "panels/square.png",
+            valign = "center",
+            lmargin = 8,
+            linger = gui.Tooltip("Unlock to allow dragging on the map"),
+            refreshLockIcon = function(element)
+                for _, bubble in pairs(dmhub.infoBubbles) do
+                    if bubble.document ~= nil and bubble.document.docid == self.id then
+                        element.selfStyle.bgimage = cond(bubble.locked,
+                            "icons/icon_tool/icon_tool_30.png",
+                            "icons/icon_tool/icon_tool_30_unlocked.png")
+                        return
+                    end
+                end
+            end,
+            create = function(element)
+                element:FireEvent("refreshLockIcon")
+            end,
+            press = function(element)
+                for _, bubble in pairs(dmhub.infoBubbles) do
+                    if bubble.document ~= nil and bubble.document.docid == self.id then
+                        bubble:BeginChanges()
+                        bubble.locked = not bubble.locked
+                        bubble:CompleteChanges(cond(bubble.locked,
+                            "Lock info bubble", "Unlock info bubble"))
+                        element:FireEvent("refreshLockIcon")
+                        return
+                    end
+                end
+            end,
+        }
+    end
+
     local m_titlePanel = args.titlePanel or gui.Panel {
         classes = {"collapsed"},
         halign = "left",
@@ -686,6 +724,7 @@ function CustomDocument:CreateInterface(args)
         flow = "horizontal",
         rmargin = 4,
         m_bubbleIconInput,
+        m_bubbleLockIcon,
         gui.Input {
             text = self.description,
             fontSize = 14,
