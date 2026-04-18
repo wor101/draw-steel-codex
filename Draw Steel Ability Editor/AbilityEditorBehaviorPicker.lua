@@ -582,7 +582,11 @@ function AbilityEditor.OpenBehaviorPicker(ability, onAdd)
 
         updateResults = function(element)
             local rawQuery = searchInput.text or ""
-            local query = (rawQuery == "") and nil or rawQuery
+            -- Note: `(x == "") and nil or x` returns "" not nil when x is "",
+            -- because Lua's `A and B or C` collapses to C when B is falsy.
+            -- Use an explicit branch so empty search correctly yields nil.
+            local query = rawQuery
+            if query == "" then query = nil end
 
             local children = {}
 
