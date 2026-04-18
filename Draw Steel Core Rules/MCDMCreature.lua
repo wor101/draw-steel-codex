@@ -5118,6 +5118,11 @@ function creature:Titles()
     return results
 end
 
+  function creature:MoveToLocPermitted(loc)
+      -- loc is a Loc userdata; return false to forbid stepping onto it
+      return true
+  end
+
 dmhub.RegisterEventHandler("ClearTemporaryState", function()
     print("CLEARSTATE:: CLEARING STATE", #dmhub.allTokens)
 end)
