@@ -666,10 +666,9 @@ function CharacterFeature:EditorPanel(editorPanelOptions)
 					click = function(element)
 						addModifierById("CLIPBOARD")
 					end,
-					thinkTime = 0.5,
-					think = function(element)
-						element:SetClass("collapsed-anim", not clipboardHasPasteable())
-					end,
+                    internalClipboardChanged = function(element)
+                        element:SetClass("collapsed-anim", not clipboardHasPasteable())
+                    end,
 				}
 
 				children[#children+1] = gui.Panel{
