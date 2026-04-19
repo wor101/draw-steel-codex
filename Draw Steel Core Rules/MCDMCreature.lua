@@ -34,6 +34,9 @@ creature.skipTurnTurnsTaken = 0
 
 --- @field creature._tmp_minionSquad SquadInfo
 
+--- @field creature.summonedMinions table List of { charid, squad, monsterType } entries tracking this creature's active summons.
+creature.summonedMinions = {}
+
 function creature:MinionSquad()
     if self:has_key("minionSquad") then
         return self.minionSquad
@@ -44,6 +47,62 @@ function creature:MinionSquad()
     end
 
     return nil
+end
+
+--- Returns the subset of summonedMinions entries whose tokens still exist and whose creatures are alive.
+--- Does not mutate the stored list; callers wanting to prune should compare the returned list to the stored one.
+--- @return table[] entries Array of { charid, squad, monsterType } entries.
+function creature:GetLiveSummonedEntries()
+    local entries = self:try_get("summonedMinions") or {}
+    local live = {}
+    for _,entry in ipairs(entries) do
+        if entry ~= nil and entry.charid ~= nil then
+            local token = dmhub.GetTokenById(entry.charid)
+            if token ~= nil and token.properties ~= nil and not token.properties:IsDeadOrDying() then
+                live[#live+1] = entry
+            end
+        end
+    end
+    return live
+end
+
+--- Groups this creature's live summoned minions by squad name, optionally filtered to a single monster type.
+--- @param monsterType string|nil If provided, only squads whose monsterType matches are returned.
+--- @return table squads Map of squadName -> { monsterType, count, charids }
+function creature:GetSummonedSquadsByType(monsterType)
+    local squads = {}
+    for _,entry in ipairs(self:GetLiveSummonedEntries()) do
+        if monsterType == nil or entry.monsterType == monsterType then
+            local squad = squads[entry.squad]
+            if squad == nil then
+                squad = { monsterType = entry.monsterType, count = 0, charids = {} }
+                squads[entry.squad] = squad
+            end
+            squad.count = squad.count + 1
+            squad.charids[#squad.charids+1] = entry.charid
+        end
+    end
+    return squads
+end
+
+--- Appends a summoned minion to this creature's roster. Caller must be inside a ModifyProperties block.
+--- @param charid string
+--- @param squadName string
+--- @param monsterType string
+function creature:RegisterSummonedMinion(charid, squadName, monsterType)
+    local entries = self:get_or_add("summonedMinions", {})
+    -- Prune stale entries opportunistically to keep the list from growing unbounded.
+    local pruned = {}
+    for _,entry in ipairs(entries) do
+        if entry ~= nil and entry.charid ~= nil and entry.charid ~= charid then
+            local token = dmhub.GetTokenById(entry.charid)
+            if token ~= nil and token.properties ~= nil and not token.properties:IsDeadOrDying() then
+                pruned[#pruned+1] = entry
+            end
+        end
+    end
+    pruned[#pruned+1] = { charid = charid, squad = squadName, monsterType = monsterType }
+    self.summonedMinions = pruned
 end
 
 local g_baseInvalidate = creature.Invalidate
@@ -5121,7 +5180,6 @@ end
 
 function creature:GetMovementRestrictionFilter(token)
     if token == nil then
-        return false
         return nil
     end
 
