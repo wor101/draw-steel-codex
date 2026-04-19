@@ -5173,7 +5173,7 @@ function creature:MoveToLocPermitted(loc)
         return calculation(loc)
     end
 
-    return false
+    return true
 end
 
 dmhub.RegisterEventHandler("ClearTemporaryState", function()
