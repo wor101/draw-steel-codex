@@ -4683,6 +4683,12 @@ function AbilityEditor.GenerateEditor(ability)
         refreshAbility = function(element)
             element:SetClass("collapsed-anim", not _clipboardHasBehavior())
         end,
+        -- Fires when the internal clipboard changes (e.g. user copies a
+        -- behavior while this editor is open). Keeps the button's visibility
+        -- in sync without requiring the editor to be closed and reopened.
+        internalClipboardChanged = function(element)
+            element:SetClass("collapsed-anim", not _clipboardHasBehavior())
+        end,
     }
 
     effectsBottomBar = gui.Panel{
