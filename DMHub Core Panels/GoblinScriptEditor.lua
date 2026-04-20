@@ -1481,6 +1481,51 @@ function gui.GoblinScriptDebugDialog(options)
 
 	local RefreshAll
 
+	-- Describe a table value for the debug UI. `typeName` is safe to read on any table:
+	-- raw tables have no metatable (returns nil), and RegisterGameType types always
+	-- expose their registered name. Once we know it's a game type, other field reads
+	-- (name/id/description) need pcall because DMHub's type metatable errors on unknown
+	-- fields (see lua-core.txt:348). Raw-table branches don't need pcall at all.
+	local function DescribeTable(t)
+		if type(t) ~= "table" then return "<table>" end
+
+		local tn = t.typeName
+		if type(tn) ~= "string" or tn == "" then
+			tn = t.__typeName
+		end
+
+		if type(tn) == "string" and tn ~= "" then
+			local function stringField(f)
+				local ok, v = pcall(function() return t[f] end)
+				if ok and type(v) == "string" and v ~= "" then return v end
+				return nil
+			end
+			local label = stringField("name") or stringField("id") or stringField("description")
+			if label ~= nil then
+				if #label > 40 then label = string.sub(label, 1, 40) .. "..." end
+				return string.format("<%s %q>", tn, label)
+			end
+			return string.format("<%s>", tn)
+		end
+
+		-- Raw-table fallbacks: StringSet-like and array-like. No metatable here, so
+		-- direct access is fine.
+		if type(t.strings) == "table" and #t.strings > 0 then
+			local parts = {}
+			for i, s in ipairs(t.strings) do
+				if i > 6 then parts[#parts+1] = "..."; break end
+				parts[#parts+1] = tostring(s)
+			end
+			return string.format("<StringSet: %s>", table.concat(parts, ", "))
+		end
+
+		if #t > 0 then
+			return string.format("<array[%d]>", #t)
+		end
+
+		return "<table>"
+	end
+
 	local function FormatValue(v)
 		local t = type(v)
 		if t == "nil" then return "nil" end
@@ -1491,8 +1536,18 @@ function gui.GoblinScriptDebugDialog(options)
 			return string.format("%.3f", v)
 		end
 		if t == "string" then return string.format("%q", v) end
-		if t == "table" then return "<table>" end
-		if t == "function" then return "<function>" end
+		if t == "table" then return DescribeTable(v) end
+		if t == "function" then
+			-- GoblinScript wraps object references as symbol-lookup functions (from
+			-- GenerateSymbols). The engine's ResolveSymbolsToObject convention is to call
+			-- the function with "self" to unwrap to the underlying object, so do the same
+			-- here. pcall since arbitrary functions could error on the call.
+			local ok, obj = pcall(v, "self")
+			if ok and type(obj) == "table" then
+				return DescribeTable(obj)
+			end
+			return "<function>"
+		end
 		return tostring(v)
 	end
 
@@ -1550,7 +1605,10 @@ function gui.GoblinScriptDebugDialog(options)
 			kindText = string.format("[%s]", ev.kind)
 		end
 		local srcText = SourceSlice(ev)
-		local label = string.format("%s%s  %s  =  %s",
+		-- TMP rich text: de-emphasize [kind op] in light grey, keep source text white,
+		-- and make the result pop in bold green so the eye can scan values quickly.
+		local label = string.format(
+			"%s<color=#888888>%s</color>  %s  =  <b><color=#7fff7f>%s</color></b>",
 			string.rep("    ", depth),
 			kindText,
 			srcText,
@@ -1665,6 +1723,17 @@ function gui.GoblinScriptDebugDialog(options)
 	local needsTreeRefresh = false
 	local needsHistoryRefresh = false
 
+	-- followLatest: while true, new batches become the selected one automatically. Set
+	-- to false when the user clicks a specific history row, so the selection stays stable
+	-- while they inspect. The "Follow latest" button re-enables it.
+	local followLatest = true
+
+	-- paused: while true, incoming debugInfo / debugBatchStart events are dropped on the
+	-- floor. The formula keeps evaluating in the engine; we just stop capturing. Lets
+	-- the user freeze the current view to examine it without new invocations scrolling
+	-- history away.
+	local paused = false
+
 	local function RefreshTree()
 		if resultPanel == nil or (not resultPanel.valid) then return end
 		local batch = currentBatchId ~= nil and batches[currentBatchId] or nil
@@ -1699,6 +1768,9 @@ function gui.GoblinScriptDebugDialog(options)
 				valign = "top",
 				click = function(element)
 					currentBatchId = rowId
+					-- Manually picking a batch pins the view; new invocations will
+					-- keep arriving in history but won't steal selection.
+					followLatest = false
 					needsTreeRefresh = true
 					needsHistoryRefresh = true
 				end,
@@ -1740,18 +1812,58 @@ function gui.GoblinScriptDebugDialog(options)
 		end
 	end
 
+	local pauseButton
+	pauseButton = gui.PrettyButton {
+		text = 'Pause',
+		width = 120,
+		height = 36,
+		fontSize = 18,
+		valign = "center",
+		events = {
+			click = function(element)
+				paused = not paused
+				pauseButton.text = paused and 'Resume' or 'Pause'
+				-- When resuming, we leave history as-is; new invocations will stream in
+				-- from here. When pausing, we simply stop recording.
+			end,
+		},
+	}
+
+	local followButton = gui.PrettyButton {
+		text = 'Follow latest',
+		width = 160,
+		height = 36,
+		fontSize = 18,
+		valign = "center",
+		events = {
+			click = function(element)
+				followLatest = true
+				-- Snap to the most recent batch so the user sees the effect immediately.
+				if #batchOrder > 0 then
+					currentBatchId = batchOrder[#batchOrder]
+				end
+				needsTreeRefresh = true
+				needsHistoryRefresh = true
+			end,
+		},
+	}
+
 	local closePanel = gui.Panel {
 		width = "100%",
 		height = 40,
 		halign = "center",
 		valign = "bottom",
 		flow = "horizontal",
+		pauseButton,
+		gui.Panel { width = 8, height = 1 },
+		followButton,
+		-- Spacer pushes Close to the right.
+		gui.Panel { width = "100% available", height = 1 },
 		gui.PrettyButton {
 			text = 'Close',
 			width = 120,
 			height = 36,
 			fontSize = 20,
-			halign = "center",
 			valign = "center",
 			events = {
 				click = function(element)
@@ -1829,18 +1941,29 @@ function gui.GoblinScriptDebugDialog(options)
 		historyPanel,
 	}
 
+	-- Anchor top-left so the resize handles (which write to dialog.selfStyle.width/height)
+	-- extend the dialog outward instead of growing from the center. Pattern copied from
+	-- the journal viewer (DocumentSystem.lua:1769).
+	local screenW = dmhub.screenDimensionsBelowTitlebar.x
+	local screenH = dmhub.screenDimensionsBelowTitlebar.y
+	local initialX = math.floor((screenW - dialogWidth) / 2)
+	local initialY = math.floor((screenH - dialogHeight) / 2)
+
 	local args = {
 		style = {
 			bgcolor = 'white',
 			width = dialogWidth,
 			height = dialogHeight,
-			halign = 'center',
-			valign = 'center',
+			halign = 'left',
+			valign = 'top',
 		},
 		styles = {
 			Styles.Default,
 			Styles.Panel,
 		},
+
+		x = initialX,
+		y = initialY,
 
 		classes = { "framedPanel" },
 		floating = true,
@@ -1888,6 +2011,7 @@ function gui.GoblinScriptDebugDialog(options)
 		-- Fired once per invocation by GoblinScriptDebug.NewBatch, before any per-expression
 		-- events. Carries the frame number and Lua traceback captured at call time.
 		debugBatchStart = function(element, info)
+			if paused then return end
 			if info == nil or info.batchId == nil then return end
 			local bid = info.batchId
 			local b = batches[bid]
@@ -1905,10 +2029,12 @@ function gui.GoblinScriptDebugDialog(options)
 			-- Parse the trace once so row tooltips and number-key frame-open handlers
 			-- share the same decorated string + frame list.
 			b.parsedTrace = FormatTracebackForDebug(info.trace or "")
-			currentBatchId = bid
-			-- A new batch landed: both the tree (now showing this batch) and the
-			-- history list need a rebuild. Let the think handler coalesce.
-			needsTreeRefresh = true
+			-- Only auto-select the new batch if the user hasn't pinned a specific one.
+			if followLatest then
+				currentBatchId = bid
+				needsTreeRefresh = true
+			end
+			-- History always rebuilds when a batch is added (new row, possibly prune).
 			needsHistoryRefresh = true
 		end,
 
@@ -1917,6 +2043,7 @@ function gui.GoblinScriptDebugDialog(options)
 		-- once per sub-expression per invocation, so keep work minimal. All UI updates
 		-- are deferred to the throttled think handler below.
 		debugInfo = function(element, info)
+			if paused then return end
 			if info == nil then return end
 			local bid = info.batch or 0
 			local b = batches[bid]
