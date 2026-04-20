@@ -37,6 +37,9 @@ creature.skipTurnTurnsTaken = 0
 --- @field creature.summonedMinions table List of { charid, squad, monsterType } entries tracking this creature's active summons.
 creature.summonedMinions = {}
 
+--- @field creature.sharesSurgesWithSummoner boolean If true, surges granted to this summoned creature are redirected to its summoner.
+creature.sharesSurgesWithSummoner = false
+
 function creature:MinionSquad()
     if self:has_key("minionSquad") then
         return self.minionSquad
@@ -303,9 +306,39 @@ function creature:HighestCharacteristic()
     return self._tmp_highestCharacteristic
 end
 
+--- @return CharacterToken|nil summoner token if this creature shares surges with its summoner, else nil.
+function creature:GetSurgeSharingSummonerToken()
+    if not self.sharesSurgesWithSummoner then
+        return nil
+    end
+
+    local selfToken = dmhub.LookupToken(self)
+    if selfToken == nil or not selfToken.summonerid then
+        return nil
+    end
+
+    local summonerToken = dmhub.GetTokenById(selfToken.summonerid)
+    if summonerToken ~= nil and summonerToken.valid then
+        return summonerToken
+    end
+
+    return nil
+end
+
 function creature:ConsumeSurges(ncount, note)
     local surgeid = CharacterResource.nameToId["Surges"]
     if surgeid == nil then
+        return
+    end
+
+    local summonerToken = self:GetSurgeSharingSummonerToken()
+    if summonerToken ~= nil then
+        summonerToken:ModifyProperties{
+            description = "Consume Surges",
+            execute = function()
+                summonerToken.properties:AddUnboundedResource(surgeid, -ncount, note or "Consumed Surges")
+            end,
+        }
         return
     end
 
@@ -318,11 +351,21 @@ function creature:GetAvailableSurges()
         return 0
     end
 
+    local summonerToken = self:GetSurgeSharingSummonerToken()
+    if summonerToken ~= nil then
+        return summonerToken.properties:GetUnboundedResourceQuantity(surgeid)
+    end
+
     local result = self:GetUnboundedResourceQuantity(surgeid)
     return result
 end
 
 function creature:GetMaxSurgeCount()
+    local summonerToken = self:GetSurgeSharingSummonerToken()
+    if summonerToken ~= nil then
+        return summonerToken.properties:GetMaxSurgeCount()
+    end
+
     if not self:has_key("_tmp_maxSurgeCount") then
         local customAttr = CustomAttribute.attributeInfoByLookupSymbol["maximumsurges"]
         if customAttr == nil then

@@ -25,6 +25,7 @@ ActivatedAbilitySummonBehavior.replaceCaster = false
 ActivatedAbilitySummonBehavior.casterControls = true
 ActivatedAbilitySummonBehavior.casterChoosesCreatures = true
 ActivatedAbilitySummonBehavior.groupInitiativeWithCaster = true
+ActivatedAbilitySummonBehavior.shareSurgesWithSummoner = false
 
 --duplicate mode fields
 ActivatedAbilitySummonBehavior.duplicateMode = false
@@ -946,6 +947,10 @@ function ActivatedAbilitySummonBehavior:Cast(ability, casterToken, targets, args
 
             token.summonerid = casterToken.charid
 
+            if self.shareSurgesWithSummoner then
+                token.properties.sharesSurgesWithSummoner = true
+            end
+
             if squadNameForSpawn ~= nil then
                 token.properties.minionSquad = squadNameForSpawn
                 summonerEntries[#summonerEntries+1] = {
@@ -1333,5 +1338,14 @@ function ActivatedAbilityBehavior:SummonEditor(parentPanel, list, options)
             end,
         }
 	end
+
+    list[#list+1] = gui.Check{
+        text = "Summons Share Surges",
+        minWidth = 300,
+        value = self.shareSurgesWithSummoner,
+        change = function(element)
+            self.shareSurgesWithSummoner = element.value
+        end,
+    }
 
 end
