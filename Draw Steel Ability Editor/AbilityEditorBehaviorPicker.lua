@@ -368,15 +368,6 @@ local BEHAVIOR_GROUPS = {
     {id = "scripting",  label = "Scripting & Advanced"},
 }
 
-local SUGGESTED_CHIPS = {
-    "deal damage",
-    "heal an ally",
-    "push the target",
-    "apply an effect",
-    "make a power roll",
-    "create an object",
-}
-
 -- IDs to exclude from the picker. Shapes are internal, "none" is a
 -- placeholder entry at index 1 of ActivatedAbility.Types.
 local EXCLUDED_IDS = {
@@ -617,52 +608,6 @@ function AbilityEditor.OpenBehaviorPicker(ability, onAdd)
                     bgimage = "panels/square.png",
                     bgcolor = COLORS.GOLD .. "66",
                     vmargin = 8,
-                }
-            end
-
-            -- Suggested chips (when search is empty and no recent)
-            if query == nil and #AbilityEditor._recentBehaviors == 0 then
-                local chipChildren = {}
-                for _, chipText in ipairs(SUGGESTED_CHIPS) do
-                    local ct = chipText
-                    chipChildren[#chipChildren + 1] = gui.Panel{
-                        width = "auto",
-                        height = 22,
-                        flow = "horizontal",
-                        halign = "left",
-                        valign = "center",
-                        hpad = 8,
-                        rmargin = 6,
-                        bmargin = 4,
-                        bgcolor = COLORS.PANEL_BG,
-                        borderWidth = 1,
-                        borderColor = COLORS.GOLD,
-                        cornerRadius = 11,
-                        borderBox = true,
-                        press = function()
-                            searchInput.text = ct
-                            resultsPanel:FireEvent("updateResults")
-                        end,
-                        gui.Label{
-                            width = "auto",
-                            height = "auto",
-                            fontSize = 12,
-                            color = COLORS.CREAM_BRIGHT,
-                            textAlignment = "left",
-                            text = ct,
-                        },
-                    }
-                end
-                children[#children + 1] = gui.Panel{
-                    width = "100%",
-                    height = "auto",
-                    flow = "horizontal",
-                    wrap = true,
-                    halign = "left",
-                    valign = "top",
-                    bmargin = 8,
-                    bgcolor = "clear",
-                    children = chipChildren,
                 }
             end
 
