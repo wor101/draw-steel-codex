@@ -591,7 +591,7 @@ local function CreateJoinGameModal(tokenToImport)
                                                 dmhub.PasteTokenFromClipboard(core.Loc { x = 0, y = 0 })
                                             end
                                         end
-                                        root:FireEventTree("overrideLoadingScreenArt", game.coverart)
+                                        root:FireEventTree("overrideLoadingScreenArt", game.coverart, game.gameid)
                                         lobby:EnterGame(game.gameid, callback)
                                     end
                                     return
@@ -1078,7 +1078,7 @@ local function CreateGameEditor(options)
                     bold = true,
                     press = function(element)
                         if mode == "create" then
-                            element.root:FireEventTree("overrideLoadingScreenArt", m_game.coverart)
+                            element.root:FireEventTree("overrideLoadingScreenArt", m_game.coverart, m_game.gameid)
                             lobby:EnterGame(m_game.gameid)
                         end
                         resultPanel:DestroySelf()
@@ -1837,7 +1837,7 @@ local function MakeGamePanel(gameIndex)
                 end,
 
                 press = function(element)
-                    element.root:FireEventTree("overrideLoadingScreenArt", m_game.coverart)
+                    element.root:FireEventTree("overrideLoadingScreenArt", m_game.coverart, m_game.gameid)
                     lobby:EnterGame(m_game.gameid)
                     audio.FireSoundEvent("Mouse.Click")
                 end,
@@ -2890,7 +2890,7 @@ local function MakeHeroPanel(heroIndex)
         },
         press = function(element)
             if element.data.game then
-                element.root:FireEventTree("overrideLoadingScreenArt", element.data.game.coverart)
+                element.root:FireEventTree("overrideLoadingScreenArt", element.data.game.coverart, element.data.game.gameid)
                 lobby:EnterGame(element.data.game.gameid)
             end
         end,
@@ -3129,6 +3129,7 @@ function CreateTitlescreen(dialog, options)
     local titlescreen
 
     local m_loadingScreenArt = nil
+    local m_loadingGameId = nil
 
     local m_currentSearch = nil
 
@@ -3247,11 +3248,14 @@ function CreateTitlescreen(dialog, options)
         end,
 
 
-        overrideLoadingScreenArt = function(element, artid)
+        overrideLoadingScreenArt = function(element, artid, gameid)
             if artid ~= nil then
                 m_loadingScreenArt = artid
             end
-            print("EVENT::: overrideLoadingScreenArt", artid)
+            if gameid ~= nil then
+                m_loadingGameId = gameid
+            end
+            print("EVENT::: overrideLoadingScreenArt", artid, gameid)
         end,
 
         loginFailed = function(element, message)
@@ -3277,6 +3281,121 @@ function CreateTitlescreen(dialog, options)
                 if quote ~= nil then
                     quoteText = string.format("<i>%s</i>\n- %s", quote.quote, quote.speaker)
                 end
+
+                -- Show an error with Retry/Cancel if the load stalls past this many seconds.
+                -- The outer watcher panel must stay active (no "hidden" class) so its think
+                -- keeps firing: SheetPanel.cs disables gameObject for any panel with hidden>=1,
+                -- and SheetManager.cs only calls Think() on panels with activeInHierarchy.
+                -- The visible error modal is a child with the "hidden" class, unhidden on stall.
+                local STALL_TIMEOUT_SECONDS = 60
+                local stallPanel
+                stallPanel = gui.Panel {
+                    floating = true,
+                    halign = "center",
+                    valign = "center",
+                    width = "100%",
+                    height = "100%",
+                    bgimage = "panels/square.png",
+                    bgcolor = "#00000000",
+                    interactable = false,
+
+                    data = {
+                        elapsed = 0,
+                        shown = false,
+                    },
+
+                    thinkTime = 1,
+                    think = function(element)
+                        if element.data.shown then return end
+                        element.data.elapsed = element.data.elapsed + 1
+                        if element.data.elapsed >= STALL_TIMEOUT_SECONDS then
+                            element.data.shown = true
+                            element.bgcolor = "#000000b0"
+                            element.interactable = true
+                            local modal = element:Get("stallModal")
+                            if modal ~= nil then
+                                modal:SetClass("hidden", false)
+                            end
+                        end
+                    end,
+
+                    gui.Panel {
+                        id = "stallModal",
+                        classes = { "framedPanel", "hidden" },
+                        styles = {
+                            Styles.Default,
+                            Styles.Panel,
+                        },
+                        bgimage = true,
+                        halign = "center",
+                        valign = "center",
+                        width = 640,
+                        height = "auto",
+                        minHeight = 320,
+                        flow = "vertical",
+                        vpad = 24,
+
+                        gui.Label {
+                            text = "Couldn't Load Game",
+                            fontSize = 36,
+                            bold = true,
+                            width = "auto",
+                            height = "auto",
+                            halign = "center",
+                            valign = "top",
+                            color = "white",
+                            tmargin = 12,
+                        },
+
+                        gui.Label {
+                            text = "We couldn't reach the game server. Check your internet connection and try again.",
+                            fontSize = 20,
+                            width = "80%",
+                            height = "auto",
+                            halign = "center",
+                            textAlignment = "center",
+                            color = "white",
+                            vmargin = 16,
+                        },
+
+                        gui.Panel {
+                            width = "auto",
+                            height = "auto",
+                            halign = "center",
+                            valign = "bottom",
+                            flow = "horizontal",
+                            bmargin = 12,
+
+                            gui.Button {
+                                text = "Retry",
+                                halign = "center",
+                                hmargin = 12,
+                                click = function(btn)
+                                    local modal = stallPanel:Get("stallModal")
+                                    if modal ~= nil then
+                                        modal:SetClass("hidden", true)
+                                    end
+                                    stallPanel.bgcolor = "#00000000"
+                                    stallPanel.interactable = false
+                                    stallPanel.data.elapsed = 0
+                                    stallPanel.data.shown = false
+                                    if m_loadingGameId ~= nil then
+                                        lobby:EnterGame(m_loadingGameId)
+                                    end
+                                end,
+                            },
+
+                            gui.Button {
+                                text = "Cancel",
+                                halign = "center",
+                                hmargin = 12,
+                                click = function(btn)
+                                    dmhub.LeaveGame()
+                                end,
+                            },
+                        },
+                    },
+                }
 
                 local loadingScreen = gui.Panel {
                     classes = { "loadingScreen" },
@@ -3461,6 +3580,8 @@ function CreateTitlescreen(dialog, options)
                             end,
                         },
                     },
+
+                    stallPanel,
                 }
 
                 titlescreen:AddChild(loadingScreen)

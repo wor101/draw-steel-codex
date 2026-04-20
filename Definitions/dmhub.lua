@@ -627,6 +627,23 @@ function dmhub.RegisterGoblinScriptDebugger(callbackFunction)
 	-- dummy implementation for documentation purposes only
 end
 
+--- SetGoblinScriptDebug: Enables or disables per-expression debug instrumentation for a specific GoblinScript formula. The caller must flush any cached compilation of the formula for the change to take effect.
+--- @param formula string
+--- @param enabled boolean
+--- @return nil
+function dmhub.SetGoblinScriptDebug(formula, enabled)
+	-- dummy implementation for documentation purposes only
+end
+
+--- OpenModFileAtLine: Opens a Lua file from a mod in the user's default editor at the specified line. Returns true on success.
+--- @param modName string
+--- @param fileName string
+--- @param lineNumber number
+--- @return boolean
+function dmhub.OpenModFileAtLine(modName, fileName, lineNumber)
+	-- dummy implementation for documentation purposes only
+end
+
 --- EvalGoblinScript: Evaluates the given goblinscript as much as possible, looking up any strings and returns the script reduced to hopefully just a dice roll or even numeric result. Always returns a string with a best effort to reduce the formula.
 --- @param goblinscript string
 --- @param lookupFunction function

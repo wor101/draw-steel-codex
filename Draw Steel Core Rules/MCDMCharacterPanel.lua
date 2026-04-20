@@ -2163,6 +2163,7 @@ function TacPanel.SurgesBox()
                 characterLimit = 2,
                 selectAllOnFocus = true,
                 placeholderText = "--",
+                numeric = true,
                 change = function(element)
                     local token = element.parent.parent.data.token
                     if token == nil then return end
@@ -2224,6 +2225,7 @@ function TacPanel.VictoriesBox()
                 characterLimit = 2,
                 selectAllOnFocus = true,
                 placeholderText = "--",
+                numeric = true,
                 data = { token = nil },
                 refreshCharacter = function(element, token)
                     element.data.token = token
@@ -2325,6 +2327,7 @@ function TacPanel.HeroicResourcesBox()
                 characterLimit = 2,
                 selectAllOnFocus = true,
                 placeholderText = "--",
+                numeric = true,
                 data = { token = nil },
                 refreshCharacter = function(element, token)
                     element.data.token = token
@@ -2985,7 +2988,7 @@ function TacPanel.RecoveriesBox()
                             local usage = token.properties:GetResourceUsage(recoveryid, recoveryInfo.usageLimit) or 0
                             local current = nresources - usage
                             local delta = n - current
-                            element.textNoNotify = string.format("%d", current)
+                            element.textNoNotify = string.format("%d", n)
                             if delta == 0 then return end
                             token:ModifyProperties{
                                 description = "Set Recoveries",

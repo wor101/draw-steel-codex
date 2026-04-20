@@ -774,6 +774,17 @@ function gui.GoblinScriptInput(options)
 						end,
 					}
 
+					menuItems[#menuItems + 1] = {
+						text = "Debug this GoblinScript",
+						group = "docs",
+						click = function()
+							element.popup = nil
+							element.root:AddChild(gui.GoblinScriptDebugDialog {
+								formula = m_value,
+							})
+						end,
+					}
+
 					if devmode() then
 						menuItems[#menuItems + 1] = {
 							text = "Show Lua (Debug)",
@@ -1435,6 +1446,561 @@ function gui.GoblinScriptLuaDialog(options)
 	if out.error then
 		resultPanel:FireEventTree("showmessage", "Compilation Error: " .. out.error)
 	end
+
+	return resultPanel
+end
+
+-- gui.GoblinScriptDebugDialog opens a debugging view for a specific GoblinScript formula.
+-- While open, it flags the formula with dmhub.SetGoblinScriptDebug(formula, true), forces the
+-- Lua-side compile cache to drop the formula, and listens for per-expression
+-- GoblinScriptDebugInfo events fired from the instrumented compiled Lua. Each evaluation of
+-- the formula produces a "batch" of events (one per sub-expression); the dialog renders the
+-- most recent batch as an expression tree with source spans and results, and keeps a history
+-- of recent invocations.
+function gui.GoblinScriptDebugDialog(options)
+	options = DeepCopy(options or {})
+
+	local formula = options.formula or ""
+	options.formula = nil
+
+	local dialogWidth = 800
+	local dialogHeight = 600
+
+	local resultPanel = nil
+
+	-- DialogResizePanel mutates this table on every drag so the helper code stays
+	-- generic; we don't persist location, so it's just a scratch target.
+	local locationScratch = {}
+
+	-- Per-batch accumulator. Each batch = one formula invocation. Events arrive in
+	-- post-order (children before parents).
+	local batches = {}        -- [batchId] = { events = {}, resultValue = any, widestSpan = number }
+	local batchOrder = {}     -- list of batch ids in arrival order (oldest first)
+	local currentBatchId = nil
+	local historyLimit = 200
+
+	local RefreshAll
+
+	local function FormatValue(v)
+		local t = type(v)
+		if t == "nil" then return "nil" end
+		if t == "boolean" then return v and "true" or "false" end
+		if t == "number" then
+			if v ~= v then return "nan" end
+			if v == math.floor(v) then return tostring(math.floor(v)) end
+			return string.format("%.3f", v)
+		end
+		if t == "string" then return string.format("%q", v) end
+		if t == "table" then return "<table>" end
+		if t == "function" then return "<function>" end
+		return tostring(v)
+	end
+
+	local function SourceSlice(ev)
+		if formula == "" then return "" end
+		local a = (ev.beginChar or 0) + 1
+		local b = ev.endChar or 0
+		if a < 1 then a = 1 end
+		if b > #formula then b = #formula end
+		if b < a then return "" end
+		return string.sub(formula, a, b)
+	end
+
+	-- Given the events from one batch, return a forest of tree nodes where each node is
+	-- { ev = <event>, span = number, children = {} }. Children are nested by source span:
+	-- an event E is a child of the smallest enclosing event. Since events arrive
+	-- post-order, we sort by ascending span so children appear before parents.
+	local function BuildTree(events)
+		local nodes = {}
+		for _,ev in ipairs(events) do
+			nodes[#nodes+1] = {
+				ev = ev,
+				span = (ev.endChar or 0) - (ev.beginChar or 0),
+				children = {},
+			}
+		end
+		table.sort(nodes, function(a, b) return a.span < b.span end)
+
+		local roots = {}
+		for i, node in ipairs(nodes) do
+			local parent = nil
+			for j = i+1, #nodes do
+				local cand = nodes[j]
+				if cand.ev.beginChar <= node.ev.beginChar and cand.ev.endChar >= node.ev.endChar then
+					parent = cand
+					break
+				end
+			end
+			if parent ~= nil then
+				parent.children[#parent.children+1] = node
+			else
+				roots[#roots+1] = node
+			end
+		end
+
+		return roots
+	end
+
+	local function RenderTreeNode(node, depth, out)
+		local ev = node.ev
+		local kindText
+		if ev.op ~= nil and ev.op ~= "" then
+			kindText = string.format("[%s %s]", ev.kind, tostring(ev.op))
+		else
+			kindText = string.format("[%s]", ev.kind)
+		end
+		local srcText = SourceSlice(ev)
+		local label = string.format("%s%s  %s  =  %s",
+			string.rep("    ", depth),
+			kindText,
+			srcText,
+			FormatValue(ev.result))
+		out[#out+1] = gui.Label {
+			width = "100%",
+			height = "auto",
+			fontSize = 14,
+			color = "white",
+			fontFace = "courier",
+			text = label,
+			halign = "left",
+		}
+		for _,child in ipairs(node.children) do
+			RenderTreeNode(child, depth + 1, out)
+		end
+	end
+
+	-- The live tree renders outermost expression first so the root is at the top; each
+	-- child is indented below its parent, matching how a human reads a formula.
+	local function RenderTreeForest(roots)
+		table.sort(roots, function(a, b) return a.span > b.span end)
+		local out = {}
+		for _,root in ipairs(roots) do
+			RenderTreeNode(root, 0, out)
+		end
+		return out
+	end
+
+	local treeContent = gui.Panel {
+		flow = "vertical",
+		width = "100%",
+		height = "auto",
+		halign = "left",
+		valign = "top",
+	}
+
+	local treePanel = gui.Panel {
+		width = "100%",
+		height = "100% available",
+		vscroll = true,
+		flow = "vertical",
+		bgcolor = "#111111",
+		borderWidth = 1,
+		borderColor = "#555555",
+		borderBox = true,
+		pad = 6,
+		treeContent,
+	}
+
+	local historyContent = gui.Panel {
+		flow = "vertical",
+		width = "100%",
+		height = "auto",
+		halign = "left",
+		valign = "top",
+	}
+
+	local historyPanel = gui.Panel {
+		width = "100%",
+		height = 120,
+		vscroll = true,
+		flow = "vertical",
+		bgcolor = "#111111",
+		borderWidth = 1,
+		borderColor = "#555555",
+		borderBox = true,
+		pad = 6,
+		historyContent,
+	}
+
+	local sourceLabel = gui.Label {
+		width = "100%",
+		height = "auto",
+		halign = "left",
+		valign = "top",
+		fontSize = 18,
+		color = "white",
+		fontFace = "courier",
+		text = formula,
+		textWrap = true,
+	}
+
+	local statusLabel = gui.Label {
+		width = "100%",
+		height = "auto",
+		halign = "left",
+		fontSize = 14,
+		color = "#cccccc",
+		text = "Waiting for the formula to be evaluated...",
+	}
+
+	-- Tooltip on a history row shows the Lua traceback captured at invocation time, but
+	-- only when both devmode and the "debug" preference are on. Matches the behavior of
+	-- the DebugLog panel's row tooltips (DMHub Core Panels/DebugLog.lua linger handler).
+	local function ShouldShowTraceTooltip()
+		return devmode() and dmhub.GetSettingValue("debug") == true
+	end
+
+	-- Tracks the parsed trace of the most recently hovered history row, so the dialog's
+	-- 1..9 keybinds know which frames to open. Not cleared on dehover so the user can move
+	-- from mouse-hover to keyboard without losing the target.
+	local hoveredParsedTrace = nil
+
+	-- Debug events can arrive hundreds of times per frame when a sheet redraws. Rather
+	-- than fully rebuilding tree + history panels on every event, we just flag work as
+	-- pending and let a think handler coalesce refreshes. These flags are the minimum set
+	-- the think handler needs to do the right amount of work:
+	--   needsTreeRefresh    -- the current batch's events changed, rebuild the tree.
+	--   needsHistoryRefresh -- a new batch was added or an existing one's summary text
+	--                          changed, rebuild the history list.
+	local needsTreeRefresh = false
+	local needsHistoryRefresh = false
+
+	local function RefreshTree()
+		if resultPanel == nil or (not resultPanel.valid) then return end
+		local batch = currentBatchId ~= nil and batches[currentBatchId] or nil
+		if batch == nil then
+			treeContent.children = {}
+			statusLabel.text = "Waiting for the formula to be evaluated..."
+		else
+			local roots = BuildTree(batch.events)
+			treeContent.children = RenderTreeForest(roots)
+			local frameStr = batch.frame and string.format("  frame %d", batch.frame) or ""
+			statusLabel.text = string.format("Showing invocation #%d%s  (result = %s)",
+				currentBatchId, frameStr, FormatValue(batch.resultValue))
+		end
+	end
+
+	local function RefreshHistory()
+		if resultPanel == nil or (not resultPanel.valid) then return end
+		local rows = {}
+		for i = #batchOrder, 1, -1 do
+			local bid = batchOrder[i]
+			local b = batches[bid]
+			local selected = bid == currentBatchId
+			local rowId = bid
+			local rowParsed = b.parsedTrace
+			local frameStr = b.frame and string.format("  frame %d", b.frame) or ""
+			rows[#rows+1] = gui.Panel {
+				width = "100%",
+				height = 22,
+				bgcolor = selected and "#333300" or "clear",
+				flow = "horizontal",
+				halign = "left",
+				valign = "top",
+				click = function(element)
+					currentBatchId = rowId
+					needsTreeRefresh = true
+					needsHistoryRefresh = true
+				end,
+				linger = function(element)
+					if rowParsed == nil or not ShouldShowTraceTooltip() then return end
+					hoveredParsedTrace = rowParsed
+					local text = rowParsed.decorated
+					if text == nil or text == "" then return end
+					if #rowParsed.frames > 0 then
+						text = text .. "\n\n(Hover here and press 1-9 to open the matching frame.)"
+					end
+					gui.Tooltip{text = text, fontSize = 12, width = 800}(element)
+				end,
+				gui.Label {
+					width = "100%",
+					height = "100%",
+					fontSize = 14,
+					color = selected and "yellow" or "white",
+					text = string.format("#%d%s  result = %s",
+						bid, frameStr, FormatValue(b.resultValue)),
+					halign = "left",
+					valign = "center",
+				},
+			}
+		end
+		historyContent.children = rows
+	end
+
+	-- Initial-render helper. Also used by the think handler as a single entry point that
+	-- checks the dirty flags and only does the work that's actually needed.
+	RefreshAll = function()
+		if needsTreeRefresh then
+			needsTreeRefresh = false
+			RefreshTree()
+		end
+		if needsHistoryRefresh then
+			needsHistoryRefresh = false
+			RefreshHistory()
+		end
+	end
+
+	local closePanel = gui.Panel {
+		width = "100%",
+		height = 40,
+		halign = "center",
+		valign = "bottom",
+		flow = "horizontal",
+		gui.PrettyButton {
+			text = 'Close',
+			width = 120,
+			height = 36,
+			fontSize = 20,
+			halign = "center",
+			valign = "center",
+			events = {
+				click = function(element)
+					resultPanel.data.close()
+				end,
+			},
+		},
+	}
+
+	local titleLabel = gui.Label {
+		text = "GoblinScript Debug",
+		valign = 'top',
+		halign = 'center',
+		width = 'auto',
+		height = 'auto',
+		color = 'white',
+		fontSize = 20,
+	}
+
+	local helpLabel = gui.Label {
+		text = "Trigger the formula (roll an ability, open a sheet, etc.) to populate the tree. Rows: [kind op]  source  =  value. Click a history row to inspect that invocation.",
+		fontSize = 12,
+		color = "#cccccc",
+		italics = true,
+		width = "100%",
+		height = "auto",
+		textWrap = true,
+		vmargin = 2,
+	}
+
+	local mainFormPanel = gui.Panel {
+		bgcolor = "#222222",
+		borderColor = "#555555",
+		borderWidth = 1,
+		borderBox = true,
+		pad = 8,
+		margin = 0,
+		width = "100%",
+		height = "100% available",
+		flow = "vertical",
+
+		gui.Label {
+			text = "Formula:",
+			fontSize = 15,
+			color = "white",
+			bold = true,
+			width = "100%",
+			height = "auto",
+			vmargin = 2,
+		},
+		sourceLabel,
+		helpLabel,
+
+		gui.Label {
+			text = "Expression tree (current invocation):",
+			fontSize = 15,
+			color = "white",
+			bold = true,
+			width = "100%",
+			height = "auto",
+			vmargin = 4,
+		},
+		statusLabel,
+		treePanel,
+
+		gui.Label {
+			text = "Invocation history:",
+			fontSize = 15,
+			color = "white",
+			bold = true,
+			width = "100%",
+			height = "auto",
+			vmargin = 4,
+		},
+		historyPanel,
+	}
+
+	local args = {
+		style = {
+			bgcolor = 'white',
+			width = dialogWidth,
+			height = dialogHeight,
+			halign = 'center',
+			valign = 'center',
+		},
+		styles = {
+			Styles.Default,
+			Styles.Panel,
+		},
+
+		classes = { "framedPanel" },
+		floating = true,
+
+		-- Moveable: the entire dialog can be dragged. Pattern matches the journal
+		-- viewer (DocumentSystem.lua) and other floating DMHub dialogs.
+		draggable = true,
+		drag = function(element)
+			element.x = element.xdrag
+			element.y = element.ydrag
+			element:SetAsLastSibling()
+		end,
+		click = function(element)
+			element:SetAsLastSibling()
+		end,
+
+		-- Intentionally no captureEscape: the debug dialog is a workspace the user keeps
+		-- open alongside normal play. Escape should keep falling through to whatever else
+		-- would normally handle it (closing menus, deselecting tokens, etc.). Close is
+		-- done via the Close button.
+
+		-- Mirrors the F7 style-inspector: while the dialog is open, pressing 1-9 opens
+		-- the corresponding frame of the most recently hovered history row's traceback
+		-- in the user's editor. Gated on devmode + the "debug" setting to avoid stealing
+		-- number keys from other shortcuts during normal play.
+		keybinds = {
+			{id = "gsdbg_frame1", defaultBind = "1"},
+			{id = "gsdbg_frame2", defaultBind = "2"},
+			{id = "gsdbg_frame3", defaultBind = "3"},
+			{id = "gsdbg_frame4", defaultBind = "4"},
+			{id = "gsdbg_frame5", defaultBind = "5"},
+			{id = "gsdbg_frame6", defaultBind = "6"},
+			{id = "gsdbg_frame7", defaultBind = "7"},
+			{id = "gsdbg_frame8", defaultBind = "8"},
+			{id = "gsdbg_frame9", defaultBind = "9"},
+		},
+		keybind = function(element, id)
+			if not ShouldShowTraceTooltip() then return end
+			if hoveredParsedTrace == nil then return end
+			local n = tonumber(string.sub(id, -1))
+			if n == nil then return end
+			OpenTracebackFrame(hoveredParsedTrace, n)
+		end,
+
+		-- Fired once per invocation by GoblinScriptDebug.NewBatch, before any per-expression
+		-- events. Carries the frame number and Lua traceback captured at call time.
+		debugBatchStart = function(element, info)
+			if info == nil or info.batchId == nil then return end
+			local bid = info.batchId
+			local b = batches[bid]
+			if b == nil then
+				b = { events = {}, resultValue = nil, widestSpan = -1 }
+				batches[bid] = b
+				batchOrder[#batchOrder+1] = bid
+				while #batchOrder > historyLimit do
+					local oldId = table.remove(batchOrder, 1)
+					batches[oldId] = nil
+				end
+			end
+			b.frame = info.frame
+			b.trace = info.trace
+			-- Parse the trace once so row tooltips and number-key frame-open handlers
+			-- share the same decorated string + frame list.
+			b.parsedTrace = FormatTracebackForDebug(info.trace or "")
+			currentBatchId = bid
+			-- A new batch landed: both the tree (now showing this batch) and the
+			-- history list need a rebuild. Let the think handler coalesce.
+			needsTreeRefresh = true
+			needsHistoryRefresh = true
+		end,
+
+		-- Each sub-expression in the instrumented compiled Lua calls
+		-- GoblinScriptDebugInfo(...), which routes here via FireEvent. Hot path: runs
+		-- once per sub-expression per invocation, so keep work minimal. All UI updates
+		-- are deferred to the throttled think handler below.
+		debugInfo = function(element, info)
+			if info == nil then return end
+			local bid = info.batch or 0
+			local b = batches[bid]
+			if b == nil then
+				-- debugBatchStart should have run first, but in case it somehow didn't
+				-- (e.g. first-run race during dialog setup) create the record lazily.
+				b = { events = {}, resultValue = nil, widestSpan = -1 }
+				batches[bid] = b
+				batchOrder[#batchOrder+1] = bid
+				while #batchOrder > historyLimit do
+					local oldId = table.remove(batchOrder, 1)
+					batches[oldId] = nil
+				end
+				needsHistoryRefresh = true
+			end
+			b.events[#b.events+1] = info
+			local span = (info.endChar or 0) - (info.beginChar or 0)
+			if span > b.widestSpan then
+				b.widestSpan = span
+				b.resultValue = info.result
+				-- Result changed -> the history row's "result = N" text is stale.
+				needsHistoryRefresh = true
+			end
+			-- Only flag the tree if we're looking at this batch. Events for older
+			-- invocations still get recorded but don't force a re-render.
+			if bid == currentBatchId then
+				needsTreeRefresh = true
+			end
+		end,
+
+		-- Coalesce UI rebuilds. thinkTime = 0.1 caps refreshes at 10Hz, which is more
+		-- than smooth enough for a debug view and eliminates the per-event rebuild cost.
+		thinkTime = 0.1,
+		think = function(element)
+			if needsTreeRefresh or needsHistoryRefresh then
+				RefreshAll()
+			end
+		end,
+
+		data = {
+			close = function()
+				GoblinScriptDebug.DisableDebug(formula)
+				resultPanel:FireEvent("close")
+				resultPanel:DestroySelf()
+			end,
+		},
+
+		children = {
+			gui.Panel {
+				id = 'content',
+				styles = {
+					{
+						halign = 'center',
+						valign = 'center',
+						width = '94%',
+						height = '94%',
+						flow = 'vertical',
+					},
+				},
+				children = {
+					titleLabel,
+					mainFormPanel,
+					closePanel,
+				},
+			},
+
+			-- Resize handles (right, bottom, bottom-right). They float over the dialog
+			-- and mutate dialog.selfStyle.width/height during drag. `locationScratch`
+			-- is the helper's persistence target; we don't actually persist here.
+			gui.DialogResizePanel(locationScratch, dialogWidth, dialogHeight),
+		},
+	}
+
+	for k, option in pairs(options) do
+		args[k] = option
+	end
+
+	resultPanel = gui.Panel(args)
+
+	GoblinScriptDebug.EnableDebug(formula, resultPanel)
+	-- First render: force both flags on so the "Waiting..." state shows immediately.
+	needsTreeRefresh = true
+	needsHistoryRefresh = true
+	RefreshAll()
 
 	return resultPanel
 end
