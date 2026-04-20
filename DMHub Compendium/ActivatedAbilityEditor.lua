@@ -4769,9 +4769,6 @@ function ActivatedAbility:ShowEditActivatedAbilityDialog(options)
 
 	local activatedAbility = self
 
-	local dialogWidth = 1200
-	local dialogHeight = 980
-
 	local resultPanel = nil
 
 	-- When the sectioned ability editor is active (the default), theme the
@@ -4783,13 +4780,23 @@ function ActivatedAbility:ShowEditActivatedAbilityDialog(options)
 	local themed = abilityEditor ~= nil and dmhub.GetSettingValue("classicAbilityEditor") ~= true
 	local c = themed and abilityEditor.COLORS or nil
 
+	-- The sectioned editor renders as a full-screen modal; the classic
+	-- editor keeps its original compact dialog dimensions.
+	local dialogWidth = themed and "100%" or 1200
+	local dialogHeight = themed and "100%" or 980
+
+	-- mainFormPanel hosts the editor body (classic or sectioned). When the
+	-- sectioned editor is active it fills the full-screen dialog minus
+	-- room for the title strip (~40px) and the Create/Close button row
+	-- (60px height + margins). The classic editor keeps its original
+	-- 1100x840 canvas.
 	local styles = {
 		{
 			bgcolor = themed and c.BG or 'white',
 			pad = 0,
 			margin = 0,
-			width = 1100,
-			height = 840,
+			width = themed and "100%" or 1100,
+			height = themed and "100%-120" or 840,
 		},
 	}
 
