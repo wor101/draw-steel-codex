@@ -631,24 +631,53 @@ function ActivatedAbilityInvokeAbilityBehavior:EditorItems(parentPanel)
 		}
 	}
 
+	-- Type row uses the stacked-label default (label above, controls
+	-- below) like the other form rows. The dropdown + Edit Ability
+	-- button share a horizontal sub-panel on the second line so the
+	-- button sits immediately next to the dropdown (only visible when
+	-- "Custom Ability" is selected). Same pattern as the Apply Ongoing
+	-- Effect behavior's Edit Effect button.
 	result[#result+1] = gui.Panel{
 		classes = {"formPanel"},
 		gui.Label{
 			classes = {"formLabel"},
 			text = "Type:",
 		},
-		gui.Dropdown{
-			options = {
-				{ text = "Custom Ability", id = "custom" },
-				{ text = "Named Ability", id = "named" },
-				cond(dmhub.GetTable("standardAbilities") ~= nil, { text = "Standard Ability", id = "standard" } ),
+		gui.Panel{
+			width = "auto",
+			height = "auto",
+			flow = "horizontal",
+			halign = "left",
+			valign = "center",
+			gui.Dropdown{
+				options = {
+					{ text = "Custom Ability", id = "custom" },
+					{ text = "Named Ability", id = "named" },
+					cond(dmhub.GetTable("standardAbilities") ~= nil, { text = "Standard Ability", id = "standard" } ),
+				},
+				idChosen = self.abilityType,
+				change = function(element)
+					self.abilityType = element.idChosen
+					parentPanel:FireEventTree("refreshInvoke")
+				end,
 			},
-			idChosen = self.abilityType,
-			change = function(element)
-				self.abilityType = element.idChosen
-				parentPanel:FireEventTree("refreshInvoke")
-			end,
-		}
+
+			gui.Button{
+				classes = {cond(self.abilityType ~= "custom", "collapsed-anim")},
+				width = "auto",
+				height = 28,
+				halign = "left",
+				lmargin = 8,
+				fontSize = 16,
+				text = "Edit Ability",
+				refreshInvoke = function(element)
+					element:SetClass("collapsed-anim", self.abilityType ~= "custom")
+				end,
+				click = function(element)
+					element.root:AddChild(self.customAbility:ShowEditActivatedAbilityDialog())
+				end,
+			},
+		},
 	}
 
 	result[#result+1] = gui.Check{
@@ -658,7 +687,7 @@ function ActivatedAbilityInvokeAbilityBehavior:EditorItems(parentPanel)
 			self.invokeOnCaster = element.value
 		end,
 	}
-	
+
 	result[#result+1] = gui.Check{
 		classes = {cond(self.abilityType == "custom", "collapsed-anim")},
 		text = "Target Player Casts",
@@ -668,21 +697,6 @@ function ActivatedAbilityInvokeAbilityBehavior:EditorItems(parentPanel)
 		end,
 		refreshInvoke = function(element)
 			element:SetClass("collapsed-anim", self.abilityType == "custom")
-		end,
-	}
-
-	result[#result+1] = gui.PrettyButton{
-		width = 200,
-		height = 50,
-		text = "Edit Ability",
-		create = function(element)
-			element:SetClass("collapsed", self.abilityType ~= "custom")
-		end,
-		refreshInvoke = function(element)
-			element:FireEventTree("create")
-		end,
-		click = function(element)
-			element.root:AddChild(self.customAbility:ShowEditActivatedAbilityDialog())
 		end,
 	}
 

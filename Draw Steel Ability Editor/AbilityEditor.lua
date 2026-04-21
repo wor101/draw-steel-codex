@@ -38,14 +38,11 @@ end
     ============================================================================
     Layout constants
     ============================================================================
-    The compendium dialog (ActivatedAbilityEditor.lua:4762) gives us a 1200x980
-    outer frame, with an inner content region of roughly 1100x840. We claim the
-    full inner region with a three-column body under a title strip.
+    The compendium dialog (ActivatedAbilityEditor.lua) is resized to fill the
+    screen when the sectioned editor is active. We claim 100% of that area
+    with a three-column body under a title strip.
 ]]
 local LAYOUT = {
-    ROOT_WIDTH = 1100,
-    ROOT_HEIGHT = 840,
-
     TITLE_HEIGHT = 44,
 
     NAV_WIDTH = 220,
@@ -54,9 +51,7 @@ local LAYOUT = {
     -- enough room for that plus padding, so description text wraps to the
     -- card's natural width rather than being squeezed.
     PREVIEW_WIDTH = 440,
-    -- When collapsed the preview column shrinks to just the reveal chevron.
-    PREVIEW_COLLAPSED_WIDTH = 40,
-    -- Detail width falls out as whatever the nav and preview leave behind.
+    -- Detail column fills whatever remains between nav and preview.
 
     NAV_BUTTON_HEIGHT = 42,
     NAV_BUTTON_VMARGIN = 6,
@@ -654,18 +649,7 @@ local function _editorStyles()
             textAlignment = "left",
             rmargin = 4,
         },
-        -- Preview column. Two states: expanded (full preview card visible)
-        -- and narrow (thin strip with just the chevron + clickable reveal
-        -- target). The state class is `nae-narrow` rather than `collapsed`,
-        -- because the engine treats `collapsed` as an auto-hide class on
-        -- every element it lands on -- `SetClassTree("collapsed", true)` was
-        -- hiding the chevron and everything else in the subtree. Using a
-        -- private class name keeps propagation safe.
-        -- Width is driven by direct `previewCol.width = N` assignment in
-        -- applyPreviewState (not via class) because class-based width
-        -- resolution did not take effect reliably. hpad is likewise driven
-        -- inline by the applyPreviewState mutation (not shown here) so the
-        -- 40px narrow column has room for a 16px chevron.
+        -- Preview column. Always visible; fixed width from LAYOUT.PREVIEW_WIDTH.
         gui.Style{
             selectors = {"nae-preview-col"},
             bgcolor = "clear",
@@ -673,13 +657,7 @@ local function _editorStyles()
         gui.Style{
             selectors = {"nae-preview-body"},
             width = "100%",
-            -- 20px toggle strip + 4px bottom margin = 24px header area.
-            height = "100%-24",
-        },
-        -- In narrow state hide the preview card entirely.
-        gui.Style{
-            selectors = {"nae-preview-body", "nae-narrow"},
-            collapsed = 1,
+            height = "100%",
         },
         gui.Style{
             selectors = {"nae-preview-heading"},
@@ -688,47 +666,7 @@ local function _editorStyles()
             bold = true,
             color = COLORS.GOLD_BRIGHT,
             textAlignment = "left",
-        },
-        -- In narrow state hide the "Preview" heading -- no room in 40px.
-        gui.Style{
-            selectors = {"nae-preview-heading", "nae-narrow"},
-            collapsed = 1,
-        },
-        -- Preview toggle header -- a thin horizontal strip with the chevron
-        -- icon pinned to the right. Lives at the top of the preview column,
-        -- so it stays visible when the body is collapsed.
-        gui.Style{
-            selectors = {"nae-preview-toggle-row"},
-            width = "100%",
-            height = 20,
-            flow = "horizontal",
-            halign = "left",
-            valign = "top",
-            bgcolor = "clear",
             bmargin = 4,
-        },
-        -- Image-based chevron. Uses the same InventoryArrow asset as
-        -- gui.PagingArrow, which is a known-working horizontal chevron.
-        -- scale = {x = -1, y = 1} points the arrow right (expanded state:
-        -- click to collapse); in narrow state the x-scale flips to point
-        -- the arrow left (click to expand). Gold tint via bgcolor.
-        gui.Style{
-            selectors = {"nae-preview-toggle-chevron"},
-            width = 16,
-            height = 16,
-            valign = "center",
-            bgimage = "panels/InventoryArrow.png",
-            bgcolor = COLORS.GOLD_BRIGHT,
-            scale = {x = -1, y = 1},
-            transitionTime = 0.15,
-        },
-        gui.Style{
-            selectors = {"nae-preview-toggle-chevron", "nae-narrow"},
-            scale = {x = 1, y = 1},
-        },
-        gui.Style{
-            selectors = {"nae-preview-toggle-chevron", "hover"},
-            bgcolor = COLORS.CREAM_BRIGHT,
         },
         -- Title strip
         gui.Style{
@@ -760,9 +698,8 @@ local function _editorStyles()
             textAlignment = "left",
             hmargin = 12,
         },
-        -- Detail col width is driven by direct `detailCol.width = N`
-        -- assignment in applyPreviewState, alongside the preview column.
-        -- The border budget (8px off the total) is applied there.
+        -- Detail col width is set once at construction time (the preview
+        -- column is always visible, no collapse handling needed).
 
         -- ================================================================
         -- Effects section: behavior list
@@ -1110,6 +1047,7 @@ local function _sharedWidgetStyles(colors)
             hpad = 6,
             vpad = 2,
             borderBox = true,
+            fontFace = "Berling",
             fontSize = 14,
             color = c.CREAM_BRIGHT,
             textAlignment = "left",
@@ -1149,6 +1087,7 @@ local function _sharedWidgetStyles(colors)
             priority = 3,
             bgcolor = "clear",
             color = c.CREAM_BRIGHT,
+            fontFace = "Berling",
             fontSize = 14,
             hpad = 6,
             vpad = 2,
@@ -1170,6 +1109,7 @@ local function _sharedWidgetStyles(colors)
             hpad = 6,
             vpad = 2,
             borderBox = true,
+            fontFace = "Berling",
             fontSize = 14,
             color = c.CREAM_BRIGHT,
             textAlignment = "left",
@@ -1641,35 +1581,58 @@ local function _themedDialogStyles(colors)
         vmargin = 4,
     }
 
-    -- Tighten formPanel/formLabel descendants so modifier sub-editor rows
-    -- match the behavior editor's density. Horizontal flow is preserved --
-    -- some modifier editors (Modify Power Roll's "Replace in Table" row)
-    -- emit multiple inputs in one formPanel expecting them side-by-side.
-    -- width = "auto" shrinks the row to fit its content, so combined with
-    -- halign = "left" everything anchors to the left edge instead of
-    -- centering within a 100%-wide row.
+    -- Stacked-label form pattern for modifier sub-editor rows: label on
+    -- its own line above the control, matching the outer feature panel's
+    -- Name / Source / Description fields. Rows that want multiple inputs
+    -- side-by-side (Modify Power Roll's "Replace in Table" / "New Text"
+    -- pair, damage-type swaps, etc.) opt in with the `formPanel-inline`
+    -- class, which restores the legacy horizontal layout + a fixed-width
+    -- label column. Parent-class selectors target the label and widgets
+    -- inside inline rows so the opt-in is a single class flip on the
+    -- parent -- children don't need to know.
     styles[#styles+1] = gui.Style{
         selectors = {"formPanel"},
         priority = 7,
-        flow = "horizontal",
-        width = "auto",
+        flow = "vertical",
+        width = "100%",
         height = "auto",
         minHeight = 0,
         halign = "left",
-        valign = "center",
+        valign = "top",
         pad = 0,
+        vmargin = 8,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"formPanel-inline"},
+        priority = 8,
+        flow = "horizontal",
+        width = "auto",
+        halign = "left",
+        valign = "center",
         vmargin = 4,
     }
     styles[#styles+1] = gui.Style{
         selectors = {"formLabel"},
         priority = 7,
-        width = 140,
+        width = "100%",
         halign = "left",
-        valign = "center",
+        valign = "top",
         fontSize = 14,
         bold = true,
         color = c.CREAM_BRIGHT,
         textAlignment = "left",
+        hmargin = 0,   -- base Styles.Form sets hmargin = 8, which indents
+                        -- the stacked-mode label text 8px to the right of
+                        -- the input frame below. Zero it so the label
+                        -- lines up with the input's visible left edge.
+        bmargin = 4,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"formLabel", "parent:formPanel-inline"},
+        priority = 8,
+        width = 140,
+        valign = "center",
+        bmargin = 0,
     }
     -- formInput is the classic class most modifier sub-editors attach to
     -- their gui.Input. Themed version gets DS chrome + left halign so the
@@ -1689,6 +1652,85 @@ local function _themedDialogStyles(colors)
         vpad = 2,
         borderBox = true,
         textAlignment = "left",
+    }
+
+    -- Alignment fix 1: callers of gui.GoblinScriptInput typically pass
+    -- `classes = "formInput"`, which brings a 6px hpad on the outer
+    -- wrapper Panel. That hpad reserves layout space on the left, so
+    -- the inner (visible) Input's frame sits 6px to the right of a
+    -- plain gui.Input's frame in the row above, AND the condition-box
+    -- edge doesn't line up with the Macro-input-box edge in the same
+    -- column. The outer wrapper has no bgimage so its border doesn't
+    -- render anyway -- only the hpad has visible effect on layout.
+    --
+    -- Fix: zero hpad on the outer wrapper (tagged `goblinscript-outer`
+    -- from the widget itself in DMHub Core Panels/GoblinScriptEditor.lua)
+    -- so the inner Input sits flush-left with plain Inputs. Leave the
+    -- inner `goblinscript-inner-input` alone so it keeps its default
+    -- 6px hpad -- that's the gap between the visible box border and
+    -- the editable text, matching what plain Inputs show.
+    styles[#styles+1] = gui.Style{
+        selectors = {"goblinscript-outer"},
+        priority = 8,
+        hpad = 0,
+    }
+
+    -- Alignment fix 2: the engine base pack gives dropdownLabel a
+    -- built-in 6px hmargin + fontSize 18 (DMHub Titlescreen/Styles.lua:284).
+    -- Inside a themed dialog the dropdown's chosen-text then sits 6px
+    -- right of the input text below it, and renders visibly larger.
+    -- Align with input body by zeroing the hmargin and dropping the
+    -- fontSize to match formInput's 14.
+    styles[#styles+1] = gui.Style{
+        selectors = {"dropdownLabel"},
+        priority = 8,
+        hmargin = 0,
+        fontSize = 14,
+        fontFace = "Berling",
+        color = c.CREAM_BRIGHT,
+    }
+
+    -- gui.Table theming. The engine's Styles.Table pack paints rows in
+    -- neutral grays (#222 / #444) and white labels -- jarring inside the
+    -- DS gold/cream frame. Override at priority 8 so the theme wins
+    -- wherever `Styles.Table` is spliced alongside these styles. Applies
+    -- to every gui.Table rendered under a themed dialog (power roll tier
+    -- table, rollable tables, etc.). Row bg alternates between PANEL_BG
+    -- and a slightly-lighter offset to keep the stripe subtle; a thin
+    -- gold hairline separates rows. Labels pick up CREAM_BRIGHT; inputs
+    -- nested in rows still use the formInput theming.
+    styles[#styles+1] = gui.Style{
+        selectors = {"row"},
+        priority = 8,
+        width = "auto",
+        height = "auto",
+        bgimage = "panels/square.png",
+        border = {y1 = 0, y2 = 1, x1 = 0, x2 = 0},
+        borderColor = c.GOLD .. "55",
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"row", "oddRow"},
+        priority = 8,
+        bgcolor = c.PANEL_BG,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"row", "evenRow"},
+        priority = 8,
+        bgcolor = c.BG,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"row", "highlight"},
+        priority = 8,
+        bgcolor = c.GOLD_DIM,
+    }
+    styles[#styles+1] = gui.Style{
+        selectors = {"row", "label"},
+        priority = 8,
+        pad = 8,
+        fontSize = 16,
+        color = c.CREAM_BRIGHT,
+        width = "auto",
+        height = "auto",
     }
 
     return styles
@@ -4464,12 +4506,17 @@ end
     content when the root panel fires "refreshPreview" -- field editors fire
     this through their shared fireChange() helper.
 
-    The preview column is collapsible: a chevron in the column's top-right
-    toggles a "collapsed" class on the column + heading + body. The detail
-    column gets a "preview-collapsed" class that widens it. Per-section
-    defaults (PREVIEW_DEFAULTS) drive the state when switching nav buttons.
+    The preview column is always visible; the editor runs as a full-screen
+    modal so the detail column has enough room even with the preview mounted.
+
+    Polling: behaviors' EditorItems are shared base code and have no hook
+    into the editor's fireChange helper, so typing in fields like a power-
+    roll tier text updates the ability's data but never triggers a preview
+    rebuild. We use a thinkTime-based poll on previewSlot to schedule a
+    refresh every 250ms. The existing debounce in _schedulePreviewRefresh
+    coalesces this with keystroke-driven refreshes so we don't double-run.
 ]]
-local function _makePreview(ability, onToggle)
+local function _makePreview(ability, schedulePreviewRefresh)
     local previewSlot
     previewSlot = gui.Panel{
         id = "previewSlot",
@@ -4479,6 +4526,13 @@ local function _makePreview(ability, onToggle)
         valign = "top",
         flow = "vertical",
         bgcolor = "clear",
+
+        thinkTime = 0.25,
+        think = function(element)
+            if schedulePreviewRefresh ~= nil then
+                schedulePreviewRefresh()
+            end
+        end,
 
         refreshPreview = function(element)
             -- Wrap the tooltip card in a width-constrained container so the
@@ -4552,52 +4606,26 @@ local function _makePreview(ability, onToggle)
         children = { previewSlot },
     }
 
-    -- Top strip: toggle chevron + (when expanded) the "Preview" heading
-    -- live in the same horizontal row. The whole strip is clickable so the
-    -- user has a large hit target.
-    local toggleStrip = gui.Panel{
-        classes = {"nae-preview-toggle-row"},
-        id = "previewToggle",
-        click = function(element)
-            if onToggle ~= nil then
-                onToggle()
-            end
-        end,
-        children = {
-            gui.Label{
-                classes = {"nae-preview-heading"},
-                text = "Preview",
-                width = "100%-24",
-                halign = "left",
-                valign = "center",
-            },
-            gui.Panel{
-                classes = {"nae-preview-toggle-chevron"},
-            },
-        },
+    local headingLabel = gui.Label{
+        classes = {"nae-preview-heading"},
+        text = "Preview",
+        width = "100%",
+        halign = "left",
+        valign = "top",
     }
 
     local colPanel = gui.Panel{
         classes = {"nae-preview-col"},
         id = "previewCol",
-        -- Initial width is the expanded state; applyPreviewState overwrites
-        -- this via direct assignment on toggle and on section switch.
         width = LAYOUT.PREVIEW_WIDTH,
         height = "100%",
         flow = "vertical",
-        -- halign omitted: in horizontal flow, the bodyRow places us after
-        -- nav + detail naturally. Setting halign = "right" was making the
-        -- engine push us flush to bodyRow's right edge, eliminating the
-        -- small slack that kept the preview card clear of the gold border.
         valign = "top",
-        -- Minimal hpad so the card uses nearly the full column width.
-        -- applyPreviewState flips this to 4 for the narrow state to fit
-        -- the 16px chevron.
         hpad = 4,
         vpad = LAYOUT.COL_VPAD,
         borderBox = true,
         children = {
-            toggleStrip,
+            headingLabel,
             scrollArea,
         },
     }
@@ -4623,45 +4651,10 @@ function AbilityEditor.GenerateEditor(ability)
     local effectsBottomBar = nil
     local previewSlot = nil
 
-    -- Preview column state. Single source of truth on the root panel's data
-    -- bag. Widths are driven via direct `panel.width = N` assignment because
-    -- class-based width resolution did not take effect reliably in this
-    -- engine version (prior attempt logged in STATUS.md / NOTES.md). The
-    -- class toggle still drives the heading/body collapse and the chevron
-    -- scale flip via style rules.
-    -- Private class name `nae-narrow` (NOT `collapsed`) so unrelated
-    -- descendants don't auto-hide via the engine-reserved `collapsed`
-    -- class rule.
-    local function applyPreviewState(narrow)
-        if rootPanel == nil then return end
-        rootPanel.data.previewNarrow = narrow
-        local previewWidth = narrow and LAYOUT.PREVIEW_COLLAPSED_WIDTH or LAYOUT.PREVIEW_WIDTH
-        -- Border budget: 8px reserved so nav + detail + preview don't clip
-        -- the root's 2px gold border on either side.
-        previewCol.width = previewWidth
-        detailCol.width = LAYOUT.ROOT_WIDTH - LAYOUT.NAV_WIDTH - previewWidth - 8
-        previewCol:SetClassTree("nae-narrow", narrow)
-        -- When expanding from narrow, flush any deferred preview rebuild
-        -- that was skipped while the preview was collapsed.
-        if not narrow and rootPanel.data.previewDirty and previewSlot ~= nil then
-            rootPanel.data.previewDirty = false
-            previewSlot:FireEvent("refreshPreview")
-        end
-    end
-
-    -- Manual toggle. Also updates the user's sticky preference so that
-    -- leaving and re-entering a non-Effects section restores whatever the
-    -- user last chose (rather than snapping back to expanded).
-    local function togglePreview()
-        local current = rootPanel.data.previewNarrow or false
-        local newNarrow = not current
-        rootPanel.data.userPreviewNarrow = newNarrow
-        applyPreviewState(newNarrow)
-    end
-
     -- Debounce state for preview rebuilds. Coalesces rapid edits (e.g.
     -- keystrokes in a text field) into a single tooltip rebuild per 150ms
-    -- window, and skips rebuilds entirely when the preview is collapsed.
+    -- window. The preview is always visible now, so every debounced flush
+    -- fires the refresh unconditionally.
     local _previewDirty = false
     local _previewTimerActive = false
 
@@ -4674,15 +4667,6 @@ function AbilityEditor.GenerateEditor(ability)
             _previewTimerActive = false
             if not _previewDirty then return end
             _previewDirty = false
-            -- Skip rebuild when preview is collapsed; mark dirty for expand.
-            -- Guard: after the dialog is destroyed the engine clears the
-            -- panel's data bag, so rootPanel.data errors. pcall because
-            -- gui panels don't have try_get (that's a game-type method).
-            local ok, rpData = pcall(function() return rootPanel ~= nil and rootPanel.data or nil end)
-            if ok and rpData ~= nil and rpData.previewNarrow then
-                rpData.previewDirty = true
-                return
-            end
             if previewSlot ~= nil then
                 previewSlot:FireEvent("refreshPreview")
             end
@@ -4722,23 +4706,16 @@ function AbilityEditor.GenerateEditor(ability)
             end
         end
 
-        -- Effects always forces narrow on entry (its behavior list +
-        -- per-behavior editor want the wide detail column). Every other
-        -- section restores the user's sticky preference -- so if they
-        -- had the preview expanded on Overview, bounce into Effects
-        -- (auto-narrowed), then bounce back, Overview is expanded again.
-        -- Manual re-expansion within Effects updates the preference, so
-        -- then moving to Overview stays expanded too.
+        -- The Effects section gets a fixed bottom bar (Add/Paste buttons);
+        -- other sections hide it and reclaim the space. The preview column
+        -- stays visible in every section.
         if sectionId == "effects" then
-            applyPreviewState(true)
             if effectsBottomBar ~= nil then
                 effectsBottomBar:SetClass("nae-not-effects", false)
                 effectsBottomBar:SetClass("collapsed", false)
                 detailScroll.height = "100%-42"
             end
         else
-            local pref = rootPanel.data.userPreviewNarrow or false
-            applyPreviewState(pref)
             if effectsBottomBar ~= nil then
                 effectsBottomBar:SetClass("nae-not-effects", true)
                 effectsBottomBar:SetClass("collapsed", true)
@@ -4825,6 +4802,12 @@ function AbilityEditor.GenerateEditor(ability)
         refreshAbility = function(element)
             element:SetClass("collapsed-anim", not _clipboardHasBehavior())
         end,
+        -- Fires when the internal clipboard changes (e.g. user copies a
+        -- behavior while this editor is open). Keeps the button's visibility
+        -- in sync without requiring the editor to be closed and reopened.
+        internalClipboardChanged = function(element)
+            element:SetClass("collapsed-anim", not _clipboardHasBehavior())
+        end,
     }
 
     effectsBottomBar = gui.Panel{
@@ -4862,10 +4845,9 @@ function AbilityEditor.GenerateEditor(ability)
     detailCol = gui.Panel{
         classes = {"nae-detail-col"},
         id = "detailCol",
-        -- Initial width for the expanded preview state. applyPreviewState
-        -- overwrites this whenever the preview toggles or the section
-        -- changes. 8px border budget matches the calculation there.
-        width = LAYOUT.ROOT_WIDTH - LAYOUT.NAV_WIDTH - LAYOUT.PREVIEW_WIDTH - 8,
+        -- Fills the remaining width between nav (fixed) and preview (fixed).
+        -- 8px border budget matches the nav + preview + border allowance.
+        width = string.format("100%%-%d", LAYOUT.NAV_WIDTH + LAYOUT.PREVIEW_WIDTH + 8),
         height = "100%",
         flow = "vertical",
         halign = "left",
@@ -4876,12 +4858,12 @@ function AbilityEditor.GenerateEditor(ability)
         children = {detailScroll, effectsBottomBar},
     }
 
-    previewCol, previewSlot = _makePreview(ability, togglePreview)
+    previewCol, previewSlot = _makePreview(ability, _schedulePreviewRefresh)
 
     local bodyRow = gui.Panel{
         id = "bodyRow",
         width = "100%",
-        height = LAYOUT.ROOT_HEIGHT - LAYOUT.TITLE_HEIGHT - 12,
+        height = string.format("100%%-%d", LAYOUT.TITLE_HEIGHT + 12),
         flow = "horizontal",
         halign = "left",
         valign = "top",
@@ -4915,16 +4897,15 @@ function AbilityEditor.GenerateEditor(ability)
         classes = {"nae-root"},
         id = "abilityEditorRoot",
         styles = _editorStyles(),
-        width = LAYOUT.ROOT_WIDTH,
-        height = LAYOUT.ROOT_HEIGHT,
+        width = "100%",
+        height = "100%",
         halign = "center",
         valign = "center",
         flow = "vertical",
         borderBox = true,
         -- No root-level padding: the outer compendium dialog already pads
         -- around us, and any root hpad here would subtract from the inner
-        -- area that nav+detail+preview column widths are computed against,
-        -- causing the right column to overflow.
+        -- area that nav+detail+preview column widths are computed against.
         hpad = 0,
         vpad = 0,
         bgcolor = COLORS.BG,
@@ -4935,13 +4916,6 @@ function AbilityEditor.GenerateEditor(ability)
         data = {
             ability = ability,
             selectedSectionId = SECTIONS[1].id,
-            -- Live preview column state. `previewNarrow` is the current
-            -- render state; `userPreviewNarrow` is the user's sticky
-            -- preference which is restored when leaving a forced-narrow
-            -- section (Effects) and returning to any other section.
-            previewNarrow = false,
-            userPreviewNarrow = false,
-            previewDirty = false,
         },
         children = {
             titleStrip,
@@ -4954,8 +4928,7 @@ function AbilityEditor.GenerateEditor(ability)
         },
     }
 
-    -- Initial selection + initial preview render. selectSection also applies
-    -- the section's default preview state.
+    -- Initial selection + initial preview render.
     selectSection(SECTIONS[1].id)
     if previewSlot ~= nil then
         previewSlot:FireEvent("refreshPreview")
