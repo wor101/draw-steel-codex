@@ -269,6 +269,8 @@ TacPanelStyles.SummaryInfo = {
         height = "auto",
         halign = "left",
         valign = "top",
+        textWrap = false,
+        minFontSize = 10,
     },
     {
         selectors = {"label", "summary-info", "char-name"},
