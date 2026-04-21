@@ -10188,7 +10188,10 @@ function creature:IsValid()
 
 	local ongoingEffectsTable = GetTableCached("characterOngoingEffects")
 	for i,ongoingEffectInstance in ipairs(self:try_get("ongoingEffects", {})) do
-		if getmetatable(ongoingEffectInstance) == nil or ongoingEffectsTable[ongoingEffectInstance.ongoingEffectid] == nil then
+		if getmetatable(ongoingEffectInstance) == nil or ongoingEffectInstance.typeName ~= "CharacterOngoingEffectInstance" then
+			return false
+		end
+		if ongoingEffectsTable[ongoingEffectInstance.ongoingEffectid] == nil then
 			return false
 		end
 	end
@@ -10319,7 +10322,9 @@ function creature:Repair(localOnly)
 	deleteList = {}
 	local ongoingEffectsTable = GetTableCached("characterOngoingEffects")
 	for i,ongoingEffectInstance in ipairs(self:try_get("ongoingEffects", {})) do
-		if getmetatable(ongoingEffectInstance) == nil or ongoingEffectsTable[ongoingEffectInstance.ongoingEffectid] == nil then
+		if getmetatable(ongoingEffectInstance) == nil or ongoingEffectInstance.typeName ~= "CharacterOngoingEffectInstance" then
+			deleteList[#deleteList+1] = i
+		elseif ongoingEffectsTable[ongoingEffectInstance.ongoingEffectid] == nil then
 			deleteList[#deleteList+1] = i
 		end
 	end

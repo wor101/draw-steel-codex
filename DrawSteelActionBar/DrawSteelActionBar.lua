@@ -2959,7 +2959,9 @@ local function CreateTokenSelectionContainer()
                         end
                     end,
                     linger = function(element)
-                        gui.Tooltip(creature.GetTokenDescription(tok))(element)
+                        if tok.valid then
+                            gui.Tooltip(creature.GetTokenDescription(tok))(element)
+                        end
                     end,
                 }
 

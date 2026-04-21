@@ -526,7 +526,7 @@ function dmhub.MarkLocs(args)
 end
 
 --- CalculateShape: Create an object describing a shape on the map.
---- @param args {shape: SpellShapes, token: CharacterToken, objectTemplate: nil|string, targetPoint: Vector3, range: nil|number, radius: nil|number, locOverride: nil|Loc, requireEmpty: nil|boolean, checklos: nil|boolean }
+--- @param args {shape: SpellShapes, token: CharacterToken, objectTemplate: nil|string, targetPoint: Vector3, range: nil|number, radius: nil|number, locOverride: nil|Loc, requireEmpty: nil|boolean, checklos: nil|boolean, altitude: nil|number }
 --- @return LuaShape
 function dmhub.CalculateShape(args)
 	-- dummy implementation for documentation purposes only
@@ -1383,7 +1383,7 @@ function dmhub.CopyToClipboard(text)
 	-- dummy implementation for documentation purposes only
 end
 
---- CopyToInternalClipboard: Sets the contents of the internal clipboard.
+--- CopyToInternalClipboard: Sets the contents of the internal clipboard. Fires the 'internalClipboardChanged' event globally and recursively on all top-level SheetPanels.
 --- @param obj any
 --- @return nil
 function dmhub.CopyToInternalClipboard(obj)

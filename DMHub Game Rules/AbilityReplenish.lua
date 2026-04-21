@@ -567,6 +567,11 @@ function ActivatedAbilityReplenishBehavior:Cast(ability, casterToken, targets, o
 
                         for resourceid,quantity in pairs(resourceidToQuantity) do
                             local resourceInfo = resourceTable[resourceid]
+                            if resourceInfo == nil then
+                                dmhub.CloudError(string.format("AbilityReplenish: no resourceInfo for resourceid=%s ability=%s mode=%s quantity=%s",
+                                    tostring(resourceid), tostring(ability and ability.name), tostring(self.mode), tostring(quantity)))
+                                goto continue
+                            end
                             if self.mode == "replenish" then
 
                                 if not self:try_get("chatonly", false) then
@@ -589,6 +594,7 @@ function ActivatedAbilityReplenishBehavior:Cast(ability, casterToken, targets, o
                                 end
 
                             end
+                            ::continue::
                         end
 
                     end,

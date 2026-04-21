@@ -1997,7 +1997,7 @@ function ActivatedAbility:CastInstantPortion(casterToken, targets, options)
 		if behavior.instant then
             --I don't think we should filter this just because we're already in a coroutine?
 			--if (not options.alreadyInCoroutine) and (not behavior:IsFiltered(self, casterToken, options)) then
-			if (not behavior:IsFiltered(self, casterToken, options)) then
+			if behavior.hasCast and (not behavior:IsFiltered(self, casterToken, options)) then
 				behavior:Cast(self, casterToken, behavior:ApplyToTargets(self, casterToken, targets, options), options)
 			end
 		else
@@ -2727,7 +2727,7 @@ function ActivatedAbility.CastCoroutine(self, casterToken, targets, options)
 
 	for i,behavior in ipairs(self.behaviors) do
 		print("CastCoroutine::", self.name, "behavior " .. i .. "/" .. #self.behaviors .. " type=" .. tostring(behavior.typeName) .. " instant=" .. tostring(behavior.instant) .. " filtered=" .. tostring(behavior:IsFiltered(self, casterToken, options)) .. " abort=" .. tostring(options.abort) .. " stopProcessing=" .. tostring(options.stopProcessing))
-		if not behavior.instant and (not behavior:IsFiltered(self, casterToken, options)) then
+		if not behavior.instant and behavior.hasCast and (not behavior:IsFiltered(self, casterToken, options)) then
             if behavior.typeName == "ActivatedAbilityPowerRollBehavior" then
                 CharacterPanel.HighlightAbilitySection{
                     ability = self,

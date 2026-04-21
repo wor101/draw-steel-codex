@@ -36,6 +36,20 @@ function lobby:CloneFirebaseGameToStagingDO(gameid, options)
 	-- dummy implementation for documentation purposes only
 end
 
+--- CloneDOGameToOtherEnvironment: Clone a Durable-Object-backed game (release or staging) into a new game backed by the OTHER DO environment. The source game is left untouched. Options table can contain 'progress' (function called with status and progress 0-1) and 'complete' (function called with success bool, new gameid string, and optional error string).
+--- @param gameid string The id of the source DO game to clone.
+--- @param options table Options with optional 'progress' and 'complete' callback fields.
+function lobby:CloneDOGameToOtherEnvironment(gameid, options)
+	-- dummy implementation for documentation purposes only
+end
+
+--- CloneGameToLocal: Clone a game (Firebase or Durable-Object-backed) into a new offline (Local) game hosted by the bundled local-game-server. The source game is left untouched. Options table can contain 'progress' (function called with status and progress 0-1) and 'complete' (function called with success bool, new gameid string, and optional error string).
+--- @param gameid string The id of the source game to clone.
+--- @param options table Options with optional 'progress' and 'complete' callback fields.
+function lobby:CloneGameToLocal(gameid, options)
+	-- dummy implementation for documentation purposes only
+end
+
 --- CreateGame: Creates a new game with the given options table. The options table may contain 'create' and 'error' callback functions. Rate-limited to one creation every 3 seconds.
 --- @param options table Options with optional 'create' and 'error' callback fields.
 function lobby:CreateGame(options)
