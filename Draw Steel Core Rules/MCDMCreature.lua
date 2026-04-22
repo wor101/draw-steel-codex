@@ -476,7 +476,7 @@ function monster:GetMentor()
 
     --Check other allied parties
     local partyInfo = GetParty(token.partyid)
-    for id, _ in pairs(partyInfo.allyParties) do
+    for id, _ in pairs(rawget(partyInfo, "allyParties") or {}) do
         partyMembers = dmhub.GetCharacterIdsInParty(id) or {}
         for _, charid in ipairs(partyMembers) do
             local charToken = dmhub.GetTokenById(charid)
