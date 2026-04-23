@@ -145,7 +145,28 @@ function creature:SingleMinionMaxStamina()
 end
 
 function creature:Potency()
+    local summonerToken = self:GetPotencySummonerToken()
+    if summonerToken ~= nil then
+        return summonerToken.properties:Potency()
+    end
     return self:HighestCharacteristic()
+end
+
+--- If this creature is a minion flagged to use its summoner's potency, returns the summoner token.
+--- Otherwise returns nil (the creature uses its own potency).
+--- @return CharacterToken|nil
+function creature:GetPotencySummonerToken()
+    if not self.minion then return nil end
+    if (self:CalculateNamedCustomAttribute("Minion Summoner Potency") or 0) <= 0 then
+        return nil
+    end
+    local selfToken = dmhub.LookupToken(self)
+    if selfToken == nil or not selfToken.summonerid then return nil end
+    local summonerToken = dmhub.GetTokenById(selfToken.summonerid)
+    if summonerToken ~= nil and summonerToken.valid then
+        return summonerToken
+    end
+    return nil
 end
 
 function creature:BaseNamedCustomAttribute(id)
@@ -1274,6 +1295,16 @@ function creature:CalcuatePotencyValue(potency)
 end
 
 function creature:CalculatePotencyValue(potency)
+    --When this minion redirects potency to its summoner, forward the entire calculation
+    --(including the "Potency Bonus" custom attribute) to the summoner's creature.
+    local summonerToken = self:GetPotencySummonerToken()
+    if summonerToken ~= nil then
+        return summonerToken.properties:CalculatePotencyValueSelf(potency)
+    end
+    return self:CalculatePotencyValueSelf(potency)
+end
+
+function creature:CalculatePotencyValueSelf(potency)
     local potencyBonus = self:CalculateNamedCustomAttribute("Potency Bonus")
     if tonumber(potency) ~= nil then
         return tonumber(potency) + potencyBonus
