@@ -630,9 +630,9 @@ local g_moduleOptions = {
     },
     {
         id = "mcdm-startermap",
-        text = "Orden",
+        text = "Custom Campaign",
         descriptionDetails =
-        "Forge your own adventure in the world of Orden! We'll start you in a tavern with all the Draw Steel rules and you can take it from there.",
+        "Forge your own adventure! We'll start you in a tavern with all the Draw Steel rules and you can take it from there.",
         coverart = "panels/backgrounds/mcdm-cinematic.jpeg",
     },
 }
