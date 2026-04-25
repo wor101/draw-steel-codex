@@ -50,6 +50,8 @@ local g_triggerHelpSymbols = {
     },
 }
 
+RegisterGoblinScriptTypeInfo("trigger", g_triggerHelpSymbols)
+
 --- Creates a symbol-lookup object for an ActiveTrigger so it can be used in GoblinScript.
 --- @param triggerInfo ActiveTrigger
 --- @return table
