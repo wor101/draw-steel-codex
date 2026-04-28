@@ -149,8 +149,12 @@ TriggeredAbility.TargetTypes = {
         end,
     },
     {
+        -- UI label is "The Trigger Subject" to match the trigger-level
+        -- "Trigger Subject" field in the new editor (design doc rev 4 +
+        -- gotcha 6). Data id stays `subject`; runtime token naming and
+        -- the GoblinScript Subject symbol are unchanged.
         id = 'subject',
-        text = 'Subject',
+        text = 'The Trigger Subject',
         condition = function(ability)
             return ability:try_get("subject", "self") ~= "self"
         end,

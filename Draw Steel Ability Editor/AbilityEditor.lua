@@ -95,6 +95,10 @@ AbilityEditor.SECTIONS = SECTIONS
     CBStyles.GetStyles(), which wires character-builder-specific width math.
     Colors and fonts match Character Builder so the editor feels consistent.
 ]]
+-- Exposed below as AbilityEditor.GetEditorStyles so the Triggered Ability
+-- Editor (and other in-module editors) can reuse the full style pack rather
+-- than reimplementing a subset. Keeps label alignment, button skins, and
+-- checkbox rendering consistent across editors in the mod.
 local function _editorStyles()
     return {
         -- SourceReference:Editor (DMHub Utils/SourceReference.lua) relies on
@@ -999,6 +1003,12 @@ local function _editorStyles()
         },
     }
 end
+
+-- Public accessor so other editors in this mod (notably the Triggered Ability
+-- Editor) can inherit the full style pack instead of maintaining a parallel
+-- copy. The pack captures label alignment, widget skinning, and nav-column +
+-- section styling conventions shared across the editors.
+AbilityEditor.GetEditorStyles = _editorStyles
 
 --[[
     ============================================================================
@@ -1911,6 +1921,11 @@ local function _makeFieldRow(labelText, childElement)
     }
 end
 
+-- Forward-declared so _buildOverviewSection can reference it before the
+-- assignment (the body below) runs. Lua resolves the name lexically at
+-- call time; without the forward local it would be treated as a global.
+local _buildModesBlock
+
 local function _buildOverviewSection(ability, fireChange)
     local children = {}
 
@@ -2239,8 +2254,27 @@ local function _buildOverviewSection(ability, fireChange)
     }
 
     --------------------------------------------------------------------------
-    -- Modes & Variations
+    -- Modes & Variations (extracted via _buildModesBlock below)
     --------------------------------------------------------------------------
+    for _, c in ipairs(_buildModesBlock(ability, fireChange)) do
+        children[#children + 1] = c
+    end
+
+    -- Bottom padding so the last field doesn't sit flush against the panel edge.
+    children[#children + 1] = gui.Panel{
+        width = "100%", height = 12, bgcolor = "clear",
+    }
+
+    return children
+end
+
+-- Modes + Variations block, extracted from _buildOverviewSection so the
+-- Triggered Ability Editor can inject it into its Trigger section.
+-- Returns a children array with the Modes dropdown + conditional mode list.
+-- The block writes to ability.multipleModes (false/true/"variations") and
+-- ability.modeList (array of {text, rules, condition, hasAbility, variation}).
+_buildModesBlock = function(ability, fireChange)
+    local children = {}
     local modesListPanel = nil
 
     children[#children + 1] = _makeFieldRow("Modes",
@@ -2475,11 +2509,6 @@ local function _buildOverviewSection(ability, fireChange)
         end,
     }
     children[#children + 1] = modesListPanel
-
-    -- Bottom padding so the last field doesn't sit flush against the panel edge.
-    children[#children + 1] = gui.Panel{
-        width = "100%", height = 12, bgcolor = "clear",
-    }
 
     return children
 end
@@ -2913,6 +2942,50 @@ local function _buildCostAndActionSection(ability, fireChange)
             persistenceSubgroup,
         },
     }
+
+    -- 8. Special Properties. Boolean flags registered via
+    -- ActivatedAbility.RegisterProperty (MCDMActivatedAbility.lua:3119).
+    -- The classic editor exposes these through a "Add Special Property..."
+    -- SetEditor; we render them as stacked nae-toggle-check rows so they
+    -- match the section's styling. Iterating registeredProperties means any
+    -- future RegisterProperty call shows up automatically without touching
+    -- this editor. At time of writing the list is Use as Free Strike,
+    -- Use as Signature Ability, and Remain Hidden.
+    local propertyChecks = {}
+    for _, prop in ipairs(ActivatedAbility.registeredProperties or {}) do
+        local propId = prop.id
+        propertyChecks[#propertyChecks + 1] = gui.Check{
+            classes = {"nae-toggle-check"},
+            text = prop.name,
+            value = ability:HasProperty(propId),
+            change = function(element)
+                local props = ability:get_or_add("properties", {})
+                if element.value then
+                    props[propId] = true
+                else
+                    props[propId] = nil
+                end
+                fireChange()
+            end,
+        }
+    end
+
+    if #propertyChecks > 0 then
+        children[#children + 1] = gui.Panel{
+            classes = {"nae-field-row"},
+            flow = "vertical",
+            children = {
+                gui.Label{
+                    classes = {"nae-field-label"},
+                    text = "Special Properties",
+                },
+                gui.Panel{
+                    classes = {"nae-field-subgroup"},
+                    children = propertyChecks,
+                },
+            },
+        }
+    end
 
     return children
 end
@@ -3756,6 +3829,23 @@ local function _buildTargetingSection(ability, fireChange)
     return children
 end
 
+-- Public entry point for other editors (e.g. NewTriggeredAbilityEditor)
+-- that want the full Target Type / Range / numTargets / AOE / proximity /
+-- "More options" stack without spinning up the rest of the New Ability
+-- Editor shell. Returns the same children array the internal section
+-- consumes. Caller is responsible for wiring up a `fireChange` function
+-- that dispatches refreshAbility across the subtree so the conditional
+-- visibility classes (collapsed-anim) update when targetType / numTargets
+-- / proximityTargeting change.
+AbilityEditor.BuildTargetingSection = _buildTargetingSection
+
+-- Public entry point for the Modes & Variations block, extracted from
+-- _buildOverviewSection. Used by the Triggered Ability Editor's Trigger
+-- section to surface `multipleModes` + `modeList` authoring. Returns
+-- children array: Modes dropdown + conditional mode list panel. Caller
+-- wires a `fireChange` for preview + validation invalidation.
+AbilityEditor.BuildModesSection = _buildModesBlock
+
 --[[
     ============================================================================
     Effects section
@@ -3785,6 +3875,14 @@ local function _makeBehaviorPillPanel(ability, behavior, fireChange)
     local modePanel = gui.Panel{
         classes = {"nae-behavior-pills", "collapsed"},
         data = {cacheKey = nil},
+
+        -- Self-initialize on create. On re-open of the editor, the behavior
+        -- list is built via behaviorList.create's FireEvent (single element),
+        -- which does not cascade to children, so pills would stay collapsed
+        -- until the next tree-wide fireChange. Fire our own refreshAbility
+        -- here so pills populate immediately. Matches the pattern used by
+        -- the behavior contentPanel below.
+        create = function(element) element:FireEvent("refreshAbility") end,
 
         refreshAbility = function(element)
             local shown = ability.multipleModes == true
@@ -3845,6 +3943,8 @@ local function _makeBehaviorPillPanel(ability, behavior, fireChange)
     local tierPanel = gui.Panel{
         classes = {"nae-behavior-pills", "collapsed"},
         data = {cacheKey = nil},
+
+        create = function(element) element:FireEvent("refreshAbility") end,
 
         refreshAbility = function(element)
             local hasPowerRollBefore = false
@@ -3910,6 +4010,8 @@ local function _makeBehaviorPillPanel(ability, behavior, fireChange)
     local strainPanel = gui.Panel{
         classes = {"nae-behavior-pills", "collapsed"},
         data = {cacheKey = nil},
+
+        create = function(element) element:FireEvent("refreshAbility") end,
 
         refreshAbility = function(element)
             local hasStrain = ability:IsStrain()
@@ -4169,6 +4271,15 @@ local function _buildEffectsSection(ability, fireChange)
 
     return children
 end
+
+-- Public entry point for other editors (e.g. NewTriggeredAbilityEditor)
+-- that want the per-behaviour card list without the rest of the New
+-- Ability Editor shell. Returns the same {behaviorListPanel} children
+-- array the internal caller consumes. Caller is responsible for wiring
+-- up the Add Behavior button (opens AbilityEditor.OpenBehaviorPicker)
+-- and a fireChange function that dispatches refreshAbility across the
+-- subtree.
+AbilityEditor.BuildEffectsSection = _buildEffectsSection
 
 --[[
     ============================================================================
