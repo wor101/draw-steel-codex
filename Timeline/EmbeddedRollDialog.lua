@@ -3080,24 +3080,40 @@ function GameHud.CreateEmbeddedRollDialog()
                 return
             end
 
-            local guid = dmhub.GenerateGuid()
+            local function doRerollAmend(rollFormula)
+                if g_activeRoll == nil then return end
+                local guid = dmhub.GenerateGuid()
+                g_activeRoll = g_activeRoll:Amend {
+                    guid = guid,
+                    roll = tostring(rollFormula),
+                    amendmentRerolls = true,
+                    description = g_activeRollArgs.description .. " -- Re-rolled!",
+                    amendable = g_activeRollArgs.amendable,
+                    tokenid = g_activeRollArgs.tokenid,
+                    silent = g_activeRollArgs.silent,
+                    instant = g_activeRollArgs.instant,
+                    creature = g_activeRollArgs.creature,
+                    properties = g_activeRollArgs.properties,
+                    begin = function(rollInfo)
+                        m_rollInfo = rollInfo
+                        resultPanel:FireEventTree("beginRoll", rollInfo, guid)
+                    end,
+                }
+            end
 
-            g_activeRoll = g_activeRoll:Amend {
-                guid = guid,
-                roll = g_activeRollArgs.roll,
-                amendmentRerolls = true,
-                description = g_activeRollArgs.description .. " -- Re-rolled!",
-                amendable = g_activeRollArgs.amendable,
-                tokenid = g_activeRollArgs.tokenid,
-                silent = g_activeRollArgs.rollIsSilent,
-                instant = g_activeRollArgs.instant,
-                creature = g_activeRollArgs.creature,
-                properties = g_activeRollArgs.properties,
-                begin = function(rollInfo)
-                    m_rollInfo = rollInfo
-                    resultPanel:FireEventTree("beginRoll", rollInfo, guid)
-                end,
-            }
+            -- Hook for external mods to intercept re-rolls
+            if RollDialog.OnReroll then
+                local rerollResult = RollDialog.OnReroll({
+                    rollArgs = g_activeRollArgs,
+                    originalRoll = g_activeRollArgs.originalRoll or g_activeRollArgs.roll,
+                    activeRoll = g_activeRoll,
+                    setActiveRoll = function(roll) g_activeRoll = roll end,
+                    amendWithResult = doRerollAmend,
+                })
+                if rerollResult == "intercept" then return end
+            end
+
+            doRerollAmend(g_activeRollArgs.originalRoll or g_activeRollArgs.roll)
         end,
     }
 
@@ -4488,6 +4504,7 @@ function GameHud.CreateEmbeddedRollDialog()
                 }
 
                 g_activeRollArgs = rollArgs
+                g_activeRollArgs.originalRoll = rollArgs.roll
 
                 -- Hook for external mods to intercept rolls
                 local hookResult = nil
@@ -4508,6 +4525,13 @@ function GameHud.CreateEmbeddedRollDialog()
                         modifiers = modifiersUsed,
                         multitargets = multitargetsUsed,
                         boons = m_boons,
+                        setActiveRoll = function(roll)
+                            activeRoll = roll
+                            g_activeRoll = roll
+                            if activeRollFn ~= nil then
+                                activeRollFn(roll)
+                            end
+                        end,
                     })
                 end
 
