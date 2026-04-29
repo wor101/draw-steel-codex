@@ -187,6 +187,7 @@ TriggeredAbility.triggers = {
 				name = "Damage Type",
 				type = "text",
 				desc = "The type of damage taken when triggering this event.",
+				valueOptionsSource = "damageTypes",
 			},
             keywords = {
                 name = "Keywords",
@@ -226,6 +227,7 @@ TriggeredAbility.triggers = {
 				name = "Damage Type",
 				type = "text",
 				desc = "The type of damage taken when triggering this event.",
+				valueOptionsSource = "damageTypes",
 			},
         },
 
@@ -543,6 +545,7 @@ TriggeredAbility.RegisterTrigger{
             name = "Damage Type",
             type = "text",
             desc = "The type of damage dealt.",
+            valueOptionsSource = "damageTypes",
         },
         {
             name = "Keywords",
@@ -570,6 +573,7 @@ TriggeredAbility.RegisterTrigger{
             name = "Damage Type",
             type = "text",
             desc = "The type of damage dealt.",
+            valueOptionsSource = "damageTypes",
         },
         {
             name = "Keywords",
@@ -597,6 +601,7 @@ TriggeredAbility.RegisterTrigger{
             name = "Damage Type",
             type = "text",
             desc = "The type of damage dealt.",
+            valueOptionsSource = "damageTypes",
         },
         {
             name = "Keywords",
