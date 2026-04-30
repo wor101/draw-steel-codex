@@ -558,6 +558,47 @@ local function parseFormula(tokens, src)
 end
 
 --------------------------------------------------------------------------
+-- Parse cache
+--------------------------------------------------------------------------
+-- Public walkers (Render, RenderTriggerSentence -> Render,
+-- ListReferencedSymbols, ListReferencedDottedAccesses, WalkLiteralComparisons,
+-- ExtractSatisfyingValues, AttributeFailure, RenderDebug) all tokenise the
+-- same conditionFormula independently. A single Mech-View / test-card refresh
+-- runs 5-7 of them on the same string today, paying tokenise + parseFormula
+-- on every call. Both functions are pure with respect to the formula string,
+-- and consumers iterate tokens / AST nodes read-only, so memoising the
+-- (tokens, ast) pair by formula string is safe.
+--
+-- Bounded MRU-by-insertion: cap at PARSE_CACHE_CAPACITY entries; on overflow
+-- evict the oldest. Hit rate during an editing session is high (the same
+-- formula sticks around between keystrokes on other fields).
+--
+-- INVARIANT (do not break): consumers must NEVER mutate the returned tokens
+-- table or AST node tree. They are shared state. All current consumers are
+-- read-only by inspection (ipairs / field reads only). Add a fresh-copy step
+-- here if a future consumer needs to mutate.
+local PARSE_CACHE_CAPACITY = 32
+local _parseCache = {}
+local _parseCacheOrder = {}
+
+local function getParsed(formula)
+    if formula == nil or formula == "" then return nil, nil end
+    local cached = _parseCache[formula]
+    if cached ~= nil then return cached.tokens, cached.ast end
+    local ok, tokens = pcall(tokenise, formula)
+    if not ok or tokens == nil then return nil, nil end
+    local astOk, ast = pcall(parseFormula, tokens, formula)
+    if not astOk then ast = nil end
+    if #_parseCacheOrder >= PARSE_CACHE_CAPACITY then
+        local victim = table.remove(_parseCacheOrder, 1)
+        _parseCache[victim] = nil
+    end
+    _parseCache[formula] = { tokens = tokens, ast = ast }
+    _parseCacheOrder[#_parseCacheOrder + 1] = formula
+    return tokens, ast
+end
+
+--------------------------------------------------------------------------
 -- Prose rendering
 --------------------------------------------------------------------------
 -- Renders an AST node. Falls back to the literal source substring when a
@@ -578,22 +619,101 @@ local function resolveEntry(entry, ctx)
             return GoblinScriptProse.quantityProse[ctx and ctx.trigger or ""]
         end
     end
+    if type(entry) == "table" and entry.role then
+        return entry.role
+    end
     return nil
 end
 
 -- Resolve a role entry specifically for possessive-position use (dotted
--- access fallback). Subject returns its possessive form directly; other
--- roles are static strings that we suffix with "'s" to produce the
--- possessive form on the fly.
+-- access fallback). Subject returns its possessive form directly; entries
+-- with explicit role/possessive forms (e.g. Self -> you/your) return their
+-- possessive directly; other roles are static strings that we suffix with
+-- "'s" to produce the possessive form on the fly.
 local function resolveRoleAsPossessive(entry, ctx)
     if entry == nil then return nil end
     if type(entry) == "table" and entry.dynamic == "subject" then
         local e = GoblinScriptProse.subjectProse[ctx and ctx.subject or ""]
         return e and e.possessive
     end
+    if type(entry) == "table" and entry.possessive then
+        return entry.possessive
+    end
     local role = resolveEntry(entry, ctx)
     if role == nil then return nil end
     return role .. "'s"
+end
+
+--------------------------------------------------------------------------
+-- Inline trigger-symbol prose (one-place registration)
+--------------------------------------------------------------------------
+-- Trigger payload symbols (Damage, Damage Type, Attacker, ...) declare
+-- their prose alongside name/type/desc on the trigger.symbols entry in
+-- TriggeredAbility.lua, e.g.
+--     damage = {
+--         name = "Damage",
+--         type = "number",
+--         desc = "...",
+--         prose = "the damage",
+--     }
+-- For creature-typed roles that compose dotted access ("Attacker.Stamina"
+-- -> "the attacker's stamina"), the possessive auto-derives from the
+-- noun phrase via "+'s" suffix, or you can set `prosePossessive`
+-- explicitly when the auto form is wrong (e.g. irregular pronouns; the
+-- {role, possessive} table shape is also accepted on `prose` itself for
+-- pronoun cases like Self).
+--
+-- The lookup at lookupSymbol consults this map BEFORE the centralised
+-- `GoblinScriptProse.symbols` / `.roles` tables, so an inline `prose`
+-- field always wins over a stale central registration. Existing central
+-- entries continue to work unchanged for symbols that haven't been
+-- migrated -- migration is opt-in and per-symbol.
+--
+-- Cache is built lazily on the first lookup that names a trigger we
+-- haven't seen yet. Trigger registrations are static after module load
+-- in production; hot-reload scenarios can clear via
+-- `GoblinScriptProse._invalidateTriggerSymbolsCache()` if needed.
+local _triggerSymbolsByName = nil
+
+local function buildTriggerSymbolsCache()
+    local cache = {}
+    if rawget(_G, "TriggeredAbility") == nil then return cache end
+    local triggers = rawget(TriggeredAbility, "triggers")
+    if type(triggers) ~= "table" then return cache end
+    for _, t in ipairs(triggers) do
+        if type(t) == "table" and t.id and type(t.symbols) == "table" then
+            local byName = {}
+            for k, v in pairs(t.symbols) do
+                if type(v) == "table" then
+                    -- Symbol identity is the runtime injection key, which
+                    -- is always derived from the symbol NAME (lowercased,
+                    -- whitespace-stripped). Numeric-key array-form entries
+                    -- carry their name in v.name; keyed-map entries may
+                    -- have a name distinct from the table key (e.g. key
+                    -- "ability" with name "Used Ability"). Always prefer
+                    -- v.name when present.
+                    local symName = v.name or (type(k) == "string" and k or nil)
+                    if symName ~= nil then
+                        byName[normalise(symName)] = v
+                    end
+                end
+            end
+            cache[t.id] = byName
+        end
+    end
+    return cache
+end
+
+local function getTriggerSymbols(triggerId)
+    if triggerId == nil or triggerId == "" then return nil end
+    if _triggerSymbolsByName == nil then
+        _triggerSymbolsByName = buildTriggerSymbolsCache()
+    end
+    return _triggerSymbolsByName[triggerId]
+end
+
+function GoblinScriptProse._invalidateTriggerSymbolsCache()
+    _triggerSymbolsByName = nil
 end
 
 -- Look up prose for a symbol or dotted name. Returns a string fragment
@@ -604,6 +724,28 @@ end
 -- without needing every creature property pre-enumerated.
 local function lookupSymbol(parts, ctx)
     if parts == nil or #parts == 0 then return nil end
+
+    -- Inline prose on the active trigger's payload symbols. Co-locates
+    -- prose with the symbol declaration in TriggeredAbility.lua so
+    -- adding a new symbol is a one-file edit. See the inline-prose block
+    -- comment above buildTriggerSymbolsCache for the schema.
+    --
+    -- Single-part inline check fires BEFORE the central full-key lookup
+    -- below; otherwise a single-part name (e.g. "damage") would match
+    -- `GoblinScriptProse.symbols[full]` first and the inline override
+    -- would never run. Multi-part dotted-access composition is handled
+    -- further down (after the central full-key check, so explicit dotted
+    -- registrations like "Ability.name" still win).
+    local triggerSymbols = ctx and ctx.trigger and getTriggerSymbols(ctx.trigger)
+    if #parts == 1 and triggerSymbols then
+        local single = normalise(parts[1])
+        local entry = triggerSymbols[single]
+        if entry and entry.prose then
+            local inlineResolved = resolveEntry(entry.prose, ctx)
+            if inlineResolved then return inlineResolved end
+        end
+    end
+
     local full = normalise(table.concat(parts, "."))
     local resolved = resolveEntry(GoblinScriptProse.symbols[full], ctx)
     if resolved then return resolved end
@@ -622,7 +764,28 @@ local function lookupSymbol(parts, ctx)
     -- rather than via "+'s" suffix so second-person pronouns compose
     -- correctly (never `"you's stamina"`).
     local parentKey = normalise(parts[1])
-    local possessive = resolveRoleAsPossessive(GoblinScriptProse.roles[parentKey], ctx)
+    local possessive = nil
+
+    -- Inline composition: honour `prosePossessive` if present, else the
+    -- {role, possessive} shape on `prose`, else auto-derive from `prose`
+    -- via "+'s" suffix.
+    if triggerSymbols then
+        local entry = triggerSymbols[parentKey]
+        if entry then
+            if entry.prosePossessive then
+                possessive = entry.prosePossessive
+            elseif type(entry.prose) == "table" and entry.prose.possessive then
+                possessive = entry.prose.possessive
+            elseif entry.prose then
+                local noun = resolveEntry(entry.prose, ctx)
+                if noun then possessive = noun .. "'s" end
+            end
+        end
+    end
+
+    if possessive == nil then
+        possessive = resolveRoleAsPossessive(GoblinScriptProse.roles[parentKey], ctx)
+    end
     if possessive == nil then return nil end
     local tailParts = {}
     for i = 2, #parts do tailParts[#tailParts + 1] = string.lower(parts[i]) end
@@ -862,9 +1025,8 @@ end
 function GoblinScriptProse.Render(formula, ctx)
     if formula == nil or formula == "" then return "" end
     local ok, result = pcall(function()
-        local tokens = tokenise(formula)
-        if #tokens == 0 then return formula end
-        local ast = parseFormula(tokens, formula)
+        local tokens, ast = getParsed(formula)
+        if tokens == nil or #tokens == 0 then return formula end
         if ast == nil then return formula end
         return Render.node(ast, ctx or {}, formula)
     end)
@@ -1009,8 +1171,7 @@ end
 
 -- Debug entry point: returns (prose, ast, tokens) for dry-runs.
 function GoblinScriptProse.RenderDebug(formula, ctx)
-    local tokens = tokenise(formula or "")
-    local ast = parseFormula(tokens, formula or "")
+    local tokens, ast = getParsed(formula or "")
     local prose = GoblinScriptProse.Render(formula, ctx)
     return prose, ast, tokens
 end
@@ -1033,8 +1194,8 @@ end
 function GoblinScriptProse.ListReferencedSymbols(formula)
     local list, set = {}, {}
     if formula == nil or formula == "" then return list, set end
-    local ok, tokens = pcall(tokenise, formula)
-    if not ok or tokens == nil then return list, set end
+    local tokens = getParsed(formula)
+    if tokens == nil then return list, set end
     for k, t in ipairs(tokens) do
         if t.kind == "IDENT" then
             -- Skip dotted-tail identifiers (Attacker.Keywords -> only
@@ -1060,6 +1221,103 @@ function GoblinScriptProse.ListReferencedSymbols(formula)
 end
 
 --------------------------------------------------------------------------
+-- ListReferencedDottedAccesses
+--------------------------------------------------------------------------
+-- Walks the formula's tokens and returns a map of dotted-access paths the
+-- author has used, keyed by lowercased head. Each value carries the
+-- original-cased head/tail strings plus an "opHint" describing what kind
+-- of value the leaf is being compared against, so the Test Trigger panel
+-- can pick the right input widget without re-parsing.
+--
+-- Multi-word identifiers (e.g. `Used Ability`) are joined with a single
+-- space and lookup keys collapse the space (so `usedability` matches the
+-- runtime injection identity that GoblinScript uses). Tails are
+-- normalised by `string.lower` to compare identity but we keep the
+-- original-case version for display.
+--
+-- Op-hint logic:
+--   - immediately followed by `has` -> "has"          (set/StringSet)
+--   - followed by `is`/`=`/`!=`     -> "compare-str"  (text)
+--   - followed by `>=`/`<=`/`>`/`<` -> "compare-num"  (number)
+--   - bare (followed by `and`/`or`/end) -> "bool"
+-- Caller can override the hint per-tail if a different shape is preferred.
+--
+-- Returns a map of the form:
+--   { ["used ability"] = {
+--       displayHead = "Used Ability",
+--       lookupKey   = "usedability",   -- runtime injection key
+--       tails = {
+--         keywords = { displayTail = "Keywords", opHint = "has" },
+--         name     = { displayTail = "name",     opHint = "compare-str" },
+--       },
+--     }, ... }
+function GoblinScriptProse.ListReferencedDottedAccesses(formula)
+    local result = {}
+    if formula == nil or formula == "" then return result end
+    local tokens = getParsed(formula)
+    if tokens == nil then return result end
+
+    -- Multi-word identifiers in GoblinScript are produced by the tokeniser
+    -- as a single IDENT token whose value contains spaces (e.g. "Used
+    -- Ability"). We don't need to re-coalesce; just consume IDENT tokens
+    -- and look one token ahead for the dot.
+    local function deriveHint(opTokenValue, opTokenKind)
+        if opTokenValue == nil then return "bool" end
+        local v = string.lower(opTokenValue or "")
+        if v == "has" then return "has" end
+        if v == "is" or v == "=" or v == "!=" then return "compare-str" end
+        if v == ">=" or v == "<=" or v == ">" or v == "<" then
+            return "compare-num"
+        end
+        if v == "and" or v == "or" then return "bool" end
+        if opTokenKind == "PUNCT" and (v == ")" or v == "(") then return "bool" end
+        return "bool"
+    end
+
+    for k, t in ipairs(tokens) do
+        if t.kind == "IDENT" then
+            local nextDot = tokens[k + 1]
+            if nextDot and nextDot.kind == "PUNCT" and nextDot.value == "." then
+                local tail = tokens[k + 2]
+                if tail and tail.kind == "IDENT" then
+                    local head = t.value
+                    local lookupKey = string.lower(string.gsub(head, "%s+", ""))
+                    local mapKey = string.lower(head)
+                    local entry = result[mapKey]
+                    if entry == nil then
+                        entry = {
+                            displayHead = head,
+                            lookupKey = lookupKey,
+                            tails = {},
+                        }
+                        result[mapKey] = entry
+                    end
+
+                    local opTok = tokens[k + 3]
+                    -- Skip a function-call paren after the tail; e.g.
+                    -- `Path.DistanceToCreature(Self) <= 1` -- the tail is
+                    -- being CALLED, not compared. Skip emitting an input
+                    -- for it. Same for chained dot (e.g. `Cast.X.Y`).
+                    local isCall = opTok and opTok.kind == "PUNCT" and opTok.value == "("
+                    local isChain = opTok and opTok.kind == "PUNCT" and opTok.value == "."
+                    if not isCall and not isChain then
+                        local tailKey = string.lower(tail.value)
+                        if entry.tails[tailKey] == nil then
+                            entry.tails[tailKey] = {
+                                displayTail = tail.value,
+                                opHint = deriveHint(opTok and opTok.value, opTok and opTok.kind),
+                            }
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return result
+end
+
+--------------------------------------------------------------------------
 -- WalkLiteralComparisons
 --------------------------------------------------------------------------
 -- Walks the AST of a formula and invokes the callback once for each leaf
@@ -1079,9 +1337,8 @@ function GoblinScriptProse.WalkLiteralComparisons(formula, callback)
     if type(callback) ~= "function" then return end
 
     pcall(function()
-        local tokens = tokenise(formula)
-        if #tokens == 0 then return end
-        local ast = parseFormula(tokens, formula)
+        local tokens, ast = getParsed(formula)
+        if tokens == nil or #tokens == 0 then return end
         if ast == nil then return end
 
         local function visit(node)
@@ -1157,17 +1414,29 @@ function GoblinScriptProse.ExtractSatisfyingValues(formula)
     if formula == nil or formula == "" then return out end
 
     local ok = pcall(function()
-        local tokens = tokenise(formula)
-        if #tokens == 0 then return end
-        local ast = parseFormula(tokens, formula)
+        local tokens, ast = getParsed(formula)
+        if tokens == nil or #tokens == 0 then return end
         if ast == nil then return end
 
         local function atomIdent(atom)
             if atom == nil then return nil end
             if atom.kind == "ident" then return atom.name end
-            -- Dotted atoms (Attacker.Keywords) can't be pre-filled directly
-            -- via a top-level symbol assignment; the creature wrapper
-            -- derives those properties from the token. Skip.
+            if atom.kind == "dotted" and atom.parts and #atom.parts == 2 then
+                -- Two-part dotted atoms are pre-fillable when the head
+                -- corresponds to an object-typed trigger symbol (ability,
+                -- spellcast, path, loc) -- the test panel surfaces a
+                -- per-tail input row keyed as `<lookupKey>.<tail_lower>`,
+                -- where lookupKey strips whitespace from the head and
+                -- both halves are lowercased. Match that key shape so
+                -- the prefill latches onto the right input row.
+                -- For creature-typed heads (Subject, Attacker, ...) the
+                -- caller's prefill is harmless: the synthesised key
+                -- won't match any input id (creature heads are role
+                -- slots, not symbol inputs) and the entry is ignored.
+                local head = string.lower(string.gsub(atom.parts[1], "%s+", ""))
+                local tail = string.lower(atom.parts[2])
+                return head .. "." .. tail
+            end
             return nil
         end
 
@@ -1264,9 +1533,8 @@ function GoblinScriptProse.AttributeFailure(formula, ctx, evalLeaf)
     if type(evalLeaf) ~= "function" then return nil end
 
     local ok, result = pcall(function()
-        local tokens = tokenise(formula)
-        if #tokens == 0 then return nil end
-        local ast = parseFormula(tokens, formula)
+        local tokens, ast = getParsed(formula)
+        if tokens == nil or #tokens == 0 then return nil end
         if ast == nil then return nil end
 
         local proseCtx = ctx or {}
@@ -1313,6 +1581,15 @@ function GoblinScriptProse.AttributeFailure(formula, ctx, evalLeaf)
         --   nil    -- caller falls back to the generic "Formula clause ... evaluated to ..." line
         --   ""     -- caller intentionally suppresses the detail line
         --   string -- caller uses the string verbatim
+        -- Capitalise the first ASCII letter of a string, preserving the
+        -- rest verbatim. Used so the detail line reads as a sentence
+        -- ("The distance to the attacker was 6 squares.") rather than
+        -- starting lowercase ("the distance ...").
+        local function capitaliseFirst(s)
+            if s == nil or s == "" then return s end
+            return string.upper(string.sub(s, 1, 1)) .. string.sub(s, 2)
+        end
+
         local function buildFailingDetail(node)
             if node == nil then return nil end
             if node.type == "compare" and node.left and node.left.kind == "call"
@@ -1325,10 +1602,11 @@ function GoblinScriptProse.AttributeFailure(formula, ctx, evalLeaf)
                 if lhsPhrase == nil then return nil end
                 local units = lookupCallUnits(node.left)
                 local valueText = formatNumber(v)
+                local phrase = capitaliseFirst(lhsPhrase)
                 if units and units ~= "" then
-                    return lhsPhrase .. " was " .. valueText .. " " .. units .. "."
+                    return phrase .. " was " .. valueText .. " " .. units .. "."
                 end
-                return lhsPhrase .. " was " .. valueText .. "."
+                return phrase .. " was " .. valueText .. "."
             elseif node.type == "atom" and node.atom and node.atom.kind == "call"
                 and callHasProse(node.atom) then
                 return ""
@@ -1436,11 +1714,17 @@ do
     local F = GoblinScriptProse.RegisterFunctionProse
     local R = GoblinScriptProse.RegisterRoleProse
 
-    -- Ambient role tokens.
+    -- Ambient role tokens. `Self` always renders as second-person ("you" /
+    -- "your") to match Draw Steel's player-facing card voice (see
+    -- TRIGGER_SYMBOL_PROSE.md voice decision 2026-04-24). `Subject` is
+    -- per-trigger dynamic (renders "any enemy" / "any ally" / "you" etc.
+    -- depending on ability.subject filter id). When ability.subject="self",
+    -- Subject also renders as "you" -- which makes Self and Subject naturally
+    -- coreferential in that case (which they are at runtime).
     S("Subject", { dynamic = "subject" })
-    S("Self", { dynamic = "subject" })
+    S("Self", { role = "you", possessive = "your" })
     R("Subject", { dynamic = "subject" })
-    R("Self", { dynamic = "subject" })
+    R("Self", { role = "you", possessive = "your" })
     S("Caster", "the aura caster")
     R("Caster", "the aura caster")
 

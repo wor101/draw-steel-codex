@@ -34,6 +34,36 @@ local LAYOUT = {
     SCROLL_GUTTER = 14,
 }
 
+-- C6a: Test Trigger popout registry. Each entry maps ability identity (guid
+-- or synthetic key) -> the floating popout root panel. Populated when the
+-- user clicks "Pop out" inside the in-editor Test Trigger card; cleared
+-- when the popout's destroy event fires. Survives the editor closing
+-- because the popout is parented to gamehud.mainDialogPanel via
+-- gui.ShowDialog, not to any editor-owned dialog.
+--
+-- File-scope locals (not stashed on `mod` -- the CodeModInterface rejects
+-- arbitrary property assignment with "Could not set property"). On a Lua
+-- hot-reload, gui.ShowDialog's mod-unload teardown destroys any open
+-- popouts before this file re-runs, so resetting the registry here is
+-- correct rather than a leak.
+--
+-- PERF: deliberately no idle subscriptions. The popout's test card runs
+-- discoverTestInputs / runTriggerTest only on Run-click, so an open-but-
+-- unused popout costs zero per-frame work. Multiple popouts are O(N) only
+-- in the click path. Do NOT add a thinkTime poll or monitorGame here --
+-- that's the trap the [PERFORMANCE_PREVIEW_REBUILD] note in
+-- TRIGGERED_ABILITY_EDITOR_DESIGN.md warns about.
+local g_openTestPopouts = {}
+local g_popoutSpawnCount = 0
+
+-- Forward-declare so buildTestTriggerCard's "Pop out" press handler can
+-- reference it. The implementation is assigned below buildTestTriggerCard
+-- via `function openTestTriggerPopout(...)` (which writes to this local
+-- rather than creating a new one). Per CLAUDE.md, self-referencing /
+-- mutually-referencing locals must be forward-declared so they're in
+-- lexical scope at parse time.
+local openTestTriggerPopout
+
 -- Fallback palette used if AbilityEditor hasn't published COLORS yet. Keeps
 -- the editor renderable even if load order shifts.
 local FALLBACK_COLORS = {
@@ -2167,7 +2197,29 @@ end
 --     (resolved against the receiver token's properties at evaluation).
 -- A reference not in this set is almost certainly a typo or a leftover
 -- from copying a formula off a different trigger event.
+--
+-- PERF: both creature.helpSymbols (~294 entries) and trigger.symbols are
+-- static config per (creature global state, triggerId) pair, so the merged
+-- result returned for a given triggerId is invariant across an editing
+-- session. Caching by triggerId avoids the helpSymbols walk + per-name
+-- normalisation entirely on the hot Mech-View refresh path.
+--
+-- Staleness contract: if a custom attribute registers mid-session via
+-- RegisterCustomSymbol, the new symbol shows a false-positive "Unknown"
+-- chip in the Mech View until the editor closes and reopens (the cache
+-- only resets on Lua reload). Same staleness profile as
+-- _conditionCompileCache. Mid-session attribute registration is rare;
+-- the chip is a soft warning, not a runtime gate, so a stale chip is
+-- annoying but never causes execution failure.
+--
+-- INVARIANT: the returned `allowed` table is shared across calls. Consumers
+-- must NOT mutate it. unknownReferences (the only call site today) reads
+-- via membership check only -- verified safe.
+local _allowedReferencesCache = {}
 local function buildAllowedReferences(triggerId)
+    local cacheKey = triggerId or ""
+    local cached = _allowedReferencesCache[cacheKey]
+    if cached ~= nil then return cached end
     local allowed = { subject = true, self = true, caster = true }
     local trigger = TriggeredAbility.GetTriggerById(triggerId)
     if trigger ~= nil and type(trigger.symbols) == "table" then
@@ -2192,6 +2244,7 @@ local function buildAllowedReferences(triggerId)
             end
         end
     end
+    _allowedReferencesCache[cacheKey] = allowed
     return allowed
 end
 
@@ -2372,15 +2425,6 @@ local function summariseBehaviours(ability)
     return table.concat(parts, ", "), false
 end
 
--- Render the "Then" clause of the Trigger Summary. The prose engine
--- (opt-in #5) returns full per-behaviour phrases chained with the
--- worksheet's ", then " convention.
-local function renderThenClause(ability)
-    local text, isEmpty = summariseBehaviours(ability)
-    if isEmpty then return "(no behaviours)" end
-    return text
-end
-
 -- Builds the Mechanical View card body and returns (card, rollupInfo).
 -- The caller lifts rollupInfo (text + color) into the pane sub-heading so
 -- the chip reads as part of the "How This Triggers" label row instead of
@@ -2500,7 +2544,11 @@ local function buildMechanicalView(ability)
         local ok, sentence = pcall(GSP.RenderTriggerSentence, ability)
         if ok and sentence ~= nil then whenClause = sentence end
     end
-    local thenClause = renderThenClause(ability)
+    -- Reuse the behaviour summary computed for the Behaviours row above
+    -- instead of running RenderBehaviourList over the same behaviour list a
+    -- second time. The output is identical; the prose engine has no state
+    -- to drift between calls.
+    local thenClause = behEmpty and "(no behaviours)" or behText
 
     -- Row renderer. Label left-aligned in a fixed-width column so values
     -- line up across rows; chip pinned to the right.
@@ -2718,8 +2766,23 @@ end
 --                      Collisions on a single creature are vanishingly
 --                      rare (two distinct triggered abilities sharing
 --                      BOTH name and trigger event).
-local function tokenHasTriggeredAbility(token, ability)
+--
+-- PERF: an optional `memo` arg ({[token.id] = bool}) lets callers share
+-- per-token results across multiple categoriseSceneTokens invocations
+-- inside one refresh. Each token check otherwise pays three Fill*
+-- modifier-list builds plus a linear scan -- expensive on busy maps. The
+-- memo is meant to be allocated fresh at the top of a synchronous refresh
+-- (e.g. buildExpanded) and discarded when the refresh ends, so cross-
+-- frame staleness is impossible: a token's modifier chain cannot change
+-- inside one synchronous Lua block.
+local function tokenHasTriggeredAbility(token, ability, memo)
     if token == nil or token.properties == nil or ability == nil then return false end
+    local memoKey
+    if memo ~= nil and token.id ~= nil then
+        memoKey = token.id
+        local cached = memo[memoKey]
+        if cached ~= nil then return cached end
+    end
     local props = token.properties
     local entries = {}
     pcall(function() props:FillBaseActiveModifiers(entries) end)
@@ -2728,36 +2791,43 @@ local function tokenHasTriggeredAbility(token, ability)
     local agid = ability:try_get("guid")
     local aname = ability:try_get("name")
     local atrig = ability:try_get("trigger")
+    local found = false
     for _, entry in ipairs(entries) do
         local m = entry and entry.mod
         if m ~= nil and m.has_key ~= nil and m:has_key("triggeredAbility") then
             local a = m.triggeredAbility
-            if a == ability then return true end
+            if a == ability then found = true; break end
             if agid ~= nil then
                 local bgid = a:try_get("guid")
-                if bgid ~= nil and bgid == agid then return true end
+                if bgid ~= nil and bgid == agid then found = true; break end
             end
             if aname ~= nil and atrig ~= nil
                     and a:try_get("name") == aname
                     and a:try_get("trigger") == atrig then
-                return true
+                found = true
+                break
             end
         end
     end
-    return false
+    if memoKey ~= nil then memo[memoKey] = found end
+    return found
 end
 
 -- Categorise scene tokens into preferred (have this triggered ability) and
 -- secondary (everyone else), filtered by the subject id constraint when
 -- supplied. Caster filter applies the subject filter relative to the
 -- chosen caster token. Returns two arrays of tokens.
-local function categoriseSceneTokens(ability, casterToken, subjectId)
+--
+-- PERF: optional `memo` is forwarded to tokenHasTriggeredAbility so per-
+-- token modifier walks are cached across calls within one refresh. See
+-- tokenHasTriggeredAbility's comment for the staleness contract.
+local function categoriseSceneTokens(ability, casterToken, subjectId, memo)
     local preferred, secondary = {}, {}
     local tokens = dmhub.allTokens or {}
     for _, tok in ipairs(tokens) do
         local matches = (subjectId == nil) or tokenMatchesSubjectFilter(tok, casterToken, subjectId)
         if matches then
-            if tokenHasTriggeredAbility(tok, ability) then
+            if tokenHasTriggeredAbility(tok, ability, memo) then
                 preferred[#preferred + 1] = tok
             else
                 secondary[#secondary + 1] = tok
@@ -2938,9 +3008,9 @@ end
 -- modal picker on click. Replaces the dropdown as the primary role-slot
 -- control so authors can tell tokens apart visually (two goblins with
 -- the same name become distinguishable by portrait).
-local function buildTokenPickerButton(ability, casterToken, subjectFilter, currentId, onSelect, pickerTitle)
+local function buildTokenPickerButton(ability, casterToken, subjectFilter, currentId, onSelect, pickerTitle, memo)
     local COLORS = getColors()
-    local preferred, secondary = categoriseSceneTokens(ability, casterToken, subjectFilter)
+    local preferred, secondary = categoriseSceneTokens(ability, casterToken, subjectFilter, memo)
 
     if #preferred == 0 and #secondary == 0 then
         return gui.Label{
@@ -3887,7 +3957,34 @@ end
 -- Builds the Test Trigger card body. Returns the panel; persistence of the
 -- expanded/collapsed state and the last-run summary lives on the panel's
 -- data field so refreshTest can rebuild without losing UI state.
-local function buildTestTriggerCard(ability)
+--
+-- opts (optional):
+--   mode = "editor" (default) | "popout"
+--     "editor" -- card mounts inside the editor's preview column, has a
+--                strip/expanded toggle, and polls a fingerprint each tick
+--                so upstream edits propagate.
+--     "popout" -- card mounts inside the C6a floating window. Always
+--                expanded, no fingerprint poll (zero idle cost), no Pop
+--                out button, no Close header (the popout chrome owns
+--                close). Inputs re-discover on every Run Test click,
+--                which is the popout's only refresh trigger.
+--   initialState -- optional table to seed state with (deep-copied at
+--                   the call site before being passed in). Used to inherit
+--                   role picks / symbol values / override toggles from
+--                   the editor card at popout time so the user doesn't
+--                   reconfigure on detach.
+--   reopen -- C6b: optional closure forwarded from
+--             TriggeredAbility:GenerateEditor's options.reopen. Captured
+--             by the Pop out press handler so the floating popout can
+--             show an "Open Editor" button that re-navigates to the
+--             original entry point. Editor-mode only; popout-mode passes
+--             reopen through to its own openTestTriggerPopout call (no-op
+--             since popout instances don't recurse).
+local function buildTestTriggerCard(ability, opts)
+    opts = opts or {}
+    local mode = opts.mode or "editor"
+    local isPopout = (mode == "popout")
+    local reopen = opts.reopen
     local COLORS = getColors()
     local CARD_WIDTH = LAYOUT.PREVIEW_WIDTH - 2 * LAYOUT.COL_HPAD - LAYOUT.SCROLL_GUTTER
 
@@ -3897,21 +3994,31 @@ local function buildTestTriggerCard(ability)
     -- from; if the author edits the condition, we clear symbolValues so the
     -- fresh pre-fill lands (otherwise the stale values from the old formula
     -- stick around).
-    local state = {
-        expanded = false,
-        lastRun = nil,
-        roleSelections = {},   -- [roleId] = tokenId
-        symbolValues = {},      -- [symKey] = { raw = ..., kind = ... }
-        lastPrefillKey = nil,
-        gateOverride = false,  -- C5: "Pretend subject has the required condition"
-        -- Path C: in-formula state overrides. Keyed by "<head>:<set>:<value>"
-        -- e.g. "subject:Conditions:Flanked" -> true means "pretend the
-        -- Subject has the Flanked condition for this test only".
-        -- Discovered from the conditionFormula via WalkLiteralComparisons;
-        -- injected at eval time via GenerateSymbols(props, overrideTable)
-        -- in buildEvalContext. See buildOverridesSection / buildEvalContext.
-        formulaOverrides = {},
-    }
+    local state
+    if opts.initialState ~= nil then
+        -- Caller already deep-copied; we own the table from here on.
+        state = opts.initialState
+    else
+        state = {
+            expanded = false,
+            lastRun = nil,
+            roleSelections = {},   -- [roleId] = tokenId
+            symbolValues = {},      -- [symKey] = { raw = ..., kind = ... }
+            lastPrefillKey = nil,
+            gateOverride = false,  -- C5: "Pretend subject has the required condition"
+            -- Path C: in-formula state overrides. Keyed by "<head>:<set>:<value>"
+            -- e.g. "subject:Conditions:Flanked" -> true means "pretend the
+            -- Subject has the Flanked condition for this test only".
+            -- Discovered from the conditionFormula via WalkLiteralComparisons;
+            -- injected at eval time via GenerateSymbols(props, overrideTable)
+            -- in buildEvalContext. See buildOverridesSection / buildEvalContext.
+            formulaOverrides = {},
+        }
+    end
+    -- Popout mode is always expanded; the floating window has no strip.
+    if isPopout then
+        state.expanded = true
+    end
 
     local cardPanel
     local function refreshTest()
@@ -3931,12 +4038,16 @@ local function buildTestTriggerCard(ability)
     end
 
     -- Builds the current scenario from state + the role/symbol declarations.
-    local function buildScenario(inputs)
+    -- `memo` is the per-refresh tokenHasTriggeredAbility cache; threaded
+    -- through so categoriseSceneTokens calls inside this scenario build
+    -- share modifier-walk results with the caller's other categorisation
+    -- calls (buildCasterSlotRow, buildRoleSlotRow / buildTokenPickerButton).
+    local function buildScenario(inputs, memo)
         local scenario = { roleTokens = {}, symbolValues = {} }
 
         -- Caster selection. Default = first preferred token; falls back to
         -- first scene token via tokensOnScene.
-        local preferredAll, secondaryAll = categoriseSceneTokens(ability, nil, nil)
+        local preferredAll, secondaryAll = categoriseSceneTokens(ability, nil, nil, memo)
         local casterId = state.roleSelections.__caster
         local casterToken = casterId and tokenById(casterId) or nil
         if casterToken == nil then
@@ -3972,7 +4083,7 @@ local function buildTestTriggerCard(ability)
             local tok = tokId and tokenById(tokId) or nil
             if tok == nil then
                 if slot.isSubject then
-                    local pref, sec = categoriseSceneTokens(ability, casterToken, slot.defaultSubjectFilter)
+                    local pref, sec = categoriseSceneTokens(ability, casterToken, slot.defaultSubjectFilter, memo)
                     tok = pref[1] or sec[1]
                 else
                     tok = pickOtherToken(casterToken)
@@ -4523,7 +4634,7 @@ local function buildTestTriggerCard(ability)
         }
     end
 
-    local function buildRoleSlotRow(slot, casterToken)
+    local function buildRoleSlotRow(slot, casterToken, memo)
         local subjectFilter = slot.isSubject and slot.defaultSubjectFilter or nil
         local control = buildTokenPickerButton(
             ability, casterToken, subjectFilter,
@@ -4532,12 +4643,13 @@ local function buildTestTriggerCard(ability)
                 state.roleSelections[slot.id] = tokenId
                 refreshTest()
             end,
-            "Choose " .. slot.name
+            "Choose " .. slot.name,
+            memo
         )
         return fieldRow(slot.name, control)
     end
 
-    local function buildCasterSlotRow()
+    local function buildCasterSlotRow(memo)
         -- Single-token scenes auto-fill the Trigger Owner silently -- no
         -- visible row, no picker. Bail out before constructing the wrapper
         -- panels so we don't leak orphaned panels (the caller's gate that
@@ -4546,7 +4658,7 @@ local function buildTestTriggerCard(ability)
         -- triggering "Panel ID-XXX was created but not attached to a
         -- parent" warnings on every test panel expansion).
         if #(dmhub.allTokens or {}) <= 1 then return nil end
-        local preferred, secondary = categoriseSceneTokens(ability, nil, nil)
+        local preferred, secondary = categoriseSceneTokens(ability, nil, nil, memo)
         if #preferred == 0 and #secondary == 0 then return nil end
         local control = buildTokenPickerButton(
             ability, nil, nil,
@@ -4555,7 +4667,8 @@ local function buildTestTriggerCard(ability)
                 state.roleSelections.__caster = tokenId
                 refreshTest()
             end,
-            "Choose Trigger Owner"
+            "Choose Trigger Owner",
+            memo
         )
         return fieldRow("Trigger Owner", control)
     end
@@ -5064,8 +5177,15 @@ local function buildTestTriggerCard(ability)
     -- Expanded card body. Re-runs the test, captures last-run state, and
     -- assembles the full child list including the close button.
     local function buildExpanded()
+        -- PERF: per-refresh tokenHasTriggeredAbility cache. Threaded through
+        -- every categoriseSceneTokens call below (buildScenario,
+        -- buildCasterSlotRow, buildRoleSlotRow / buildTokenPickerButton) so
+        -- the modifier-chain walks happen at most once per scene token per
+        -- refresh. Discarded when buildExpanded returns -- can never go
+        -- stale because Lua/DMHub run synchronously inside this block.
+        local hasAbilityMemo = {}
         local inputs = discoverTestInputs(ability)
-        local scenario = buildScenario(inputs)
+        local scenario = buildScenario(inputs, hasAbilityMemo)
         local result = runTriggerTest(ability, scenario)
         state.lastRun = result
 
@@ -5074,37 +5194,44 @@ local function buildTestTriggerCard(ability)
         -- Header row with title (kept in body so the close button has a
         -- consistent home; the strip view's title row is omitted when
         -- expanded since the card itself carries the visual weight).
-        children[#children + 1] = gui.Panel{
-            width = "100%",
-            height = "auto",
-            flow = "horizontal",
-            halign = "left",
-            valign = "center",
-            bgcolor = "clear",
-            bmargin = 6,
-            children = {
-                gui.Label{
-                    text = "Test Trigger",
-                    bold = true,
-                    fontSize = 14,
-                    color = COLORS.GOLD_BRIGHT,
-                    width = "100%-70",
-                    height = "auto",
-                    halign = "left",
+        --
+        -- Popout mode skips this row entirely -- the popout's chrome
+        -- title bar already shows the ability name, and the Close button
+        -- here would collapse the card body which is meaningless in a
+        -- floating window (there's no strip view to fall back to).
+        if not isPopout then
+            children[#children + 1] = gui.Panel{
+                width = "100%",
+                height = "auto",
+                flow = "horizontal",
+                halign = "left",
+                valign = "center",
+                bgcolor = "clear",
+                bmargin = 6,
+                children = {
+                    gui.Label{
+                        text = "Test Trigger",
+                        bold = true,
+                        fontSize = 14,
+                        color = COLORS.GOLD_BRIGHT,
+                        width = "100%-70",
+                        height = "auto",
+                        halign = "left",
+                    },
+                    gui.Button{
+                        text = "Close",
+                        width = 60,
+                        height = 24,
+                        halign = "right",
+                        fontSize = 12,
+                        press = function()
+                            state.expanded = false
+                            refreshTest()
+                        end,
+                    },
                 },
-                gui.Button{
-                    text = "Close",
-                    width = 60,
-                    height = 24,
-                    halign = "right",
-                    fontSize = 12,
-                    press = function()
-                        state.expanded = false
-                        refreshTest()
-                    end,
-                },
-            },
-        }
+            }
+        end
 
         -- Path C: scope note. Single sentence, sized to be legible
         -- alongside the Mech View body text (13pt). The earlier longer
@@ -5134,13 +5261,13 @@ local function buildTestTriggerCard(ability)
         -- The token-count gate now lives inside buildCasterSlotRow so the
         -- row's panels aren't constructed at all in the single-token case
         -- (avoids orphaning them when the gate trips).
-        local casterRow = buildCasterSlotRow()
+        local casterRow = buildCasterSlotRow(hasAbilityMemo)
         if casterRow ~= nil then
             children[#children + 1] = casterRow
         end
 
         for _, slot in ipairs(inputs.roleSlots) do
-            children[#children + 1] = buildRoleSlotRow(slot, scenario.casterToken)
+            children[#children + 1] = buildRoleSlotRow(slot, scenario.casterToken, hasAbilityMemo)
         end
 
         -- C5: Required Condition gate row. Sits between role slots and
@@ -5189,6 +5316,54 @@ local function buildTestTriggerCard(ability)
 
         children[#children + 1] = buildBehaviourPreview()
 
+        local actionRow = {
+            gui.Button{
+                text = "Run Test",
+                width = 100,
+                height = 28,
+                fontSize = 13,
+                halign = "left",
+                press = function()
+                    refreshTest()
+                end,
+            },
+        }
+        -- C6a: "Pop out" only in editor mode. Detaches the test card into
+        -- a draggable floating window that survives the editor closing.
+        -- State (role picks, symbol values, override toggles, last-run)
+        -- is deep-copied at popout time so the two cards diverge cleanly.
+        if not isPopout then
+            actionRow[#actionRow + 1] = gui.Button{
+                text = "Pop out",
+                width = 100,
+                height = 28,
+                fontSize = 13,
+                halign = "left",
+                hmargin = 8,
+                press = function()
+                    if openTestTriggerPopout == nil then return end
+                    -- Inherit user-input fields only. state.lastRun
+                    -- contains live token refs and a buildEvalContext-
+                    -- wrapped symbols table -- DeepCopy would either
+                    -- throw or produce garbage on those. The popout
+                    -- runs runTriggerTest fresh on first refreshTest
+                    -- so lastRun is regenerated immediately anyway.
+                    local seed = dmhub.DeepCopy({
+                        roleSelections = state.roleSelections,
+                        symbolValues = state.symbolValues,
+                        lastPrefillKey = state.lastPrefillKey,
+                        gateOverride = state.gateOverride,
+                        formulaOverrides = state.formulaOverrides,
+                    })
+                    seed.expanded = true
+                    seed.lastRun = nil
+                    -- C6b: forward the editor's reopen closure (if any).
+                    -- The popout will surface an "Open Editor" button when
+                    -- reopen is non-nil; otherwise that button is hidden.
+                    openTestTriggerPopout(ability, seed, reopen)
+                end,
+            }
+        end
         children[#children + 1] = gui.Panel{
             width = "100%",
             height = "auto",
@@ -5197,18 +5372,7 @@ local function buildTestTriggerCard(ability)
             valign = "center",
             bgcolor = "clear",
             tmargin = 8,
-            children = {
-                gui.Button{
-                    text = "Run Test",
-                    width = 100,
-                    height = 28,
-                    fontSize = 13,
-                    halign = "left",
-                    press = function()
-                        refreshTest()
-                    end,
-                },
-            },
+            children = actionRow,
         }
 
         return children
@@ -5230,7 +5394,12 @@ local function buildTestTriggerCard(ability)
     end
     local lastFingerprint = fingerprint()
 
-    cardPanel = gui.Panel{
+    -- Popout mode mounts the card inside a floating window; the editor's
+    -- preview-column padding doesn't apply, and we want the popout body
+    -- to fill its parent so the chrome wraps it tightly. The card also
+    -- skips its inset border in popout mode (the popout's frame already
+    -- carries the visual separation; doubled borders look noisy).
+    local panelArgs = {
         id = "tsTestTriggerCard",
         width = CARD_WIDTH,
         height = "auto",
@@ -5238,28 +5407,30 @@ local function buildTestTriggerCard(ability)
         halign = "left",
         valign = "top",
         bgcolor = "clear",
-        tmargin = 14,
-        thinkTime = 0.25,
-        think = function(element)
-            local fp = fingerprint()
-            if fp ~= lastFingerprint then
-                lastFingerprint = fp
-                element:FireEvent("refreshTest")
-            end
-        end,
+        tmargin = isPopout and 0 or 14,
         refreshTest = function(element)
             -- Sync the fingerprint here too so an upstream refreshAbility
             -- dispatch doesn't also trigger a redundant think-poll rebuild.
             lastFingerprint = fingerprint()
             if state.expanded then
-                element.bgimage = "panels/square.png"
-                element.bgcolor = COLORS.CARD_BG
-                element.borderWidth = 2
-                element.borderColor = COLORS.GOLD_DIM
-                element.cornerRadius = 4
-                element.vpad = 10
-                element.hpad = 12
-                element.borderBox = true
+                if isPopout then
+                    -- Popout chrome carries the border; card body sits
+                    -- transparent inside it for a clean visual.
+                    element.bgimage = nil
+                    element.bgcolor = "clear"
+                    element.borderWidth = 0
+                    element.vpad = 0
+                    element.hpad = 0
+                else
+                    element.bgimage = "panels/square.png"
+                    element.bgcolor = COLORS.CARD_BG
+                    element.borderWidth = 2
+                    element.borderColor = COLORS.GOLD_DIM
+                    element.cornerRadius = 4
+                    element.vpad = 10
+                    element.hpad = 12
+                    element.borderBox = true
+                end
                 element.children = buildExpanded()
             else
                 element.bgimage = nil
@@ -5270,16 +5441,392 @@ local function buildTestTriggerCard(ability)
                 element.children = { buildStrip() }
             end
         end,
-        -- Re-evaluate when any ability field changes upstream. Discovery of
-        -- inputs (referenced symbols, role slots) needs to refresh as the
-        -- author edits the trigger event / condition / behaviours.
-        refreshAbility = function(element)
-            element:FireEvent("refreshTest")
-        end,
     }
+    -- PERF: think handler is editor-mode-only. The popout deliberately
+    -- has no idle subscription -- it refreshes inputs on Run-click only.
+    -- Multiple popouts open simultaneously thus cost zero per-frame work
+    -- when idle. See [PERFORMANCE_PREVIEW_REBUILD] in
+    -- TRIGGERED_ABILITY_EDITOR_DESIGN.md for the perf design rationale.
+    if not isPopout then
+        panelArgs.thinkTime = 0.25
+        panelArgs.think = function(element)
+            local fp = fingerprint()
+            if fp ~= lastFingerprint then
+                lastFingerprint = fp
+                element:FireEvent("refreshTest")
+            end
+        end
+        -- Re-evaluate when any ability field changes upstream. Discovery
+        -- of inputs (referenced symbols, role slots) needs to refresh as
+        -- the author edits the trigger event / condition / behaviours.
+        -- Popouts don't subscribe to fireChange (the editor's fireChange
+        -- closure goes out of scope when the editor closes anyway), so
+        -- they refresh inputs on Run-click via the natural rebuild path.
+        panelArgs.refreshAbility = function(element)
+            element:FireEvent("refreshTest")
+        end
+    end
+    cardPanel = gui.Panel(panelArgs)
 
     cardPanel:FireEvent("refreshTest")
     return cardPanel
+end
+
+-- C6a: open (or focus) a floating Test Trigger popout for `ability`.
+--
+-- Behaviour:
+--   - One popout per ability identity (guid, fallback to tostring(ability)).
+--     Re-clicking Pop out for the same ability nudges the existing window
+--     back to a visible position rather than spawning a duplicate.
+--   - State is seeded from `initialState` (the caller deep-copies the
+--     editor card's state at click time) so role picks / symbol values /
+--     override toggles carry over.
+--   - Popout root is draggable -- clicking and dragging anywhere on the
+--     window moves it (4px threshold so button clicks still fire as
+--     clicks). Pattern lifted from RestDialog.lua:173-177.
+--   - Lifecycle: parented directly to gamehud.parentPanel via AddChild,
+--     then promoted to last-sibling via SetAsLastSibling so it renders
+--     above the editor's modal layer. A 1-second `think` on the chrome
+--     (NOT on the inner test card -- the test card stays think-free per
+--     the perf rule) keeps the popout on top after sub-modals open
+--     (token picker, condition picker, etc.) -- those call
+--     `gamehud.modalPanel:SetAsLastSibling()` via Hud.ShowModal, which
+--     would otherwise demote the popout below the modal layer
+--     permanently. The think is one cheap sibling-reorder call per
+--     popout per second.
+--
+--     Why not gui.ShowModal? It puts the popout in modalPanel as a
+--     sibling of the editor's modal, which makes the editor
+--     non-interactive (modal-stack exclusivity blocks clicks to lower
+--     modals) -- the explicit user-reported bug "you cannot click on
+--     the Close menu of the editor" while the popout is open.
+--
+--     Why not gui.ShowDialog or gamehud.popupPanel? Both sit BELOW
+--     modalPanel in parentPanel.children -- and Hud.ShowModal aggressively
+--     re-promotes modalPanel via SetAsLastSibling on every modal open.
+--     The popout would render under the editor.
+--
+--     The popout's destroy event clears its registry slot. Mod-unload
+--     teardown is wired manually because parentPanel:AddChild doesn't
+--     register an unload handler the way gui.ShowDialog does.
+--   - blocksGameInteraction = false on the popout root so clicks on
+--     the map (areas outside the popout's visible body) fall through to
+--     game elements. Default true would block map clicks across the
+--     popout's full bounding box -- not the floating-utility-window
+--     behaviour we want.
+--
+-- PERF (read before adding any subscription):
+--   - The popout's body card has no thinkTime, no monitorGame, no
+--     fireEvent listeners that arm timers. Idle cost = zero.
+--   - Multiple popouts therefore cost zero per-frame work when idle.
+--   - The only path that re-evaluates the ability is Run Test (user
+--     click), which goes through discoverTestInputs -> buildScenario ->
+--     runTriggerTest exactly once.
+-- C6b: `reopen` (optional) is the closure originally passed to
+-- TriggeredAbility:GenerateEditor as `options.reopen`. When non-nil, the
+-- popout surfaces an "Open Editor" button in its title bar that calls
+-- `reopen()` (wrapped in pcall) to re-navigate the user to the editor's
+-- original entry context. When nil (no caller provided one), the button
+-- is omitted entirely -- no broken affordance.
+function openTestTriggerPopout(ability, initialState, reopen)
+    if ability == nil then return end
+    local key = ability:try_get("guid") or tostring(ability)
+    local abilityName = ability:try_get("name") or "Triggered Ability"
+
+    -- Cascade so subsequent popouts don't stack invisibly. Position is
+    -- relative to the parent's centre (halign/valign center on the root)
+    -- so an offset of 0,0 puts the window in the middle of the screen.
+    -- Total spawn count drives the offset rather than current-open count
+    -- so closing-and-reopening doesn't reset to the centre.
+    g_popoutSpawnCount = g_popoutSpawnCount + 1
+    local cascadeIndex = (g_popoutSpawnCount - 1) % 8
+    local cascadeOffset = cascadeIndex * 30
+
+    -- If a popout for this ability already exists and is still alive,
+    -- just nudge it onscreen instead of spawning a duplicate. The user
+    -- may have dragged it offscreen; a click on Pop out should always
+    -- result in a visible window.
+    local existing = g_openTestPopouts[key]
+    if existing ~= nil and existing.valid then
+        existing.x = cascadeOffset
+        existing.y = cascadeOffset
+        return
+    end
+    g_openTestPopouts[key] = nil
+
+    local POPOUT_WIDTH = LAYOUT.PREVIEW_WIDTH - 2 * LAYOUT.COL_HPAD - LAYOUT.SCROLL_GUTTER + 24
+    local COLORS = getColors()
+
+    -- Construct the inner card first so we can parent it inside the
+    -- chrome below. mode = "popout" disables the think handler and the
+    -- nested Close/Pop-out buttons; initialState carries over the user's
+    -- in-editor configuration.
+    local innerCard = buildTestTriggerCard(ability, {
+        mode = "popout",
+        initialState = initialState,
+    })
+
+    -- Forward-declared so the close button's press handler can reach it.
+    local popoutRoot
+
+    -- C6b: build title-bar children. Label always present; "Open Editor"
+    -- button appears only when reopen is non-nil; close X always present.
+    -- Label width adjusts so the row never overflows: 100% - close button
+    -- (~32px) - optional Open Editor button (~96px including margin).
+    local titleChildren = {}
+    local labelWidthDelta = 32  -- close button + halign breathing room
+    if reopen ~= nil then
+        labelWidthDelta = labelWidthDelta + 96
+    end
+    titleChildren[#titleChildren + 1] = gui.Label{
+        text = "Test Trigger - " .. abilityName,
+        bold = true,
+        fontSize = 14,
+        color = COLORS.GOLD_BRIGHT,
+        width = string.format("100%%-%d", labelWidthDelta),
+        height = "auto",
+        halign = "left",
+        valign = "center",
+        textWrap = false,
+        textOverflow = "ellipsis",
+    }
+    -- Forward-declared so the Open Editor press handler can reference the
+    -- banner panel that's constructed below.
+    local banner
+    if reopen ~= nil then
+        titleChildren[#titleChildren + 1] = gui.Button{
+            text = "Open Editor",
+            width = 88,
+            height = 22,
+            fontSize = 12,
+            halign = "right",
+            valign = "center",
+            hmargin = 4,
+            press = function()
+                -- C6c: pcall the reopen closure and surface failures via
+                -- the banner. Failures here mean the original entry
+                -- context is gone (deleted compendium entry, removed
+                -- feature, unmounted parent panel). The banner gives
+                -- the user actionable feedback rather than a silent
+                -- no-op that looks like a broken button.
+                local ok, err = pcall(reopen)
+                if not ok and banner ~= nil and banner.valid then
+                    banner:FireEvent("showError",
+                        "Could not reopen the editor. The source entry may have been deleted or the parent panel unmounted.")
+                end
+            end,
+        }
+    end
+    titleChildren[#titleChildren + 1] = gui.CloseButton{
+        width = 20,
+        height = 20,
+        halign = "right",
+        valign = "center",
+        -- Modal-layer escape priority so Esc closes the top-of-stack
+        -- modal (this popout) rather than fighting with the editor's
+        -- own EXIT_MODAL_DIALOG handler. gui.CloseButton's default is
+        -- EXIT_DIALOG which would never fire while a modal is open.
+        escapePriority = EscapePriority.EXIT_MODAL_DIALOG,
+        press = function()
+            if popoutRoot ~= nil and popoutRoot.valid then
+                popoutRoot:DestroySelf()
+            end
+        end,
+    }
+
+    local titleBar = gui.Panel{
+        width = "100%",
+        height = "auto",
+        flow = "horizontal",
+        halign = "left",
+        valign = "top",
+        bgimage = "panels/square.png",
+        bgcolor = COLORS.CARD_BG,
+        bmargin = 6,
+        hpad = 8,
+        vpad = 6,
+        borderBox = true,
+        children = titleChildren,
+    }
+
+    -- C6c: stale-state banner. Sits between the title bar and the body.
+    -- Hidden by default; surfaces a one-line warning + dismiss X when an
+    -- action fails (today: reopen-pcall failure; future: ability-existence
+    -- check failures). Panel is always present in the tree so we don't
+    -- have to manage attach/detach across the chrome -- just toggle the
+    -- "hidden" class via the showError / hideError events.
+    -- (`local banner` was forward-declared above so the Open Editor
+    -- press handler can reference it; here we assign the actual panel.)
+    banner = gui.Panel{
+        classes = { "ds-test-trigger-popout-banner", "hidden" },
+        width = "100%",
+        height = "auto",
+        flow = "horizontal",
+        halign = "left",
+        valign = "top",
+        bgimage = "panels/square.png",
+        bgcolor = "#3a1414",
+        borderColor = "#a14b3a",
+        borderWidth = 1,
+        bmargin = 6,
+        hpad = 8,
+        vpad = 6,
+        borderBox = true,
+        showError = function(element, msg)
+            element:RemoveClass("hidden")
+            element.children = {
+                gui.Label{
+                    text = msg,
+                    color = "#dfcfc0",
+                    fontSize = 12,
+                    width = "100%-24",
+                    height = "auto",
+                    halign = "left",
+                    valign = "center",
+                    wrap = true,
+                },
+                gui.Panel{
+                    -- Mini dismiss X (reuses gui.CloseButton classes for
+                    -- the icon + hover styling without the modal-escape
+                    -- semantics; this is a banner-local action, not a
+                    -- dialog-level close).
+                    classes = { "close-button", "closeButton" },
+                    bgimage = "ui-icons/close.png",
+                    width = 14,
+                    height = 14,
+                    halign = "right",
+                    valign = "center",
+                    press = function()
+                        if banner ~= nil and banner.valid then
+                            banner:AddClass("hidden")
+                            banner.children = {}
+                        end
+                    end,
+                },
+            }
+        end,
+    }
+
+    -- Body holds the test card inside a vscroll container so tall content
+    -- (lots of overrides, long behaviour previews) doesn't push the
+    -- window past the screen edge.
+    local body = gui.Panel{
+        width = "100%",
+        height = "100%-44",
+        halign = "left",
+        valign = "top",
+        flow = "vertical",
+        vscroll = true,
+        hpad = 12,
+        vpad = 8,
+        borderBox = true,
+        children = { innerCard },
+    }
+
+    popoutRoot = gui.Panel{
+        classes = { "ds-test-trigger-popout" },
+        width = POPOUT_WIDTH,
+        height = 600,
+        halign = "center",
+        valign = "center",
+        flow = "vertical",
+        bgimage = "panels/square.png",
+        bgcolor = COLORS.CARD_BG,
+        borderWidth = 2,
+        borderColor = COLORS.GOLD_DIM,
+        cornerRadius = 6,
+        borderBox = true,
+        x = cascadeOffset,
+        y = cascadeOffset,
+        -- Apply the editor's themed styles to the popout subtree so
+        -- gui.Button / gui.Input / gui.Check / gui.Dropdown render with
+        -- the gold/cream chrome users see in the in-editor card. Without
+        -- this, the popout's controls fall back to engine-default style
+        -- (visibly different from the editor's). `buildStyles()` already
+        -- merges Styles.Form + the AbilityEditor themed pack.
+        styles = buildStyles(),
+        -- See block-comment above: don't block map/token clicks for areas
+        -- outside the popout's visible body. The popout is a floating
+        -- utility, not a screen-blocking modal.
+        blocksGameInteraction = false,
+        -- Drag-the-window pattern -- mirrors RestDialog.lua:173-177.
+        -- 4px dragThreshold (engine default) means clicks on inner
+        -- buttons / inputs still fire as clicks; only sustained motion
+        -- starts the drag.
+        draggable = true,
+        drag = function(element)
+            element.x = element.xdrag
+            element.y = element.ydrag
+        end,
+        -- Keep the popout above the editor's modal even after sub-modals
+        -- re-promote modalPanel. Cheap O(1) sibling reorder per popout
+        -- per second; chrome-only, the inner test card stays think-free
+        -- per the perf rule.
+        --
+        -- Orphan self-destruct: if our registry slot doesn't point to us
+        -- (file-scope `g_openTestPopouts` was reset on Lua hot-reload, OR
+        -- the slot was overwritten by a newer popout), we're stale --
+        -- destroy ourselves so we don't sit on screen blocking clicks
+        -- and constantly reordering the panel tree. In production
+        -- (no hot-reloads) this branch is unreachable; in dev it
+        -- guarantees orphans clean themselves up within 1s of a reload.
+        --
+        -- Sub-modal guard: if modalPanel has more than one child (editor
+        -- + at least one sub-modal like a token picker), DO NOT promote.
+        -- Promoting under a sub-modal would route clicks intended for
+        -- the sub-modal to the popout instead -- the user-reported
+        -- "had to F5 to click on anything" symptom. Skipping promotion
+        -- while a sub-modal is up means popout is hidden behind it
+        -- (acceptable since sub-modals are short-lived). Once the
+        -- sub-modal closes (modalPanel.children drops to 1), the next
+        -- think tick promotes us back above the editor.
+        thinkTime = 1.0,
+        think = function(element)
+            if g_openTestPopouts[key] ~= element then
+                element:DestroySelf()
+                return
+            end
+            local modalChildren = gamehud.modalPanel and gamehud.modalPanel.children
+            if modalChildren and #modalChildren > 1 then
+                return
+            end
+            element:SetAsLastSibling()
+        end,
+        destroy = function(element)
+            -- Clear registry slot so the next Pop out for this ability
+            -- spawns fresh rather than focus-existing on a stale ref.
+            if g_openTestPopouts[key] == element then
+                g_openTestPopouts[key] = nil
+            end
+        end,
+        -- Banner sits between titleBar and body. When hidden it
+        -- contributes 0 height (height = "auto" with no children +
+        -- "hidden" class). When showError fires, it grows to fit the
+        -- message; body's "100%-44" height accommodates the title bar
+        -- only, so the banner pushes the body's vscroll-area down by
+        -- the banner's height -- acceptable, the test card scrolls
+        -- the lost area without breaking layout.
+        children = { titleBar, banner, body },
+    }
+
+    g_openTestPopouts[key] = popoutRoot
+    -- Parent directly to gamehud.parentPanel (the root of the gamehud
+    -- panel tree) so we sit at the same nesting level as modalPanel
+    -- itself, not inside it. SetAsLastSibling promotes us above
+    -- modalPanel so we render on top of any open editor. The thinkTime
+    -- handler keeps us promoted as sub-modals open and call
+    -- modalPanel:SetAsLastSibling.
+    gamehud.parentPanel:AddChild(popoutRoot)
+    popoutRoot:SetAsLastSibling()
+    popoutRoot:PulseClass("fadein")
+    -- AddChild doesn't register an unload handler the way gui.ShowDialog
+    -- does, so wire mod.unloadHandlers manually. Mirrors the pattern at
+    -- DMHub Core UI\Gui.lua:111-115.
+    mod.unloadHandlers[#mod.unloadHandlers + 1] = function()
+        if popoutRoot ~= nil and popoutRoot.valid then
+            popoutRoot:DestroySelf()
+        end
+    end
 end
 
 -- Preview column + slot factory. Returns (colPanel, previewSlot). The slot
@@ -5310,7 +5857,11 @@ end
 --   (b) ensure dmhub.ToJson serialises it -- transient _tmp_ fields are
 --       skipped, so anything that the engine considers persistent state
 --       will be picked up automatically.
-local function makePreviewColumn(ability, schedulePreviewRefresh)
+-- C6b: `editorOptions.reopen` (optional) is the closure callers pass when
+-- they want the popout's "Open Editor" button to re-navigate the user
+-- back to the original entry point. Threaded through to buildTestTriggerCard
+-- so the Pop out press handler can capture it for openTestTriggerPopout.
+local function makePreviewColumn(ability, schedulePreviewRefresh, editorOptions)
     local COLORS = getColors()
     -- Heading rows (subHeading below) need to match the cards' width so the
     -- right-aligned rollup chip aligns with the card's right border instead
@@ -5474,7 +6025,13 @@ local function makePreviewColumn(ability, schedulePreviewRefresh)
     -- refreshPreview rebuilds. It listens for refreshAbility internally to
     -- re-discover referenced symbols when the trigger event or condition
     -- formula change.
-    local testTriggerCard = buildTestTriggerCard(ability)
+    -- C6b: pass editorOptions.reopen through so the in-editor card's Pop
+    -- out press handler can forward it to the floating popout's "Open
+    -- Editor" button. Nil-safe; popout omits the button when reopen is nil.
+    local testTriggerCard = buildTestTriggerCard(ability, {
+        mode = "editor",
+        reopen = editorOptions and editorOptions.reopen or nil,
+    })
 
     local scrollArea = gui.Panel{
         classes = {"nae-preview-body"},
@@ -5712,7 +6269,7 @@ local function generateSectionedEditor(ability, options)
     -- GoblinScriptProse engine; other slots stay blank until phase 7's
     -- Display overrides land. Kept to the right of the detail column.
     local previewCol
-    previewCol, previewSlot = makePreviewColumn(ability, schedulePreviewRefresh)
+    previewCol, previewSlot = makePreviewColumn(ability, schedulePreviewRefresh, options)
 
     rootPanel = gui.Panel{
         classes = {"nae-root"},
@@ -5769,3 +6326,4 @@ function TriggeredAbility:GenerateEditor(options)
 
     return generateSectionedEditor(self, options)
 end
+
